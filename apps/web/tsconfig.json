@@ -11,14 +11,23 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@spirom/ui": ["../../packages/ui/src"]
+    }
   },
-  "include": [],
-  "exclude": ["node_modules"],
-  "references": [
-    { "path": "apps/web" },
-    { "path": "packages/ui" },
-    { "path": "sanity/studio" }
-  ]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
 }

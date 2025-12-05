@@ -1,0 +1,67 @@
+[package]
+name = "spirom-api"
+version = "0.1.0"
+edition = "2021"
+description = "Spirom EC API Backend"
+authors = ["Spirom Team"]
+license = "MIT"
+
+[dependencies]
+# Web Framework
+axum = { version = "0.7", features = ["macros", "multipart"] }
+axum-extra = { version = "0.9", features = ["typed-header", "cookie"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.4", features = ["util", "timeout"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "limit"] }
+hyper = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database (Supabase REST API)
+# Supabase anon keyでRLSを有効にしたアクセス
+# reqwestは既に依存関係にあるのでそれを使用
+
+# Authentication
+jsonwebtoken = "9"
+argon2 = "0.5"
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Utilities
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+anyhow = "1"
+async-trait = "0.1"
+futures = "0.3"
+rand = "0.8"
+base64 = "0.22"
+hex = "0.4"
+sha2 = "0.10"
+hmac = "0.12"
+
+# Tracing & Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Environment
+dotenvy = "0.15"
+config = "0.14"
+
+# HTTP Client (for payment providers & Supabase REST API)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+urlencoding = "2.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+fake = { version = "2.9", features = ["derive", "uuid", "chrono"] }
+mockall = "0.12"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

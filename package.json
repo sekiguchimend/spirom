@@ -2,25 +2,22 @@
   "name": "spirom",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "sanity/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.0.7",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:sanity": "npm run dev --workspace=sanity/studio",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:sanity": "npm run build --workspace=sanity/studio"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.7",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "turbo": "^2.3.0"
+  },
+  "packageManager": "npm@10.0.0"
 }

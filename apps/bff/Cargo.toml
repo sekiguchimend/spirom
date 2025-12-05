@@ -1,0 +1,41 @@
+[package]
+name = "spirom-bff"
+version = "0.1.0"
+edition = "2021"
+description = "Spirom BFF - Cloudflare Workers with Rust/WASM"
+authors = ["Spirom Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Cloudflare Workers
+worker = "0.3"
+worker-macros = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async
+futures = "0.3"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde", "wasmbind"] }
+uuid = { version = "1", features = ["v4", "serde", "js"] }
+url = "2"
+base64 = "0.22"
+sha2 = "0.10"
+hex = "0.4"
+
+# Logging
+console_error_panic_hook = "0.1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Os", "--enable-mutable-globals"]
