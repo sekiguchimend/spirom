@@ -2,8 +2,9 @@ import { createClient } from "@sanity/client";
 import imageUrlBuilder from "@sanity/image-url";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 
+// Sanity client（projectIdが設定されていない場合はダミー値を使用）
 export const client = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "",
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "dummy-project-id",
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
   apiVersion: "2024-01-01",
   useCdn: true,
@@ -46,6 +47,8 @@ export const postSlugsQuery = `*[_type == "post" && publishedAt < now()] {
 }`;
 
 // Types
+import type { PortableTextBlock } from "@portabletext/types";
+
 export interface Post {
   _id: string;
   title: string;
@@ -54,7 +57,7 @@ export interface Post {
   publishedAt: string;
   author: string | { name: string; image?: SanityImageSource };
   category: string | { title: string; slug: { current: string } };
-  body?: unknown[];
+  body?: PortableTextBlock[];
   seoTitle?: string;
   seoDescription?: string;
 }

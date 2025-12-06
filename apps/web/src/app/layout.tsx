@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Nunito_Sans } from "next/font/google";
-import localFont from 'next/font/local';
 import "./globals.css";
 import { Header, Footer } from "@/components/layout";
 

@@ -36,7 +36,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link href="/" className="text-2xl font-bold tracking-tighter">JUICE</Link>
+          <Link href="/" className="text-2xl font-bold tracking-tighter">SPIROM</Link>
           <p className="text-gray-500 text-xs uppercase tracking-wide">&copy; {new Date().getFullYear()} SPIROM INC.</p>
         </div>
       </div>

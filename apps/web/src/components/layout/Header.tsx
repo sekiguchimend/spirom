@@ -12,22 +12,21 @@ export default function Header() {
       {/* 固定ヘッダーではなく、絶対配置でオーバーレイさせるスタイルに変更 */}
       <header className="absolute top-0 left-0 w-full z-50 p-6 md:p-8 flex justify-between items-start mix-blend-normal">
         {/* 左上: ロゴ */}
-        <Link href="/" className="block" aria-label="Spirom Home">
-          {/* ユーザーがロゴを差し替える場所 */}
-          <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white font-bold">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-              <circle cx="9" cy="10" r="1.5"/>
-              <circle cx="15" cy="10" r="1.5"/>
-            </svg>
-          </div>
+        <Link href="/" className="block relative w-20 h-20 md:w-28 md:h-28" aria-label="Spirom Home">
+          <Image
+            src="/spirom.png"
+            alt="Spirom Logo"
+            fill
+            className="object-contain"
+            priority
+          />
         </Link>
 
         {/* 中央上: 通知バー（PCのみ表示） */}
         <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-8">
           <Link 
             href="/about" 
-            className="inline-flex items-center gap-2 bg-brand-cream/90 backdrop-blur px-4 py-2 rounded text-xs font-bold uppercase tracking-widest border border-black/10 hover:bg-white transition-colors"
+            className="inline-flex text-black items-center gap-2 bg-brand-cream/90 backdrop-blur px-4 py-2 rounded text-xs font-bold uppercase tracking-widest border border-black/10 hover:bg-white transition-colors"
           >
             We rebranded with purpose. Read the story
             <span aria-hidden="true">→</span>
@@ -37,7 +36,7 @@ export default function Header() {
         {/* 右上: ハンバーガーメニュー */}
         <button
           type="button"
-          className="w-12 h-12 bg-black text-brand-cream flex flex-col items-center justify-center gap-1.5 rounded hover:bg-gray-900 transition-colors"
+          className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex flex-col items-center justify-center gap-1.5 rounded hover:bg-gray-900 transition-colors flex-shrink-0"
           onClick={() => setIsMenuOpen(true)}
           aria-label="Open menu"
         >

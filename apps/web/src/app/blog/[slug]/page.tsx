@@ -13,8 +13,17 @@ export const revalidate = 60;
 
 // SSG: ビルド時に主要な記事を生成
 export async function generateStaticParams() {
-  const posts = await client.fetch<{ slug: string }[]>(postSlugsQuery);
-  return posts.map((post) => ({ slug: post.slug }));
+  // Sanity未設定時は空配列を返す
+  if (!process.env.NEXT_PUBLIC_SANITY_PROJECT_ID) {
+    return [];
+  }
+
+  try {
+    const posts = await client.fetch<{ slug: string }[]>(postSlugsQuery);
+    return posts.map((post) => ({ slug: post.slug }));
+  } catch {
+    return [];
+  }
 }
 
 async function getPost(slug: string): Promise<Post | null> {

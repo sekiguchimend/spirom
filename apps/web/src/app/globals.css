@@ -1,37 +1,71 @@
 @import "tailwindcss";
 
 @theme {
-  /* チャットボット・UIコンポーネント用カラー */
-  /* 指定色: #323232 と #fff のみ */
-  --color-primary: #323232;
-  --color-primary-foreground: #fff;
-  --color-secondary: #fff;
-  --color-secondary-foreground: #323232;
-
-  /* ブランドカラー（互換性のため維持） */
+  /* ブランドカラー - Juice Agency inspired */
   --color-brand-green: #446e87;
   --color-brand-cream: #FFFFEB;
-  --color-brand-black: #323232;
+  --color-brand-black: #000000;
+
+  /* カートゥーンカラー */
+  --color-cartoon-lime: #7dff3a;
+  --color-cartoon-pink: #ff2d78;
+  --color-cartoon-orange: #ff9500;
+  --color-cartoon-blue: #00d4ff;
+  --color-cartoon-purple: #8b5cf6;
+  --color-cartoon-yellow: #ffe135;
 }
 
 :root {
-  /* ユーザーの要望に合わせて背景色をブランドカラーに戻す */
   --background: var(--color-brand-green);
-  --foreground: var(--color-brand-black);
+  --foreground: var(--color-brand-cream);
+}
 
-  /* UIコンポーネント用 */
-  --color-bg: #fff;
-  --color-bg-alt: #f5f5f5;
-  --color-text: #323232;
-  --color-text-light: #555;
-  --color-text-muted: #888;
-  --color-border: #e0e0e0;
-  --color-accent: #323232;
+* {
+  box-sizing: border-box;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* カートゥーンボタン共通 */
+.btn-cartoon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: white;
+  color: black;
+  border: 3px solid black;
+  border-radius: 1rem;
+  box-shadow: 4px 4px 0 black;
+  transition: all 0.15s ease;
+}
+
+.btn-cartoon:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 black;
+}
+
+.btn-cartoon:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 black;
+}
+
+/* セクション背景 */
+.section-light {
+  background: #FFFFF5;
+  color: black;
+}
+
+.section-dark {
+  background: black;
+  color: white;
 }
