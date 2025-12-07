@@ -18,7 +18,7 @@ pub async fn list_reviews(
     State(state): State<AppState>,
     Path(product_id): Path<Uuid>,
 ) -> Result<Json<PaginatedResponse<Review>>> {
-    let review_repo = ReviewRepository::new(state.db.clone());
+    let review_repo = ReviewRepository::new(state.db.anonymous());
 
     let reviews = review_repo.find_by_product(product_id, 50).await?;
     let total = reviews.len() as i64;
@@ -31,7 +31,7 @@ pub async fn get_review_stats(
     State(state): State<AppState>,
     Path(product_id): Path<Uuid>,
 ) -> Result<Json<DataResponse<ReviewStats>>> {
-    let review_repo = ReviewRepository::new(state.db.clone());
+    let review_repo = ReviewRepository::new(state.db.anonymous());
 
     let stats = review_repo.get_stats(product_id).await?;
 
@@ -47,9 +47,9 @@ pub async fn create_review(
 ) -> Result<Json<DataResponse<Review>>> {
     req.validate()?;
 
-    let review_repo = ReviewRepository::new(state.db.clone());
-    let product_repo = ProductRepository::new(state.db.clone());
-    let user_repo = UserRepository::new(state.db.clone());
+    let review_repo = ReviewRepository::new(state.db.anonymous());
+    let product_repo = ProductRepository::new(state.db.anonymous());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     // 商品存在確認
     product_repo

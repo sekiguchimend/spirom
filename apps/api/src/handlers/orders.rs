@@ -32,10 +32,10 @@ pub async fn create_order(
         .map(|s| s.to_string())
         .unwrap_or_else(generate_session_id);
 
-    let cart_repo = CartRepository::new(state.db.clone());
-    let order_repo = OrderRepository::new(state.db.clone());
-    let user_repo = UserRepository::new(state.db.clone());
-    let product_repo = ProductRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
+    let order_repo = OrderRepository::new(state.db.anonymous());
+    let user_repo = UserRepository::new(state.db.anonymous());
+    let product_repo = ProductRepository::new(state.db.anonymous());
 
     // カート取得
     let cart = cart_repo.find_by_session(&session_id).await?;
@@ -148,7 +148,7 @@ pub async fn list_orders(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
 ) -> Result<Json<PaginatedResponse<OrderSummary>>> {
-    let order_repo = OrderRepository::new(state.db.clone());
+    let order_repo = OrderRepository::new(state.db.anonymous());
 
     let orders = order_repo.find_by_user(auth_user.id, 50).await?;
     let total = orders.len() as i64;
@@ -162,7 +162,7 @@ pub async fn get_order(
     Extension(auth_user): Extension<AuthenticatedUser>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataResponse<Order>>> {
-    let order_repo = OrderRepository::new(state.db.clone());
+    let order_repo = OrderRepository::new(state.db.anonymous());
 
     let order = order_repo
         .find_by_id(id)
@@ -183,8 +183,8 @@ pub async fn cancel_order(
     Extension(auth_user): Extension<AuthenticatedUser>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataResponse<Order>>> {
-    let order_repo = OrderRepository::new(state.db.clone());
-    let product_repo = ProductRepository::new(state.db.clone());
+    let order_repo = OrderRepository::new(state.db.anonymous());
+    let product_repo = ProductRepository::new(state.db.anonymous());
 
     let order = order_repo
         .find_by_id(id)

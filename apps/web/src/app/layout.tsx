@@ -6,8 +6,9 @@ import { Header, Footer } from "@/components/layout";
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "600", "700", "900"],
   display: "swap",
+  preload: true,
 });
 
 // Juice Agency に極めて近い、超極太・縦長サンセリフフォントとして、
@@ -22,6 +23,7 @@ const anton = Anton({
   subsets: ["latin"],
   weight: "400",
   display: "swap",
+  preload: true,
 });
 
 export const viewport: Viewport = {
@@ -179,9 +181,9 @@ export default function RootLayout({
           メインコンテンツへスキップ
         </a>
         <Header />
-        <div id="main-content" className="flex-1">
+        <main id="main-content" className="flex-1">
           {children}
-        </div>
+        </main>
         <Footer />
       </body>
     </html>

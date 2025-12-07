@@ -3,25 +3,23 @@ main = "build/worker/shim.mjs"
 compatibility_date = "2024-01-01"
 
 [build]
-command = "cargo install -q worker-build && worker-build --release"
+command = "cargo install -q worker-build@0.1.1 && worker-build --release"
 
 [vars]
 ENVIRONMENT = "production"
 API_BASE_URL = "https://api.spirom.com"
-SANITY_PROJECT_ID = ""
+SANITY_PROJECT_ID = "ef16j1jl"
 SANITY_DATASET = "production"
 SITE_URL = "https://spirom.com"
 
 # KV Namespaces
 [[kv_namespaces]]
 binding = "CACHE"
-id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-preview_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+id = "86cb4f8aaa3649b890b5ad05e453dd34"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-preview_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+id = "6af4058e53654fd58e3f3098af5c2c52"
 
 # R2 Buckets
 [[r2_buckets]]
@@ -38,4 +36,22 @@ vars = { ENVIRONMENT = "staging", API_BASE_URL = "https://api-staging.spirom.com
 
 [env.development]
 name = "spirom-bff-dev"
-vars = { ENVIRONMENT = "development", API_BASE_URL = "http://localhost:3001" }
+
+[env.development.vars]
+ENVIRONMENT = "development"
+API_BASE_URL = "http://localhost:3001"
+SANITY_PROJECT_ID = "ef16j1jl"
+SANITY_DATASET = "production"
+SITE_URL = "http://localhost:3000"
+
+[[env.development.kv_namespaces]]
+binding = "CACHE"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[[env.development.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[[env.development.r2_buckets]]
+binding = "ASSETS"
+bucket_name = "spirom-assets-dev"

@@ -15,8 +15,8 @@ pub async fn list_products(
     State(state): State<AppState>,
     Query(query): Query<ProductQuery>,
 ) -> Result<Json<PaginatedResponse<ProductSummary>>> {
-    let product_repo = ProductRepository::new(state.db.clone());
-    let category_repo = CategoryRepository::new(state.db.clone());
+    let product_repo = ProductRepository::new(state.db.anonymous());
+    let category_repo = CategoryRepository::new(state.db.anonymous());
 
     let limit = query.pagination.limit();
 
@@ -61,8 +61,8 @@ pub async fn get_product(
     State(state): State<AppState>,
     Path(slug): Path<String>,
 ) -> Result<Json<DataResponse<Product>>> {
-    let product_repo = ProductRepository::new(state.db.clone());
-    let category_repo = CategoryRepository::new(state.db.clone());
+    let product_repo = ProductRepository::new(state.db.anonymous());
+    let category_repo = CategoryRepository::new(state.db.anonymous());
 
     let mut product = product_repo
         .find_by_slug(&slug)
@@ -81,7 +81,7 @@ pub async fn get_product(
 pub async fn get_featured_products(
     State(state): State<AppState>,
 ) -> Result<Json<DataResponse<Vec<ProductSummary>>>> {
-    let product_repo = ProductRepository::new(state.db.clone());
+    let product_repo = ProductRepository::new(state.db.anonymous());
 
     let products = product_repo.find_featured(20).await?;
 

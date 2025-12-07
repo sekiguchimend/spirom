@@ -50,6 +50,13 @@ export default defineType({
         { name: "website", title: "Webサイト", type: "url" },
       ],
     }),
+    defineField({
+      name: "active",
+      title: "アクティブ",
+      type: "boolean",
+      description: "現在アクティブな著者かどうか",
+      initialValue: true,
+    }),
   ],
   preview: {
     select: {

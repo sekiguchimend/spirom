@@ -97,6 +97,31 @@ impl BffHandlers {
         add_cache_headers(response, 60, 120)
     }
 
+    pub async fn blog_list(&self, req: Request) -> std::result::Result<Response, BffError> {
+        let url = req.url().map_err(BffError::from)?;
+        let params: std::collections::HashMap<String, String> = url
+            .query_pairs()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+
+        let page: u32 = params.get("page").and_then(|p| p.parse().ok()).unwrap_or(1);
+        let per_page: u32 = params.get("per_page").and_then(|p| p.parse().ok()).unwrap_or(10);
+        let per_page = per_page.min(50);
+
+        let cache_key = generate_cache_key("bff", &["blog-list", &page.to_string()]);
+
+        let data = self.cache.get_or_fetch(
+            &cache_key,
+            &CacheOptions::medium(),
+            || self.aggregator.get_blog_list(page, per_page),
+        ).await?;
+
+        let response = Response::from_json(&data)
+            .map_err(BffError::from)?;
+
+        add_cache_headers(response, 300, 600)
+    }
+
     pub async fn search(&self, req: Request) -> std::result::Result<Response, BffError> {
         let url = req.url().map_err(BffError::from)?;
         let params: std::collections::HashMap<String, String> = url

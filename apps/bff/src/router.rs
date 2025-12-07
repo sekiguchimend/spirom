@@ -39,16 +39,17 @@ pub async fn handle_request(req: Request, env: Env, _ctx: Context) -> Result<Res
         return rate_limiter.add_headers(response, &rate_result);
     }
 
-    let result = route_request(req.clone()?, path, method, &env).await;
+    let path_owned = path.to_string();
+    let result = route_request(req, &path_owned, method, &env).await;
 
     let response = match result {
         Ok(response) => response,
         Err(e) => e.to_response()?,
     };
 
-    let response = cors.apply(&req, response)?;
+    let response = cors.apply_without_req(response, &environment)?;
 
-    let response = if path.starts_with("/bff/") || path.starts_with("/api/") {
+    let response = if path_owned.starts_with("/bff/") || path_owned.starts_with("/api/") {
         SecurityHeaders::apply_api(response)?
     } else {
         SecurityHeaders::apply(response)?
@@ -128,6 +129,7 @@ async fn route_request(
         return match bff_path {
             "home" => bff_handlers.home(req).await,
             "search" => bff_handlers.search(req).await,
+            "blog" => bff_handlers.blog_list(req).await,
             p if p.starts_with("products/") => {
                 let slug = &p[9..];
                 bff_handlers.product_detail(req, slug).await

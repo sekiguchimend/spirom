@@ -56,8 +56,10 @@ impl std::str::FromStr for OrderStatus {
 pub enum PaymentStatus {
     #[default]
     Pending,
+    Paid,
     Succeeded,
     Failed,
+    Refunding,
     Refunded,
     PartiallyRefunded,
 }

@@ -82,7 +82,7 @@ impl From<User> for UserPublic {
 pub struct UpdateUserRequest {
     #[validate(length(min = 1, max = 100))]
     pub name: Option<String>,
-    #[validate(phone)]
+    #[validate(length(max = 20))]
     pub phone: Option<String>,
 }
 

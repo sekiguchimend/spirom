@@ -70,11 +70,10 @@ impl DataAggregator {
             .get(&format!("/api/v1/products/{}", slug))
             .await?;
 
-        let related_future = self.api_client.get::<Vec<ProductListItem>>(
-            &format!("/api/v1/products?category={}&limit=4&exclude={}", product.category_id, product.id)
-        );
-
-        let related_products = related_future.await.unwrap_or_default();
+        let related_url = format!("/api/v1/products?category={}&limit=4&exclude={}", product.category_id, product.id);
+        let related_products = self.api_client.get::<Vec<ProductListItem>>(&related_url)
+            .await
+            .unwrap_or_default();
 
         let breadcrumbs = vec![
             Breadcrumb {
@@ -126,9 +125,10 @@ impl DataAggregator {
             category.id, per_page, offset
         );
 
+        let subcategories_url = format!("/api/v1/categories?parent={}", category.id);
         let (products, subcategories) = futures::join!(
             self.api_client.get::<Vec<ProductListItem>>(&products_url),
-            self.api_client.get::<Vec<Category>>(&format!("/api/v1/categories?parent={}", category.id))
+            self.api_client.get::<Vec<Category>>(&subcategories_url)
         );
 
         let products = products.unwrap_or_default();
@@ -231,13 +231,51 @@ impl DataAggregator {
         })
     }
 
+    pub async fn get_blog_list(&self, page: u32, per_page: u32) -> Result<BlogListResponse, BffError> {
+        let offset = (page - 1) * per_page;
+        
+        let (posts, total) = futures::join!(
+            self.sanity_client.get_posts(per_page as usize, offset as usize),
+            self.sanity_client.get_posts_count()
+        );
+
+        let posts = posts.unwrap_or_default();
+        let total = total.unwrap_or(0);
+
+        let total_pages = ((total as f64) / (per_page as f64)).ceil() as u32;
+
+        let pagination = Pagination {
+            page,
+            per_page,
+            total,
+            total_pages,
+            has_next: page < total_pages,
+            has_prev: page > 1,
+        };
+
+        let meta = MetaData {
+            title: "ブログ | Spirom".to_string(),
+            description: "暮らしのヒントや商品の使い方、スタッフおすすめの情報をお届けするSpiromのブログです。".to_string(),
+            canonical: format!("{}/blog", self.site_url),
+            og_image: Some(format!("{}/images/og-blog.jpg", self.site_url)),
+            og_type: "website".to_string(),
+        };
+
+        Ok(BlogListResponse {
+            posts,
+            pagination,
+            meta,
+        })
+    }
+
     pub async fn search_products(&self, request: &SearchRequest) -> Result<SearchResponse, BffError> {
         let page = request.page.unwrap_or(1);
         let per_page = request.per_page.unwrap_or(20);
         let offset = (page - 1) * per_page;
 
+        let encoded_query: String = url::form_urlencoded::byte_serialize(request.query.as_bytes()).collect();
         let mut query_params = vec![
-            format!("q={}", url::form_urlencoded::encode(&request.query)),
+            format!("q={}", encoded_query),
             format!("limit={}", per_page),
             format!("offset={}", offset),
         ];
@@ -287,7 +325,7 @@ impl DataAggregator {
         let meta = MetaData {
             title: format!("Search: {} | Spirom", request.query),
             description: format!("Search results for '{}' - {} products found", request.query, api_response.total),
-            canonical: format!("{}/search?q={}", self.site_url, url::form_urlencoded::encode(&request.query)),
+            canonical: format!("{}/search?q={}", self.site_url, encoded_query),
             og_image: None,
             og_type: "website".to_string(),
         };

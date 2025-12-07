@@ -36,7 +36,9 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/cart/items/:product_id", delete(handlers::cart::remove_from_cart))
         // レビュー（読み取りは公開）
         .route("/api/v1/products/:id/reviews", get(handlers::reviews::list_reviews))
-        .route("/api/v1/products/:id/reviews/stats", get(handlers::reviews::get_review_stats));
+        .route("/api/v1/products/:id/reviews/stats", get(handlers::reviews::get_review_stats))
+        // Webhook（公開：署名検証あり）
+        .route("/api/v1/webhooks/stripe", post(handlers::payments::handle_webhook));
 
     let auth_routes = Router::new()
         // 認証
@@ -56,6 +58,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/orders", get(handlers::orders::list_orders))
         .route("/api/v1/orders/:id", get(handlers::orders::get_order))
         .route("/api/v1/orders/:id/cancel", post(handlers::orders::cancel_order))
+        // 決済
+        .route("/api/v1/payments/intent", post(handlers::payments::create_payment_intent))
+        .route("/api/v1/payments/confirm", post(handlers::payments::confirm_payment))
+        .route("/api/v1/payments/refund", post(handlers::payments::create_refund))
         // レビュー（投稿は認証必要）
         .route("/api/v1/products/:id/reviews", post(handlers::reviews::create_review))
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));

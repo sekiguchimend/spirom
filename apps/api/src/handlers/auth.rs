@@ -16,7 +16,7 @@ pub async fn register(
 ) -> Result<Json<AuthResponse>> {
     req.validate()?;
 
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
     let auth_service = AuthService::new(user_repo, state.config.clone());
 
     let response = auth_service.register(req).await?;
@@ -31,7 +31,7 @@ pub async fn login(
 ) -> Result<Json<AuthResponse>> {
     req.validate()?;
 
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
     let auth_service = AuthService::new(user_repo, state.config.clone());
 
     let response = auth_service.login(req).await?;
@@ -52,7 +52,7 @@ pub async fn refresh_token(
     Extension(user): Extension<AuthenticatedUser>,
     Json(_req): Json<RefreshTokenRequest>,
 ) -> Result<Json<TokenResponse>> {
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
     let auth_service = AuthService::new(user_repo, state.config.clone());
 
     let tokens = auth_service.refresh_token(user.id).await?;

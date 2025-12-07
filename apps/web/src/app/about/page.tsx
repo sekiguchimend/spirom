@@ -86,9 +86,10 @@ export default function AboutPage() {
 
       <div className="min-h-screen bg-[#FFFFF5]">
         {/* ヒーローセクション */}
-        <section className="py-20 px-4">
-          <div className="max-w-7xl mx-auto text-center">
+        <section className="py-20 px-4" aria-labelledby="page-title">
+          <header className="max-w-7xl mx-auto text-center">
             <h1
+              id="page-title"
               className="text-6xl md:text-8xl font-black mb-6 tracking-tighter"
               style={{
                 fontFamily: 'var(--font-anton), sans-serif',
@@ -100,14 +101,15 @@ export default function AboutPage() {
             <p className="text-xl md:text-2xl font-bold uppercase tracking-wider max-w-2xl mx-auto bg-black text-white px-6 py-3 inline-block border-3 border-black">
               WE CREATE PRODUCTS FOR COMFORTABLE LIVING
             </p>
-          </div>
+          </header>
         </section>
 
         {/* ミッション */}
-        <section className="py-16 px-4">
+        <section className="py-16 px-4" aria-labelledby="mission-heading">
           <div className="max-w-4xl mx-auto">
             <div className="bg-white border-4 border-black rounded-3xl p-8 md:p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
               <h2
+                id="mission-heading"
                 className="text-3xl md:text-4xl font-black mb-6 uppercase tracking-tight"
                 style={{ fontFamily: 'var(--font-anton), sans-serif' }}
               >
@@ -126,9 +128,10 @@ export default function AboutPage() {
         </section>
 
         {/* バリュー */}
-        <section className="py-16 px-4 bg-black">
+        <section className="py-16 px-4 bg-black" aria-labelledby="values-heading">
           <div className="max-w-7xl mx-auto">
             <h2
+              id="values-heading"
               className="text-4xl md:text-5xl font-black text-white mb-12 text-center uppercase tracking-tight"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
@@ -155,9 +158,10 @@ export default function AboutPage() {
         </section>
 
         {/* チーム */}
-        <section className="py-16 px-4">
+        <section className="py-16 px-4" aria-labelledby="team-heading">
           <div className="max-w-7xl mx-auto">
             <h2
+              id="team-heading"
               className="text-4xl md:text-5xl font-black mb-12 text-center uppercase tracking-tight"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
@@ -192,9 +196,10 @@ export default function AboutPage() {
         </section>
 
         {/* 沿革 */}
-        <section className="py-16 px-4 bg-[#7dff3a]">
+        <section className="py-16 px-4 bg-[#7dff3a]" aria-labelledby="history-heading">
           <div className="max-w-3xl mx-auto">
             <h2
+              id="history-heading"
               className="text-4xl md:text-5xl font-black mb-12 text-center uppercase tracking-tight"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
@@ -217,9 +222,10 @@ export default function AboutPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-20 px-4">
+        <section className="py-20 px-4" aria-labelledby="cta-heading">
           <div className="max-w-4xl mx-auto text-center">
             <h2
+              id="cta-heading"
               className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tight"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >

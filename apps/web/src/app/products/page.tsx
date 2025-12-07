@@ -47,8 +47,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     <div className="min-h-screen bg-[#FFFFF5]">
       <div className="max-w-7xl mx-auto px-4 py-20">
         {/* ページヘッダー */}
-        <header className="text-center mb-16">
-          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+        <header className="text-center mb-16" aria-labelledby="page-title">
+          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             PRODUCTS
           </h1>
           <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">
@@ -98,10 +98,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           <button className="w-12 h-12 font-black bg-black text-white border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
             1
           </button>
-          <button className="w-12 h-12 font-black bg-white text-black border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all">
+          <button className="w-12 h-12 font-black bg-white text-black border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200">
             2
           </button>
-          <button className="px-6 py-3 font-black text-sm uppercase tracking-wider bg-white border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-all">
+          <button className="px-6 py-3 font-black text-sm uppercase tracking-wider bg-white border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200">
             NEXT
           </button>
         </nav>

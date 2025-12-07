@@ -57,9 +57,33 @@ export default defineType({
       to: [{ type: "category" }],
     }),
     defineField({
+      name: "excerpt",
+      title: "抜粋",
+      type: "text",
+      description: "記事一覧で表示される短い説明文",
+      validation: (Rule) => Rule.max(200),
+    }),
+    defineField({
       name: "body",
       title: "本文",
       type: "blockContent",
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: "featured",
+      title: "注目記事",
+      type: "boolean",
+      description: "トップページで強調表示する記事",
+      initialValue: false,
+    }),
+    defineField({
+      name: "tags",
+      title: "タグ",
+      type: "array",
+      of: [{ type: "string" }],
+      options: {
+        layout: "tags",
+      },
     }),
     defineField({
       name: "seoTitle",

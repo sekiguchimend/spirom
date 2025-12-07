@@ -77,6 +77,23 @@ impl CorsMiddleware {
         Ok(response)
     }
 
+    pub fn apply_without_req(&self, mut response: Response, environment: &str) -> Result<Response> {
+        // In development, allow localhost origins
+        let allowed_origin = if environment == "development" {
+            "http://localhost:3000"
+        } else {
+            "https://spirom.com"
+        };
+
+        let mut headers = response.headers().clone();
+        headers.set("Access-Control-Allow-Origin", allowed_origin)?;
+        headers.set("Access-Control-Allow-Credentials", "true")?;
+        headers.set("Vary", "Origin")?;
+        response = response.with_headers(headers);
+
+        Ok(response)
+    }
+
     fn is_origin_allowed(&self, origin: &str) -> bool {
         self.allowed_origins.iter().any(|allowed| {
             allowed == "*" || allowed == origin

@@ -95,7 +95,7 @@ impl CacheManager {
     }
 
     pub async fn delete(&self, key: &str) -> Result<()> {
-        self.kv.delete(key).await
+        self.kv.delete(key).await.map_err(|e| worker::Error::from(e.to_string()))
     }
 
     pub async fn get_or_fetch<T, F, Fut>(

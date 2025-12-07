@@ -126,10 +126,22 @@ impl OrderRepository {
     }
 
     /// 決済ID更新
-    pub async fn update_payment_id(&self, id: Uuid, payment_id: &str) -> Result<()> {
+    pub async fn update_payment_id(&self, id: Uuid, _user_id: Uuid, payment_id: &str) -> Result<()> {
         let query = format!("id=eq.{}", id);
         let update = PaymentIdUpdate {
             payment_id: Some(payment_id.to_string()),
+            updated_at: Utc::now(),
+        };
+
+        let _: Vec<OrderRow> = self.client.update("orders", &query, &update).await?;
+        Ok(())
+    }
+
+    /// 決済ステータス更新
+    pub async fn update_payment_status(&self, id: Uuid, payment_status: crate::models::PaymentStatus) -> Result<()> {
+        let query = format!("id=eq.{}", id);
+        let update = PaymentStatusUpdate {
+            payment_status: serde_json::to_string(&payment_status).unwrap_or_default(),
             updated_at: Utc::now(),
         };
 
@@ -208,6 +220,12 @@ struct StatusUpdate {
 #[derive(Debug, Serialize)]
 struct PaymentIdUpdate {
     payment_id: Option<String>,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+struct PaymentStatusUpdate {
+    payment_status: String,
     updated_at: DateTime<Utc>,
 }
 

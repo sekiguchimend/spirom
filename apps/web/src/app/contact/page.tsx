@@ -92,9 +92,10 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#FFFFF5]">
       {/* ヒーロー */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="py-20 px-4" aria-labelledby="page-title">
+        <header className="max-w-4xl mx-auto text-center">
           <h1
+            id="page-title"
             className="text-6xl md:text-8xl font-black tracking-tighter mb-6"
             style={{
               fontFamily: 'var(--font-anton), sans-serif',
@@ -106,7 +107,7 @@ export default function ContactPage() {
           <p className="text-xl font-bold uppercase tracking-wider bg-black text-white px-6 py-3 inline-block border-3 border-black">
             DROP US A LINE!
           </p>
-        </div>
+        </header>
       </section>
 
       <div className="max-w-5xl mx-auto px-4 pb-20">
@@ -119,15 +120,18 @@ export default function ContactPage() {
             >
               {/* お名前 */}
               <div className="mb-6">
-                <label className="block font-black text-sm uppercase tracking-wider mb-2">
-                  NAME <span className="text-[#ff2d78]">*</span>
+                <label htmlFor="name" className="block font-black text-sm uppercase tracking-wider mb-2">
+                  NAME <span className="text-[#ff2d78]" aria-hidden="true">*</span>
+                  <span className="sr-only">（必須）</span>
                 </label>
                 <input
+                  id="name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  autoComplete="name"
                   className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="山田 太郎"
                 />
@@ -135,25 +139,29 @@ export default function ContactPage() {
 
               {/* メール */}
               <div className="mb-6">
-                <label className="block font-black text-sm uppercase tracking-wider mb-2">
-                  EMAIL <span className="text-[#ff2d78]">*</span>
+                <label htmlFor="email" className="block font-black text-sm uppercase tracking-wider mb-2">
+                  EMAIL <span className="text-[#ff2d78]" aria-hidden="true">*</span>
+                  <span className="sr-only">（必須）</span>
                 </label>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  autoComplete="email"
                   className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="your@email.com"
                 />
               </div>
 
               {/* お問い合わせ種別 */}
-              <div className="mb-6">
-                <label className="block font-black text-sm uppercase tracking-wider mb-3">
-                  WHAT&apos;S UP? <span className="text-[#ff2d78]">*</span>
-                </label>
+              <fieldset className="mb-6">
+                <legend className="block font-black text-sm uppercase tracking-wider mb-3">
+                  WHAT&apos;S UP? <span className="text-[#ff2d78]" aria-hidden="true">*</span>
+                  <span className="sr-only">（必須）</span>
+                </legend>
                 <div className="flex flex-wrap gap-2">
                   {inquiryTypes.map((type) => {
                     const Icon = type.icon;
@@ -174,14 +182,15 @@ export default function ContactPage() {
                     );
                   })}
                 </div>
-              </div>
+              </fieldset>
 
               {/* 注文番号 */}
               <div className="mb-6">
-                <label className="block font-black text-sm uppercase tracking-wider mb-2">
+                <label htmlFor="orderNumber" className="block font-black text-sm uppercase tracking-wider mb-2">
                   ORDER # <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
+                  id="orderNumber"
                   type="text"
                   name="orderNumber"
                   value={formData.orderNumber}
@@ -193,10 +202,12 @@ export default function ContactPage() {
 
               {/* メッセージ */}
               <div className="mb-8">
-                <label className="block font-black text-sm uppercase tracking-wider mb-2">
-                  MESSAGE <span className="text-[#ff2d78]">*</span>
+                <label htmlFor="message" className="block font-black text-sm uppercase tracking-wider mb-2">
+                  MESSAGE <span className="text-[#ff2d78]" aria-hidden="true">*</span>
+                  <span className="sr-only">（必須）</span>
                 </label>
                 <textarea
+                  id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleChange}

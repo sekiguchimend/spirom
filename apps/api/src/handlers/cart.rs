@@ -31,7 +31,7 @@ pub async fn get_cart(
     headers: HeaderMap,
 ) -> Result<Json<DataResponse<CartResponse>>> {
     let session_id = get_session_id(&headers);
-    let cart_repo = CartRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
 
     let cart = cart_repo.find_by_session(&session_id).await?;
 
@@ -47,8 +47,8 @@ pub async fn add_to_cart(
     req.validate()?;
 
     let session_id = get_session_id(&headers);
-    let cart_repo = CartRepository::new(state.db.clone());
-    let product_repo = ProductRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
+    let product_repo = ProductRepository::new(state.db.anonymous());
 
     // 商品取得
     let product = product_repo
@@ -109,8 +109,8 @@ pub async fn update_cart_item(
     req.validate()?;
 
     let session_id = get_session_id(&headers);
-    let cart_repo = CartRepository::new(state.db.clone());
-    let product_repo = ProductRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
+    let product_repo = ProductRepository::new(state.db.anonymous());
 
     // 在庫確認
     let product = product_repo
@@ -138,7 +138,7 @@ pub async fn remove_from_cart(
     Path(product_id): Path<Uuid>,
 ) -> Result<Json<DataResponse<CartResponse>>> {
     let session_id = get_session_id(&headers);
-    let cart_repo = CartRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
 
     cart_repo.remove_item(&session_id, product_id).await?;
 
@@ -153,7 +153,7 @@ pub async fn clear_cart(
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>> {
     let session_id = get_session_id(&headers);
-    let cart_repo = CartRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
 
     cart_repo.clear(&session_id).await?;
 
@@ -168,7 +168,7 @@ pub async fn merge_cart(
     Json(req): Json<MergeCartRequest>,
 ) -> Result<Json<DataResponse<CartResponse>>> {
     let user_session_id = get_session_id(&headers);
-    let cart_repo = CartRepository::new(state.db.clone());
+    let cart_repo = CartRepository::new(state.db.anonymous());
 
     cart_repo
         .merge(&req.guest_session_id, &user_session_id, auth_user.id)

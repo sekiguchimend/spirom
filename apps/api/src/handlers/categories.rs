@@ -15,7 +15,7 @@ use crate::models::{
 pub async fn list_categories(
     State(state): State<AppState>,
 ) -> Result<Json<CategoryListResponse>> {
-    let category_repo = CategoryRepository::new(state.db.clone());
+    let category_repo = CategoryRepository::new(state.db.anonymous());
 
     let categories = category_repo.find_active().await?;
 
@@ -26,7 +26,7 @@ pub async fn list_categories(
 pub async fn get_category_tree(
     State(state): State<AppState>,
 ) -> Result<Json<CategoryTreeResponse>> {
-    let category_repo = CategoryRepository::new(state.db.clone());
+    let category_repo = CategoryRepository::new(state.db.anonymous());
 
     let all_categories = category_repo.find_active().await?;
 
@@ -60,7 +60,7 @@ pub async fn get_category(
     State(state): State<AppState>,
     Path(slug): Path<String>,
 ) -> Result<Json<DataResponse<Category>>> {
-    let category_repo = CategoryRepository::new(state.db.clone());
+    let category_repo = CategoryRepository::new(state.db.anonymous());
 
     let category = category_repo
         .find_by_slug(&slug)
@@ -76,8 +76,8 @@ pub async fn get_category_products(
     Path(slug): Path<String>,
     Query(query): Query<PaginationQuery>,
 ) -> Result<Json<PaginatedResponse<ProductSummary>>> {
-    let category_repo = CategoryRepository::new(state.db.clone());
-    let product_repo = ProductRepository::new(state.db.clone());
+    let category_repo = CategoryRepository::new(state.db.anonymous());
+    let product_repo = ProductRepository::new(state.db.anonymous());
 
     let category = category_repo
         .find_by_slug(&slug)

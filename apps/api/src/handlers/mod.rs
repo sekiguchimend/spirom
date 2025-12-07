@@ -6,3 +6,4 @@ pub mod categories;
 pub mod cart;
 pub mod orders;
 pub mod reviews;
+pub mod payments;

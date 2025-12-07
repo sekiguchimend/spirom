@@ -64,7 +64,7 @@ pub struct UpdateAddressRequest {
 }
 
 /// 注文用住所（埋め込み）
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OrderAddress {
     pub name: String,
     pub postal_code: String,

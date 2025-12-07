@@ -66,7 +66,7 @@ pub struct PaymentResult {
 }
 
 /// 決済結果ステータス
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentResultStatus {
     Succeeded,

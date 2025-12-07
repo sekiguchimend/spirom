@@ -22,41 +22,42 @@ export function ContentCard({ href, title, description, image, date, category, t
   return (
     <article className="group">
       <Link href={href} className="block">
-        <div className="relative bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-x-1 group-hover:-translate-y-1 transition-all duration-200">
+        <div className="relative bg-white border-3 border-black rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200">
           {image && (
-            <figure className="relative aspect-[16/10] bg-gray-100 border-b-4 border-black overflow-hidden">
+            <figure className="relative aspect-[16/9] bg-gray-100 border-b-3 border-black overflow-hidden">
               <Image
                 src={image}
                 alt=""
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 768px) 100vw, 33vw"
+                loading="lazy"
               />
               {category && (
-                <span className={`absolute top-4 left-4 px-4 py-2 text-xs font-black uppercase tracking-wider border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${tagColors[tagColor]}`}>
+                <span className={`absolute top-3 left-3 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${tagColors[tagColor]}`}>
                   {category}
                 </span>
               )}
             </figure>
           )}
-          <div className="p-5">
+          <div className="p-4">
             {date && (
-              <time className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">
+              <time className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
                 {date}
               </time>
             )}
-            <h3 className="text-lg font-black text-black uppercase tracking-tight leading-tight mb-2">
+            <h3 className="text-base font-black text-black uppercase tracking-tight leading-tight mb-1.5">
               {title}
             </h3>
             {description && (
-              <p className="text-gray-500 text-sm font-medium line-clamp-2">
+              <p className="text-gray-500 text-xs font-medium line-clamp-2">
                 {description}
               </p>
             )}
-            <div className="mt-4 flex items-center gap-2 text-black font-black text-xs uppercase tracking-widest">
+            <div className="mt-3 flex items-center gap-1.5 text-black font-black text-[10px] uppercase tracking-widest">
               <span>Read More</span>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform">
-                <path d="M3 7h8M7 3l4 4-4 4"/>
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform">
+                <path d="M2 6h8M6 2l4 4-4 4"/>
               </svg>
             </div>
           </div>

@@ -2,18 +2,12 @@ import { CategoryPill, ProductCard } from '@/components/ui';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getFeaturedProducts } from '@/lib/supabase';
 
 export const metadata: Metadata = {
   title: 'Spirom - Digital Product Agency & Store',
   description: 'We build digital products and sell curated lifestyle goods.',
 };
-
-const products = [
-  { id: '1', slug: 'tote-bag', name: 'COTTON TOTE BAG', price: 3800, image: '/products/1.jpg', tag: 'NEW' as const },
-  { id: '2', slug: 'mug-set', name: 'CERAMIC MUG', price: 2400, image: '/products/2.jpg' },
-  { id: '3', slug: 'cushion', name: 'LINEN CUSHION', price: 4200, image: '/products/3.jpg', tag: 'SALE' as const },
-  { id: '4', slug: 'coaster', name: 'WOODEN COASTER', price: 1200, image: '/products/4.jpg' },
-];
 
 const categories = [
   { slug: 'kitchen', name: 'Kitchen' },
@@ -22,9 +16,11 @@ const categories = [
   { slug: 'outdoor', name: 'Outdoor' },
 ];
 
-export default function Home() {
+export default async function Home() {
+  // Supabaseから注目商品を取得
+  const products = await getFeaturedProducts(4);
   return (
-    <main className="flex flex-col w-full">
+    <div className="flex flex-col w-full">
       {/* 
         Hero Section - Juice Agency Clone 
         背景色: brand-green (globals.cssで定義)
@@ -33,10 +29,10 @@ export default function Home() {
         
         {/* 背景の巨大文字 */}
         <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none overflow-hidden">
-           {/* 
-             SVGを使用して文字を描画することで、文字の角を正確に丸める。
-             CSSのstroke-linejoin: round では限界があるため、SVGフィルタを使用する。
-           */}
+          {/* 
+            SVGを使用して文字を描画することで、文字の角を正確に丸める。
+            CSSのstroke-linejoin: round では限界があるため、SVGフィルタを使用する。
+          */}
           <svg width="100%" height="100%" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" className="w-full h-full">
             <defs>
               <filter id="rounded-corners">
@@ -54,11 +50,11 @@ export default function Home() {
               fill="var(--color-brand-cream)"
               style={{
                 fontFamily: 'var(--font-anton), Impact, "Arial Black", sans-serif',
-                fontSize: '310px', // SVG内での相対サイズ
+                fontSize: '310px',
                 fontWeight: '900',
                 letterSpacing: '0.02em',
-                filter: 'url(#rounded-corners)', // フィルタ適用
-                transform: 'scaleY(0.9)', // 縦の長さを少し小さく
+                filter: 'url(#rounded-corners)',
+                transform: 'scaleY(0.9)',
                 transformBox: 'fill-box',
                 transformOrigin: 'center',
               }}
@@ -70,13 +66,13 @@ export default function Home() {
 
         {/* 中央のメインビジュアル（ユーザー差し替え用） */}
         <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none pb-0">
-          {/* 影を追加するために box-shadow を調整 */}
           <div className="relative w-[45vh] h-[45vh] md:w-[80vh] md:h-[80vh] flex items-center justify-center translate-y-[20%]">
              <Image
                src="/s.png"
                alt="Main Visual"
                fill
                className="object-contain"
+               priority
              />
           </div>
         </div>
@@ -107,7 +103,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 pb-8 border-b border-gray-200">
             <div>
-              <h2 className="text-6xl font-black tracking-tighter mb-2" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>SELECTED ITEMS</h2>
+              <h2 className="text-6xl font-black tracking-wide mb-2" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>SELECTED ITEMS</h2>
               <p className="text-gray-500 font-bold uppercase tracking-wider">Curated products for your lifestyle.</p>
             </div>
             
@@ -139,14 +135,14 @@ export default function Home() {
                   slug={product.slug}
                   name={product.name}
                   price={product.price}
-                  image={product.image}
-                  tag={product.tag}
+                  image={product.images[0] || '/placeholder-product.jpg'}
+                  tag={product.tags.includes('new') ? 'NEW' : product.tags.includes('sale') ? 'SALE' : undefined}
                 />
               </li>
             ))}
           </ul>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

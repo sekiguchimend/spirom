@@ -46,8 +46,8 @@ export default function CartPage() {
     <div className="min-h-screen bg-[#FFFFF5]">
       <div className="max-w-7xl mx-auto px-4 py-20">
         {/* ページヘッダー */}
-        <header className="text-center mb-16">
-          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+        <header className="text-center mb-16" aria-labelledby="page-title">
+          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             CART
           </h1>
           <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">
@@ -79,7 +79,8 @@ export default function CartPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* カート商品リスト */}
-            <section className="lg:col-span-2 space-y-4">
+            <section className="lg:col-span-2 space-y-4" aria-labelledby="cart-items-heading">
+              <h2 id="cart-items-heading" className="sr-only">カート内の商品</h2>
               {cartItems.map((item) => (
                 <article key={item.id} className="bg-white border-4 border-black rounded-2xl p-4 shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
                   <div className="flex gap-4">

@@ -164,17 +164,4 @@ impl From<validator::ValidationErrors> for AppError {
     }
 }
 
-// ScyllaDBエラーの変換
-impl From<scylla::transport::errors::NewSessionError> for AppError {
-    fn from(err: scylla::transport::errors::NewSessionError) -> Self {
-        AppError::Database(err.to_string())
-    }
-}
-
-impl From<scylla::transport::errors::QueryError> for AppError {
-    fn from(err: scylla::transport::errors::QueryError) -> Self {
-        AppError::Database(err.to_string())
-    }
-}
-
 pub type Result<T> = std::result::Result<T, AppError>;

@@ -59,22 +59,26 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
   return (
     <div className="bg-white border-4 border-black rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left p-4 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
-      >
-        <span className="font-bold text-base">{question}</span>
-        <ChevronDown
-          size={24}
-          strokeWidth={3}
-          className={`flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-96' : 'max-h-0'}`}>
+      <dt>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full text-left p-4 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
+          aria-expanded={isOpen}
+        >
+          <span className="font-bold text-base">{question}</span>
+          <ChevronDown
+            size={24}
+            strokeWidth={3}
+            className={`flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+      </dt>
+      <dd className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-96' : 'max-h-0'}`}>
         <div className="p-4 pt-0 border-t-2 border-gray-200">
           <p className="text-gray-600">{answer}</p>
         </div>
-      </div>
+      </dd>
     </div>
   );
 }
@@ -100,9 +104,10 @@ export default function FAQPage() {
 
       <div className="min-h-screen bg-[#FFFFF5]">
         {/* ヒーローセクション */}
-        <section className="py-20 px-4">
-          <div className="max-w-4xl mx-auto text-center">
+        <section className="py-20 px-4" aria-labelledby="page-title">
+          <header className="max-w-4xl mx-auto text-center">
             <h1
+              id="page-title"
               className="text-6xl md:text-8xl font-black tracking-tighter mb-6"
               style={{
                 fontFamily: 'var(--font-anton), sans-serif',
@@ -114,11 +119,11 @@ export default function FAQPage() {
             <p className="text-xl font-bold uppercase tracking-wider bg-black text-white px-6 py-3 inline-block border-3 border-black">
               GOT QUESTIONS? WE GOT ANSWERS!
             </p>
-          </div>
+          </header>
         </section>
 
         {/* カテゴリタブ */}
-        <nav className="max-w-4xl mx-auto px-4 mb-12">
+        <nav className="max-w-4xl mx-auto px-4 mb-12" aria-label="FAQカテゴリ">
           <div className="flex flex-wrap justify-center gap-3">
             {faqs.map((cat) => {
               const Icon = cat.icon;
@@ -169,20 +174,21 @@ export default function FAQPage() {
                 </div>
 
                 {/* FAQ アイテム */}
-                <div className="space-y-4">
+                <dl className="space-y-4">
                   {category.items.map((item, index) => (
                     <FAQItem key={index} question={item.question} answer={item.answer} />
                   ))}
-                </div>
+                </dl>
               </section>
             );
           })}
         </div>
 
         {/* CTA */}
-        <section className="max-w-4xl mx-auto px-4 pb-20">
+        <section className="max-w-4xl mx-auto px-4 pb-20" aria-labelledby="cta-heading">
           <div className="bg-[#323232] text-white border-4 border-black rounded-2xl p-8 md:p-12 text-center shadow-[8px_8px_0px_0px_rgba(125,255,58,1)]">
             <h2
+              id="cta-heading"
               className="text-3xl md:text-4xl font-black mb-4 uppercase"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >

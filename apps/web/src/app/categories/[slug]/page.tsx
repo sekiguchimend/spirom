@@ -56,7 +56,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumbs */}
-        <nav className="mb-8">
+        <nav className="mb-8" aria-label="パンくずリスト">
           <ol className="flex items-center space-x-2 text-sm">
             {breadcrumbs.map((crumb, index) => (
               <li key={crumb.url} className="flex items-center">
@@ -74,58 +74,63 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </nav>
 
         {/* Category Header */}
-        <div className="mb-8">
+        <header className="mb-8">
           <h1 className="text-3xl font-bold mb-4">{category.name}</h1>
           {category.description && (
             <p className="text-gray-600">{category.description}</p>
           )}
-        </div>
+        </header>
 
         {/* Subcategories */}
         {subcategories.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">Subcategories</h2>
-            <div className="flex flex-wrap gap-2">
+          <nav className="mb-8" aria-labelledby="subcategories-heading">
+            <h2 id="subcategories-heading" className="text-lg font-semibold mb-4">Subcategories</h2>
+            <ul className="flex flex-wrap gap-2">
               {subcategories.map((sub) => (
-                <Link
-                  key={sub.id}
-                  href={`/categories/${sub.slug}`}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 transition"
-                >
-                  {sub.name}
-                </Link>
+                <li key={sub.id}>
+                  <Link
+                    href={`/categories/${sub.slug}`}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 transition inline-block"
+                  >
+                    {sub.name}
+                  </Link>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </nav>
         )}
 
         {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-          {products.map((product) => (
-            <Link
-              key={product.id}
-              href={`/products/${product.slug}`}
-              className="group"
-            >
-              <div className="aspect-square relative overflow-hidden bg-gray-100 mb-3">
-                {product.image && (
-                  <Image
-                    src={product.image.url}
-                    alt={product.image.alt}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                )}
-              </div>
-              <h3 className="font-medium group-hover:underline">{product.name}</h3>
-              <p className="text-gray-600">{formatPrice(product.price, product.currency)}</p>
-            </Link>
-          ))}
-        </div>
+        <section aria-labelledby="products-heading">
+          <h2 id="products-heading" className="sr-only">商品一覧</h2>
+          <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+            {products.map((product) => (
+              <li key={product.id}>
+                <Link
+                  href={`/products/${product.slug}`}
+                  className="group block"
+                >
+                  <figure className="aspect-square relative overflow-hidden bg-gray-100 mb-3">
+                    {product.image && (
+                      <Image
+                        src={product.image.url}
+                        alt={product.image.alt}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
+                  </figure>
+                  <h3 className="font-medium group-hover:underline">{product.name}</h3>
+                  <p className="text-gray-600">{formatPrice(product.price, product.currency)}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {/* Pagination */}
         {pagination.total_pages > 1 && (
-          <nav className="flex justify-center space-x-2">
+          <nav className="flex justify-center space-x-2" aria-label="ページネーション">
             {pagination.has_prev && (
               <Link
                 href={`/categories/${slug}?page=${currentPage - 1}`}

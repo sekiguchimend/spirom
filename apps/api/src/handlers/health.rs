@@ -2,7 +2,6 @@ use axum::{extract::State, Json};
 use serde::Serialize;
 
 use crate::config::AppState;
-use crate::db::health_check as db_health_check;
 use crate::error::Result;
 
 #[derive(Serialize)]
@@ -35,7 +34,7 @@ pub async fn liveness() -> Json<HealthResponse> {
 
 /// Readinessチェック（DB接続含む）
 pub async fn readiness(State(state): State<AppState>) -> Result<Json<ReadinessResponse>> {
-    let db_status = match db_health_check(&state.db).await {
+    let db_status = match state.db.health_check().await {
         Ok(_) => "connected".to_string(),
         Err(_) => "disconnected".to_string(),
     };

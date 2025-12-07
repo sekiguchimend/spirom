@@ -19,7 +19,7 @@ pub async fn get_me(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
 ) -> Result<Json<DataResponse<UserPublic>>> {
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     let user = user_repo
         .find_by_id(auth_user.id)
@@ -37,7 +37,7 @@ pub async fn update_me(
 ) -> Result<Json<DataResponse<UserPublic>>> {
     req.validate()?;
 
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     let mut user = user_repo
         .find_by_id(auth_user.id)
@@ -63,7 +63,7 @@ pub async fn list_addresses(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
 ) -> Result<Json<DataResponse<Vec<Address>>>> {
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     let addresses = user_repo.find_addresses_by_user(auth_user.id).await?;
 
@@ -78,7 +78,7 @@ pub async fn create_address(
 ) -> Result<Json<DataResponse<Address>>> {
     req.validate()?;
 
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     let address = Address {
         id: Uuid::new_v4(),
@@ -108,7 +108,7 @@ pub async fn update_address(
 ) -> Result<Json<DataResponse<Address>>> {
     req.validate()?;
 
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     let mut address = user_repo
         .find_address(auth_user.id, id)
@@ -154,7 +154,7 @@ pub async fn delete_address(
     Extension(auth_user): Extension<AuthenticatedUser>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>> {
-    let user_repo = UserRepository::new(state.db.clone());
+    let user_repo = UserRepository::new(state.db.anonymous());
 
     // 存在確認
     user_repo
