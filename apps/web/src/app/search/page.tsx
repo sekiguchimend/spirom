@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { searchProducts, formatPrice, type SearchResponse, type ProductListItem } from '@/lib/bff';
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') || '';
@@ -292,5 +292,37 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function SearchLoading() {
+  return (
+    <div className="min-h-screen bg-[#FFFFF5]">
+      <div className="max-w-7xl mx-auto px-4 py-20">
+        <header className="text-center mb-16">
+          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+            SEARCH
+          </h1>
+          <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">
+            LOADING...
+          </p>
+        </header>
+        <div className="text-center py-16">
+          <div className="w-20 h-20 mx-auto mb-6 bg-white border-4 border-black rounded-2xl shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchLoading />}>
+      <SearchContent />
+    </Suspense>
   );
 }

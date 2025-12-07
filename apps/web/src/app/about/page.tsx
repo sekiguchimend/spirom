@@ -1,7 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Settings, Leaf, Heart, ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -12,26 +11,61 @@ export const metadata: Metadata = {
   },
 };
 
-const values = [
+const valuesData = [
   {
-    icon: Settings,
+    iconType: 'settings' as const,
     title: 'QUALITY',
     description: '厳選された素材と職人の技。長く愛用いただける品質をお約束します。',
     color: '#7dff3a',
   },
   {
-    icon: Leaf,
+    iconType: 'leaf' as const,
     title: 'SUSTAINABLE',
     description: '環境に配慮した素材選びと製造プロセス。持続可能な暮らしを応援します。',
     color: '#00d4ff',
   },
   {
-    icon: Heart,
+    iconType: 'heart' as const,
     title: 'CONNECTION',
     description: '一人ひとりのお客様との出会いを大切に。心のこもったサービスをお届けします。',
     color: '#ff2d78',
   },
 ];
+
+function ValueIcon({ type }: { type: 'settings' | 'leaf' | 'heart' }) {
+  const props = { width: 32, height: 32, strokeWidth: 2.5, stroke: "currentColor", fill: "none", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (type) {
+    case 'settings':
+      return (
+        <svg {...props} viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      );
+    case 'leaf':
+      return (
+        <svg {...props} viewBox="0 0 24 24">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+        </svg>
+      );
+    case 'heart':
+      return (
+        <svg {...props} viewBox="0 0 24 24">
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+        </svg>
+      );
+  }
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg width={20} height={20} strokeWidth={3} stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
+  );
+}
 
 const team = [
   {
@@ -138,7 +172,7 @@ export default function AboutPage() {
               OUR VALUES
             </h2>
             <ul className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {values.map((value, index) => (
+              {valuesData.map((value, index) => (
                 <li
                   key={index}
                   className="bg-white border-4 border-black rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(125,255,58,1)] hover:-translate-y-1 transition-transform"
@@ -147,7 +181,7 @@ export default function AboutPage() {
                     className="w-16 h-16 border-3 border-black rounded-full flex items-center justify-center mb-4"
                     style={{ backgroundColor: value.color }}
                   >
-                    <value.icon size={32} strokeWidth={2.5} />
+                    <ValueIcon type={value.iconType} />
                   </div>
                   <h3 className="font-black text-xl mb-3 uppercase tracking-tight">{value.title}</h3>
                   <p className="text-gray-600">{value.description}</p>
@@ -240,14 +274,14 @@ export default function AboutPage() {
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-black uppercase tracking-wider bg-black text-white border-4 border-black rounded-xl shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] hover:shadow-[8px_8px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all"
               >
                 SHOP NOW
-                <ArrowRight size={20} strokeWidth={3} />
+                <ArrowRightIcon />
               </Link>
               <Link
                 href="/contact"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-black uppercase tracking-wider bg-white text-black border-4 border-black rounded-xl shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all"
               >
                 CONTACT US
-                <ArrowRight size={20} strokeWidth={3} />
+                <ArrowRightIcon />
               </Link>
             </div>
           </div>

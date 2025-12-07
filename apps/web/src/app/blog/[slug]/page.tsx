@@ -111,9 +111,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 // Portable Text用カスタムコンポーネント
+interface ImageValue {
+  asset?: { _ref: string };
+  alt?: string;
+  caption?: string;
+}
+
+interface CodeValue {
+  language?: string;
+  code?: string;
+}
+
+interface LinkValue {
+  blank?: boolean;
+  href?: string;
+}
+
+import type { ReactNode } from "react";
+
 const portableTextComponents = {
   types: {
-    image: ({ value }: any) => {
+    image: ({ value }: { value: ImageValue }) => {
       if (!value?.asset) return null;
       return (
         <figure className="my-8">
@@ -132,7 +150,7 @@ const portableTextComponents = {
         </figure>
       );
     },
-    code: ({ value }: any) => {
+    code: ({ value }: { value: CodeValue }) => {
       return (
         <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4">
           <code className={`language-${value.language}`}>{value.code}</code>
@@ -141,7 +159,7 @@ const portableTextComponents = {
     },
   },
   marks: {
-    link: ({ children, value }: any) => {
+    link: ({ children, value }: { children: ReactNode; value?: LinkValue }) => {
       const target = value?.blank ? "_blank" : undefined;
       return (
         <a
@@ -156,19 +174,19 @@ const portableTextComponents = {
     },
   },
   block: {
-    h1: ({ children }: any) => <h1 className="text-4xl font-bold mt-8 mb-4">{children}</h1>,
-    h2: ({ children }: any) => <h2 className="text-3xl font-bold mt-8 mb-4">{children}</h2>,
-    h3: ({ children }: any) => <h3 className="text-2xl font-bold mt-6 mb-3">{children}</h3>,
-    h4: ({ children }: any) => <h4 className="text-xl font-bold mt-6 mb-3">{children}</h4>,
-    blockquote: ({ children }: any) => (
+    h1: ({ children }: { children?: ReactNode }) => <h1 className="text-4xl font-bold mt-8 mb-4">{children}</h1>,
+    h2: ({ children }: { children?: ReactNode }) => <h2 className="text-3xl font-bold mt-8 mb-4">{children}</h2>,
+    h3: ({ children }: { children?: ReactNode }) => <h3 className="text-2xl font-bold mt-6 mb-3">{children}</h3>,
+    h4: ({ children }: { children?: ReactNode }) => <h4 className="text-xl font-bold mt-6 mb-3">{children}</h4>,
+    blockquote: ({ children }: { children?: ReactNode }) => (
       <blockquote className="border-l-4 border-gray-300 pl-4 py-2 my-4 italic text-gray-700">
         {children}
       </blockquote>
     ),
   },
   list: {
-    bullet: ({ children }: any) => <ul className="list-disc list-inside my-4 space-y-2">{children}</ul>,
-    number: ({ children }: any) => <ol className="list-decimal list-inside my-4 space-y-2">{children}</ol>,
+    bullet: ({ children }: { children?: ReactNode }) => <ul className="list-disc list-inside my-4 space-y-2">{children}</ul>,
+    number: ({ children }: { children?: ReactNode }) => <ol className="list-decimal list-inside my-4 space-y-2">{children}</ol>,
   },
 };
 

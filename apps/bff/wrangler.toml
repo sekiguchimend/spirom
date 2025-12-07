@@ -7,7 +7,7 @@ command = "cargo install -q worker-build@0.1.1 && worker-build --release"
 
 [vars]
 ENVIRONMENT = "production"
-API_BASE_URL = "https://api.spirom.com"
+API_BASE_URL = "https://spirom.fly.dev"
 SANITY_PROJECT_ID = "ef16j1jl"
 SANITY_DATASET = "production"
 SITE_URL = "https://spirom.com"

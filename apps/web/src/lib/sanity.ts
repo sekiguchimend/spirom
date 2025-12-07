@@ -150,14 +150,15 @@ export interface Category {
 // ヘルパー関数
 export function calculateReadingTime(body?: PortableTextBlock[]): number {
   if (!body) return 1;
-  
+
   const text = body
     .filter((block) => block._type === "block")
-    .map((block: any) => 
-      block.children?.map((child: any) => child.text).join("") || ""
-    )
+    .map((block) => {
+      const children = (block as { children?: Array<{ text?: string }> }).children;
+      return children?.map((child) => child.text || "").join("") || "";
+    })
     .join(" ");
-  
+
   // 日本語と英語の混在を考慮（平均400文字/分）
   const wordsPerMinute = 400;
   const minutes = Math.ceil(text.length / wordsPerMinute);

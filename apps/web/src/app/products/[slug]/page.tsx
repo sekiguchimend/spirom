@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getProductBySlug, getFeaturedProducts, type Product } from '@/lib/supabase';
+import { getProductBySlug, getFeaturedProducts } from '@/lib/supabase';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
