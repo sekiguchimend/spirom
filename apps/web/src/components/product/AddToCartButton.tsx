@@ -1,8 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { addToCart } from '@/lib/cart';
+import dynamic from 'next/dynamic';
+
+const ProductCheckout = dynamic(() => import('./ProductCheckout'), {
+  ssr: false,
+});
 
 interface AddToCartButtonProps {
   productId: string;
@@ -21,10 +25,10 @@ export default function AddToCartButton({
   image,
   stock,
 }: AddToCartButtonProps) {
-  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const inStock = stock > 0;
 
@@ -58,17 +62,7 @@ export default function AddToCartButton({
 
   const handleBuyNow = () => {
     if (!inStock) return;
-
-    addToCart({
-      productId,
-      slug,
-      name,
-      price,
-      quantity,
-      image,
-    });
-
-    router.push('/checkout');
+    setShowCheckout(true);
   };
 
   return (
@@ -131,6 +125,20 @@ export default function AddToCartButton({
           </svg>
         </button>
       </div>
+
+      {/* チェックアウトモーダル */}
+      {showCheckout && (
+        <ProductCheckout
+          product={{
+            id: productId,
+            name,
+            price,
+            image,
+          }}
+          quantity={quantity}
+          onClose={() => setShowCheckout(false)}
+        />
+      )}
     </>
   );
 }

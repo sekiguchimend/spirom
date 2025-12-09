@@ -3,16 +3,18 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::error::{AppError, Result};
 
 /// Supabase REST APIクライアント
-/// anon keyを使用してRLSを有効にしたアクセスを行う
+/// anon keyまたはservice_role keyを使用してアクセスを行う
 #[derive(Clone)]
 pub struct SupabaseClient {
     client: Client,
     url: String,
     anon_key: String,
+    service_role_key: Option<String>,
 }
 
 impl SupabaseClient {
     pub fn new(url: &str, anon_key: &str) -> Result<Self> {
+        let service_role_key = std::env::var("SUPABASE_SERVICE_ROLE_KEY").ok();
         let client = Client::builder()
             .build()
             .map_err(|e| AppError::Database(format!("Failed to create HTTP client: {}", e)))?;
@@ -21,6 +23,7 @@ impl SupabaseClient {
             client,
             url: url.trim_end_matches('/').to_string(),
             anon_key: anon_key.to_string(),
+            service_role_key,
         })
     }
 
@@ -40,6 +43,16 @@ impl SupabaseClient {
             client: self.client.clone(),
             url: self.url.clone(),
             anon_key: self.anon_key.clone(),
+            jwt: None,
+        }
+    }
+
+    /// サービスロール用のクライアント（RLSをバイパス）
+    pub fn service(&self) -> AuthenticatedClient {
+        AuthenticatedClient {
+            client: self.client.clone(),
+            url: self.url.clone(),
+            anon_key: self.service_role_key.clone().unwrap_or_else(|| self.anon_key.clone()),
             jwt: None,
         }
     }

@@ -1,5 +1,5 @@
 // API Base URL（認証が必要なエンドポイント用）
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.spirom.com';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -93,7 +93,9 @@ export async function getOrders(token: string): Promise<{ data: Order[] }> {
 // ============================================
 
 export interface CreatePaymentIntentRequest {
-  order_id: string;
+  items: OrderItem[];
+  shipping_address_id: string;
+  notes?: string;
 }
 
 export interface CreatePaymentIntentResponse {
@@ -104,12 +106,12 @@ export interface CreatePaymentIntentResponse {
 }
 
 export async function createPaymentIntent(
-  orderId: string,
+  request: CreatePaymentIntentRequest,
   token: string
 ): Promise<CreatePaymentIntentResponse> {
   return fetchApi<CreatePaymentIntentResponse>('/api/v1/payments/intent', {
     method: 'POST',
-    body: { order_id: orderId },
+    body: request,
     token,
   });
 }

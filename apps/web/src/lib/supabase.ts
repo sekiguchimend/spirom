@@ -78,3 +78,4 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return data;
 }
 
+

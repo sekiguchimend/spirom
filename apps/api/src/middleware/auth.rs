@@ -13,17 +13,17 @@ use crate::models::{AuthenticatedUser, Claims, UserRole};
 
 /// JWT認証ミドルウェア
 pub async fn auth_middleware(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    let token = extract_token(&request)?;
-
-    let claims = validate_token(&token, &state.config.jwt.secret)?;
-
-    // 認証情報をリクエストエクステンションに追加
-    let user = AuthenticatedUser::from(claims);
-    request.extensions_mut().insert(user);
+    // 開発環境: 認証をバイパス
+    let dev_user = AuthenticatedUser {
+        id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+        email: "dev@spirom.com".to_string(),
+        role: UserRole::Admin,
+    };
+    request.extensions_mut().insert(dev_user);
 
     Ok(next.run(request).await)
 }

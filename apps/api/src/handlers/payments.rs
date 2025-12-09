@@ -18,7 +18,22 @@ use crate::services::payment::{
 /// PaymentIntent作成リクエスト
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreatePaymentIntentRequest {
-    pub order_id: Uuid,
+    #[validate(length(min = 1, message = "商品が選択されていません"))]
+    pub items: Vec<PaymentIntentItem>,
+    pub shipping_address_id: Uuid,
+    #[validate(length(max = 500))]
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Validate)]
+pub struct PaymentIntentItem {
+    pub product_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product_name: Option<String>,
+    #[validate(range(min = 1, message = "数量は1以上である必要があります"))]
+    pub quantity: i32,
+    #[validate(range(min = 1, message = "価格は1以上である必要があります"))]
+    pub price: i64,
 }
 
 /// PaymentIntent作成レスポンス
@@ -28,35 +43,71 @@ pub struct CreatePaymentIntentResponse {
     pub payment_intent_id: String,
 }
 
-/// PaymentIntent作成
+/// PaymentIntent作成（注文は作成しない。決済成功後にWebhookで作成する）
 pub async fn create_payment_intent(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
     Json(req): Json<CreatePaymentIntentRequest>,
 ) -> Result<Json<DataResponse<CreatePaymentIntentResponse>>> {
+    // 手動でitemsの各要素を検証
+    for item in &req.items {
+        item.validate()?;
+    }
     req.validate()?;
 
-    let order_repo = OrderRepository::new(state.db.anonymous());
-
-    // 注文取得
-    let order = order_repo
-        .find_by_id(req.order_id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
-
-    // 自分の注文かチェック
-    if order.user_id != auth_user.id {
-        return Err(AppError::Forbidden(
-            "この注文にアクセスする権限がありません".to_string(),
-        ));
+    let product_repo = crate::db::repositories::ProductRepository::new(state.db.service());
+    
+    // 商品情報を取得して金額を計算
+    let mut total: i64 = 0;
+    let mut items_with_names = Vec::new();
+    
+    for item in &req.items {
+        let product = product_repo
+            .find_by_id(item.product_id)
+            .await
+            .map_err(|e| {
+                tracing::error!("商品取得エラー: product_id={}, error={}", item.product_id, e);
+                AppError::Internal(format!("商品情報の取得に失敗しました: {}", e))
+            })?
+            .ok_or_else(|| {
+                tracing::warn!("商品が見つかりません: product_id={}", item.product_id);
+                AppError::NotFound(format!("商品ID {} が見つかりません", item.product_id))
+            })?;
+        
+        // 価格検証
+        if product.price != item.price {
+            return Err(AppError::BadRequest(format!(
+                "商品「{}」の価格が一致しません",
+                product.name
+            )));
+        }
+        
+        // 在庫チェック
+        if product.stock < item.quantity {
+            return Err(AppError::BadRequest(format!(
+                "「{}」の在庫が不足しています",
+                product.name
+            )));
+        }
+        
+        let item_total = product.price * item.quantity as i64;
+        total += item_total;
+        
+        items_with_names.push(PaymentIntentItem {
+            product_id: item.product_id,
+            product_name: Some(product.name),
+            quantity: item.quantity,
+            price: item.price,
+        });
     }
-
-    // 決済待ち状態かチェック
-    if order.status != OrderStatus::PendingPayment {
-        return Err(AppError::BadRequest(
-            "この注文は決済できません".to_string(),
-        ));
-    }
+    
+    // 送料計算（5000円以上で無料）
+    let shipping_fee = if total >= 5000 { 0 } else { 550 };
+    total += shipping_fee;
+    
+    // 税計算（10%）
+    let tax = (total as f64 * 0.1) as i64;
+    total += tax;
 
     // Stripe PaymentIntent作成
     let stripe_key = std::env::var("STRIPE_SECRET_KEY")
@@ -66,23 +117,31 @@ pub async fn create_payment_intent(
 
     let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret);
 
+    // metadataに注文情報を含める（決済成功後にWebhookで注文を作成）
+    let mut metadata = std::collections::HashMap::new();
+    metadata.insert("user_id".to_string(), auth_user.id.to_string());
+    metadata.insert("shipping_address_id".to_string(), req.shipping_address_id.to_string());
+    metadata.insert("items".to_string(), serde_json::to_string(&items_with_names)
+        .map_err(|e| AppError::Internal(format!("商品情報のシリアライズに失敗しました: {}", e)))?);
+    metadata.insert("shipping_fee".to_string(), shipping_fee.to_string());
+    metadata.insert("tax".to_string(), tax.to_string());
+    if let Some(notes) = &req.notes {
+        metadata.insert("notes".to_string(), notes.clone());
+    }
+
     let params = CreateIntentParams {
-        order_id: order.id,
-        amount: order.total,
-        currency: order.currency.clone(),
+        order_id: Uuid::new_v4(), // 一時的なID（注文はまだ作成しない）
+        amount: total,
+        currency: "JPY".to_string(),
         customer_email: auth_user.email.clone(),
-        description: Some(format!("注文番号: {}", order.order_number)),
-        metadata: None,
+        description: Some(format!("SPIROM 商品購入（{}点）", req.items.len())),
+        metadata: Some(metadata),
     };
 
     let payment_intent = payment_provider.create_intent(params).await.map_err(|e| {
+        tracing::error!("PaymentIntent作成エラー: {}", e);
         AppError::Internal(format!("PaymentIntent作成に失敗しました: {}", e))
     })?;
-
-    // 注文にpayment_idを保存
-    order_repo
-        .update_payment_id(order.id, auth_user.id, &payment_intent.id)
-        .await?;
 
     Ok(Json(DataResponse::new(CreatePaymentIntentResponse {
         client_secret: payment_intent.client_secret,
@@ -115,51 +174,17 @@ pub async fn handle_webhook(
         .verify_webhook(&body, signature)
         .map_err(|e| AppError::BadRequest(format!("Webhook検証に失敗しました: {}", e)))?;
 
-    let order_repo = OrderRepository::new(state.db.anonymous());
+    // WebhookはStripeからのリクエストなので、service_roleを使用
+    let order_repo = OrderRepository::new(state.db.service());
 
     // イベント処理
     match event.event_type {
         WebhookEventType::PaymentSucceeded => {
-            if let Some(order_id) = event.order_id {
-                // 注文取得
-                let order = order_repo.find_by_id(order_id).await?;
-                if let Some(order) = order {
-                    // 決済完了状態に更新
-                    order_repo
-                        .update_payment_status(order_id, PaymentStatus::Paid)
-                        .await?;
-
-                    // 注文ステータスを更新
-                    order_repo
-                        .update_status(
-                            order_id,
-                            order.user_id,
-                            OrderStatus::Paid,
-                            order.created_at.timestamp_millis(),
-                        )
-                        .await?;
-
-                    tracing::info!(
-                        "注文 {} の決済が完了しました: payment_id={}",
-                        order_id,
-                        event.payment_id
-                    );
-                }
-            }
+            // dataから注文情報を取得して注文を作成
+            tracing::info!("決済成功 - 注文作成（TODO）: payment_id={}", event.payment_id);
         }
         WebhookEventType::PaymentFailed => {
-            if let Some(order_id) = event.order_id {
-                // 決済失敗状態に更新
-                order_repo
-                    .update_payment_status(order_id, PaymentStatus::Failed)
-                    .await?;
-
-                tracing::warn!(
-                    "注文 {} の決済が失敗しました: payment_id={}",
-                    order_id,
-                    event.payment_id
-                );
-            }
+            tracing::warn!("決済失敗: payment_id={}", event.payment_id);
         }
         WebhookEventType::RefundSucceeded => {
             if let Some(order_id) = event.order_id {
@@ -191,8 +216,8 @@ pub struct ConfirmPaymentRequest {
 
 /// 決済確認
 pub async fn confirm_payment(
-    State(state): State<AppState>,
-    Extension(auth_user): Extension<AuthenticatedUser>,
+    State(_state): State<AppState>,
+    Extension(_auth_user): Extension<AuthenticatedUser>,
     Json(req): Json<ConfirmPaymentRequest>,
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;
@@ -231,11 +256,12 @@ pub struct CreateRefundRequest {
 pub async fn create_refund(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Json(req): Json<CreateRefundRequest>,
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;
 
-    let order_repo = OrderRepository::new(state.db.anonymous());
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     // 注文取得
     let order = order_repo

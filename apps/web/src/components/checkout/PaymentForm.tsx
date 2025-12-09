@@ -61,21 +61,21 @@ export function PaymentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* 注文情報 */}
-      <div className="bg-gray-50 border-2 sm:border-3 border-black rounded-lg sm:rounded-xl p-3 sm:p-4">
-        <div className="flex justify-between items-center">
-          <span className="font-bold text-gray-600 text-sm sm:text-base">注文番号</span>
-          <span className="font-black text-sm sm:text-base">{orderNumber}</span>
+      <div className="bg-[#4a7c59]/5 rounded-xl p-5">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-gray-600">注文番号</span>
+          <span className="font-bold text-[#323232]">{orderNumber}</span>
         </div>
-        <div className="flex justify-between items-center mt-2">
-          <span className="font-bold text-gray-600 text-sm sm:text-base">お支払い金額</span>
-          <span className="text-xl sm:text-2xl font-black">{formatPrice(total)}</span>
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600">お支払い金額</span>
+          <span className="text-2xl font-black text-[#4a7c59]">{formatPrice(total)}</span>
         </div>
       </div>
 
       {/* Stripe Payment Element */}
-      <div className="bg-white border-2 sm:border-3 border-black rounded-lg sm:rounded-xl p-3 sm:p-4">
+      <div>
         <PaymentElement
           options={{
             layout: 'tabs',
@@ -85,7 +85,7 @@ export function PaymentForm({
 
       {/* エラーメッセージ */}
       {errorMessage && (
-        <div className="bg-red-50 border-2 sm:border-3 border-red-500 rounded-lg sm:rounded-xl p-3 sm:p-4 text-red-700 font-bold text-sm sm:text-base">
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-red-700 font-medium">
           {errorMessage}
         </div>
       )}
@@ -94,11 +94,11 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full px-5 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-black uppercase tracking-wider bg-black text-white border-3 sm:border-4 border-black rounded-lg sm:rounded-xl shadow-[4px_4px_0px_0px_rgba(125,255,58,1)] sm:shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] hover:shadow-[6px_6px_0px_0px_rgba(125,255,58,1)] sm:hover:shadow-[8px_8px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0px_0px_rgba(125,255,58,1)] sm:disabled:hover:shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+        className="w-full px-8 py-4 text-lg font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md disabled:hover:bg-[#4a7c59]"
       >
         {isProcessing ? (
           <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24">
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
                 cx="12"
@@ -122,7 +122,7 @@ export function PaymentForm({
       </button>
 
       {/* セキュリティ表示 */}
-      <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-500">
+      <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"

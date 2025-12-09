@@ -157,9 +157,21 @@ impl From<Order> for OrderSummary {
     }
 }
 
+/// 注文アイテムリクエスト
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct OrderItemRequest {
+    pub product_id: Uuid,
+    #[validate(range(min = 1))]
+    pub quantity: i32,
+    pub price: i64,
+}
+
 /// 注文作成リクエスト
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct CreateOrderRequest {
+    /// 注文アイテム（指定された場合はカートではなくこちらを使用）
+    #[serde(default)]
+    pub items: Option<Vec<OrderItemRequest>>,
     pub shipping_address_id: Uuid,
     pub billing_address_id: Option<Uuid>,
     pub payment_method: PaymentMethod,

@@ -87,10 +87,10 @@ export function CheckoutForm({
   // ローディング中
   if (step === 'creating_order' || step === 'creating_payment') {
     return (
-      <div className="bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl p-5 sm:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-        <div className="flex flex-col items-center justify-center py-8 sm:py-12">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 border-3 sm:border-4 border-black border-t-transparent rounded-full animate-spin mb-4 sm:mb-6" />
-          <p className="font-black text-base sm:text-xl uppercase tracking-wider text-center">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 border-4 border-[#4a7c59] border-t-transparent rounded-full animate-spin mb-6" />
+          <p className="font-bold text-lg text-[#323232] text-center">
             {step === 'creating_order' ? '注文を作成中...' : '決済を準備中...'}
           </p>
         </div>
@@ -101,30 +101,30 @@ export function CheckoutForm({
   // エラー
   if (step === 'error') {
     return (
-      <div className="bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl p-5 sm:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-        <div className="flex flex-col items-center justify-center py-8 sm:py-12">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 border-3 sm:border-4 border-red-500 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="3"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-6 h-6 sm:w-8 sm:h-8 text-red-500"
+              className="w-8 h-8 text-red-500"
             >
               <path d="M18 6 6 18" />
               <path d="m6 6 12 12" />
             </svg>
           </div>
-          <p className="font-black text-base sm:text-xl uppercase tracking-wider text-red-500 mb-3 sm:mb-4 text-center">
+          <p className="font-bold text-xl text-red-500 mb-4 text-center">
             エラーが発生しました
           </p>
-          <p className="text-gray-600 text-center text-sm sm:text-base mb-4 sm:mb-6">{error}</p>
+          <p className="text-gray-600 text-center mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-black uppercase tracking-wider bg-black text-white border-2 sm:border-3 border-black rounded-lg sm:rounded-xl shadow-[3px_3px_0px_0px_rgba(125,255,58,1)] sm:shadow-[4px_4px_0px_0px_rgba(125,255,58,1)] hover:shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] sm:hover:shadow-[6px_6px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"
+            className="px-6 py-3 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-md hover:shadow-lg"
           >
             再試行
           </button>
@@ -141,10 +141,18 @@ export function CheckoutForm({
   const stripePromise = getStripe();
 
   return (
-    <div className="bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-      <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight mb-4 sm:mb-6">
-        お支払い情報
-      </h2>
+    <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-[#4a7c59]/10 rounded-full flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a7c59" strokeWidth="2">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <path d="M2 10h20"/>
+          </svg>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-[#323232]">
+          お支払い情報
+        </h2>
+      </div>
       <Elements
         stripe={stripePromise}
         options={{
@@ -152,12 +160,13 @@ export function CheckoutForm({
           appearance: {
             theme: 'stripe',
             variables: {
-              colorPrimary: '#000000',
+              colorPrimary: '#4a7c59',
               colorBackground: '#ffffff',
-              colorText: '#000000',
+              colorText: '#323232',
               colorDanger: '#ef4444',
               fontFamily: 'system-ui, sans-serif',
-              borderRadius: '8px',
+              borderRadius: '12px',
+              spacingUnit: '4px',
             },
           },
           locale: 'ja',
@@ -171,6 +180,6 @@ export function CheckoutForm({
           onError={handlePaymentError}
         />
       </Elements>
-    </div>
+    </section>
   );
 }

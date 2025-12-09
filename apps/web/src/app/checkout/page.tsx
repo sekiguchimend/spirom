@@ -61,9 +61,9 @@ export default function CheckoutPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FFFFF5] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 border-4 border-[#4a7c59] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600 font-bold">読み込み中...</p>
         </div>
       </div>
@@ -72,16 +72,16 @@ export default function CheckoutPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-[#FFFFF5]">
+      <div className="min-h-screen bg-[#FAFAFA]">
         <div className="max-w-4xl mx-auto px-4 py-20">
           <div className="text-center">
-            <h1 className="text-4xl font-black mb-4 text-black">カートが空です</h1>
+            <h1 className="text-4xl font-black mb-4 text-[#323232]">カートが空です</h1>
             <p className="text-gray-600 mb-8">
               お買い物を続けて商品をカートに追加してください
             </p>
             <Link
               href="/products"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-black uppercase tracking-wider bg-black text-white border-4 border-black rounded-xl shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] hover:shadow-[8px_8px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-lg hover:shadow-xl"
             >
               商品を見る
             </Link>
@@ -92,51 +92,62 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFFFF5]">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8 sm:py-20">
+    <div className="min-h-screen bg-[#FAFAFA]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
         {/* ページヘッダー */}
-        <header className="text-center mb-8 sm:mb-16">
-          <h1
-            className="text-4xl sm:text-6xl md:text-7xl font-black mb-2 sm:mb-4 tracking-wide text-black"
-            style={{ fontFamily: 'var(--font-anton), sans-serif' }}
-          >
-            CHECKOUT
-          </h1>
-          <p className="text-sm sm:text-lg text-gray-600 font-bold uppercase tracking-wider">
+        <header className="mb-12 sm:mb-16">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-1 w-12 bg-[#4a7c59]" />
+            <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase font-bold">
+              Checkout
+            </p>
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-black text-[#323232] mb-2">
             お支払い手続き
+          </h1>
+          <p className="text-gray-600">
+            配送先とお支払い情報を入力してください
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* 左カラム：配送先・決済 */}
-          <div className="space-y-4 sm:space-y-8 order-2 lg:order-1">
+          <div className="lg:col-span-3 space-y-8 order-2 lg:order-1">
             {/* 配送先住所 */}
-            <section className="bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-              <h2 className="text-lg sm:text-xl font-black uppercase tracking-wide mb-4 sm:mb-6 text-black">
-                配送先住所
-              </h2>
+            <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-[#4a7c59]/10 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a7c59" strokeWidth="2">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-[#323232]">
+                  配送先住所
+                </h2>
+              </div>
 
               {addresses.length === 0 ? (
-                <div className="text-center py-6 sm:py-8">
-                  <p className="text-gray-600 mb-4 text-sm sm:text-base">
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-6">
                     配送先住所が登録されていません
                   </p>
                   <Link
                     href="/account/addresses/new"
-                    className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-black uppercase tracking-wider bg-black text-white border-2 sm:border-3 border-black rounded-lg sm:rounded-xl shadow-[3px_3px_0px_0px_rgba(125,255,58,1)] sm:shadow-[4px_4px_0px_0px_rgba(125,255,58,1)]"
+                    className="inline-flex items-center px-6 py-3 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all"
                   >
                     住所を追加
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-4">
                   {addresses.map((address) => (
                     <label
                       key={address.id}
-                      className={`block p-3 sm:p-4 border-2 sm:border-3 rounded-lg sm:rounded-xl cursor-pointer transition-all ${
+                      className={`block p-5 border-2 rounded-xl cursor-pointer transition-all ${
                         selectedAddressId === address.id
-                          ? 'border-black bg-[#7dff3a]/20 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                          : 'border-gray-300 hover:border-black'
+                          ? 'border-[#4a7c59] bg-[#4a7c59]/5 shadow-md'
+                          : 'border-gray-200 hover:border-[#4a7c59]/50 hover:shadow-sm'
                       }`}
                     >
                       <input
@@ -147,36 +158,36 @@ export default function CheckoutPage() {
                         onChange={(e) => setSelectedAddressId(e.target.value)}
                         className="sr-only"
                       />
-                      <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="flex items-start gap-4">
                         <div
-                          className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 sm:border-3 flex-shrink-0 mt-0.5 sm:mt-1 ${
+                          className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${
                             selectedAddressId === address.id
-                              ? 'border-black bg-black'
-                              : 'border-gray-400'
+                              ? 'border-[#4a7c59] bg-[#4a7c59]'
+                              : 'border-gray-300'
                           }`}
                         >
                           {selectedAddressId === address.id && (
                             <div className="w-full h-full flex items-center justify-center">
-                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full" />
+                              <div className="w-2 h-2 bg-white rounded-full" />
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-black text-sm sm:text-base">{address.name}</p>
-                          <p className="text-gray-600 text-xs sm:text-sm mt-1">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-[#323232] mb-2">{address.name}</p>
+                          <p className="text-gray-600 text-sm">
                             〒{address.postal_code}
                           </p>
-                          <p className="text-gray-600 text-xs sm:text-sm break-all">
+                          <p className="text-gray-600 text-sm">
                             {address.prefecture}
                             {address.city}
                             {address.address_line1}
                           </p>
                           {address.address_line2 && (
-                            <p className="text-gray-600 text-xs sm:text-sm break-all">
+                            <p className="text-gray-600 text-sm">
                               {address.address_line2}
                             </p>
                           )}
-                          <p className="text-gray-600 text-xs sm:text-sm mt-1">
+                          <p className="text-gray-600 text-sm mt-1">
                             {address.phone}
                           </p>
                         </div>
@@ -198,31 +209,31 @@ export default function CheckoutPage() {
           </div>
 
           {/* 右カラム：注文サマリー */}
-          <aside className="order-1 lg:order-2">
-            <div className="bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] lg:sticky lg:top-28">
-              <h2 className="text-lg sm:text-xl font-black uppercase tracking-wide mb-4 sm:mb-6 text-black">
+          <aside className="lg:col-span-2 order-1 lg:order-2">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm lg:sticky lg:top-28">
+              <h2 className="text-xl sm:text-2xl font-black text-[#323232] mb-6">
                 注文内容
               </h2>
 
               {/* 商品リスト */}
-              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+              <div className="space-y-4 mb-6">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex gap-3 sm:gap-4">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 relative bg-gray-100 border-2 sm:border-3 border-black rounded-lg overflow-hidden flex-shrink-0">
+                  <div key={item.id} className="flex gap-4">
+                    <div className="w-20 h-20 relative bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
                       <Image
                         src={item.image || '/placeholder.jpg'}
                         alt=""
                         fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 64px, 80px"
+                        className="object-contain p-2"
+                        sizes="80px"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm sm:text-base line-clamp-2">{item.name}</p>
-                      <p className="text-xs sm:text-sm text-gray-600">
+                      <p className="font-bold text-[#323232] line-clamp-2 mb-1">{item.name}</p>
+                      <p className="text-sm text-gray-600 mb-2">
                         数量: {item.quantity}
                       </p>
-                      <p className="font-black text-sm sm:text-base mt-1">
+                      <p className="font-bold text-[#4a7c59]">
                         {formatPrice(item.price * item.quantity)}
                       </p>
                     </div>
@@ -230,38 +241,53 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              <hr className="border-2 border-black mb-4 sm:mb-6" />
+              <hr className="border-t-2 border-gray-100 mb-6" />
 
               {/* 金額内訳 */}
-              <dl className="space-y-2 sm:space-y-3">
-                <div className="flex justify-between">
-                  <dt className="text-gray-600 text-sm sm:text-base">小計</dt>
-                  <dd className="font-black text-sm sm:text-base">{formatPrice(subtotal)}</dd>
+              <dl className="space-y-3 mb-6">
+                <div className="flex justify-between text-gray-600">
+                  <dt>小計</dt>
+                  <dd className="font-bold text-[#323232]">{formatPrice(subtotal)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-600 text-sm sm:text-base">送料</dt>
-                  <dd className="font-black text-sm sm:text-base">
+                <div className="flex justify-between text-gray-600">
+                  <dt>送料</dt>
+                  <dd className="font-bold text-[#323232]">
                     {shipping === 0 ? (
-                      <span className="text-[#7dff3a] bg-black px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm">
-                        FREE
+                      <span className="text-[#4a7c59] bg-[#4a7c59]/10 px-3 py-1 rounded-full text-sm font-bold">
+                        無料
                       </span>
                     ) : (
                       formatPrice(shipping)
                     )}
                   </dd>
                 </div>
-                <hr className="border-2 border-black" />
-                <div className="flex justify-between items-baseline">
-                  <dt className="font-black text-base sm:text-lg uppercase">合計</dt>
-                  <dd className="text-xl sm:text-2xl font-black">{formatPrice(total)}</dd>
+                <hr className="border-t-2 border-gray-100" />
+                <div className="flex justify-between items-baseline pt-2">
+                  <dt className="font-bold text-lg text-[#323232]">合計</dt>
+                  <dd className="text-2xl sm:text-3xl font-black text-[#4a7c59]">{formatPrice(total)}</dd>
                 </div>
                 <p className="text-xs text-gray-500 text-right">（税込）</p>
               </dl>
 
+              {/* 特典情報 */}
+              <div className="bg-[#4a7c59]/5 rounded-xl p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-[#4a7c59] rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#323232] mb-1">送料無料特典</p>
+                    <p className="text-xs text-gray-600">5,000円以上のご注文で送料無料</p>
+                  </div>
+                </div>
+              </div>
+
               {/* カートに戻る */}
               <Link
                 href="/cart"
-                className="flex items-center gap-2 mt-4 sm:mt-6 font-bold text-sm sm:text-base text-gray-600 hover:text-black transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-3 font-bold text-[#4a7c59] hover:text-[#3d6a4a] transition-colors border-2 border-[#4a7c59]/20 rounded-xl hover:border-[#4a7c59]/40"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -271,7 +297,6 @@ export default function CheckoutPage() {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  className="w-4 h-4 sm:w-5 sm:h-5"
                 >
                   <path d="m15 18-6-6 6-6" />
                 </svg>

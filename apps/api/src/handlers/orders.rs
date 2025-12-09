@@ -32,17 +32,39 @@ pub async fn create_order(
         .map(|s| s.to_string())
         .unwrap_or_else(generate_session_id);
 
-    let cart_repo = CartRepository::new(state.db.anonymous());
-    let order_repo = OrderRepository::new(state.db.anonymous());
-    let user_repo = UserRepository::new(state.db.anonymous());
-    let product_repo = ProductRepository::new(state.db.anonymous());
+    // Service roleを使用（RLSをバイパス）
+    let db = state.db.service();
+    let cart_repo = CartRepository::new(db.clone());
+    let order_repo = OrderRepository::new(db.clone());
+    let user_repo = UserRepository::new(db.clone());
+    let product_repo = ProductRepository::new(db);
 
-    // カート取得
-    let cart = cart_repo.find_by_session(&session_id).await?;
-
-    if cart.items.is_empty() {
-        return Err(AppError::BadRequest("カートが空です".to_string()));
-    }
+    // リクエストボディのitemsを優先的に使用、なければカートから取得
+    let source_items = if let Some(ref items) = req.items {
+        if items.is_empty() {
+            return Err(AppError::BadRequest("注文アイテムが指定されていません".to_string()));
+        }
+        // 各アイテムのバリデーション
+        for item in items {
+            item.validate()?;
+        }
+        items.clone()
+    } else {
+        // カートから取得
+        let cart = cart_repo.find_by_session(&session_id).await?;
+        if cart.items.is_empty() {
+            return Err(AppError::BadRequest("カートが空です".to_string()));
+        }
+        // カートアイテムをOrderItemRequestに変換
+        cart.items
+            .iter()
+            .map(|item| crate::models::OrderItemRequest {
+                product_id: item.product_id,
+                quantity: item.quantity,
+                price: item.price,
+            })
+            .collect()
+    };
 
     // ユーザー情報取得
     let user = user_repo
@@ -70,32 +92,43 @@ pub async fn create_order(
 
     // 在庫確認と注文アイテム作成
     let mut order_items = Vec::new();
-    for cart_item in &cart.items {
+    let mut subtotal = 0i64;
+
+    for item_req in &source_items {
         let product = product_repo
-            .find_by_id(cart_item.product_id)
+            .find_by_id(item_req.product_id)
             .await?
             .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
 
-        if product.stock < cart_item.quantity {
+        if !product.is_active {
+            return Err(AppError::BadRequest(format!(
+                "「{}」は現在販売されていません",
+                product.name
+            )));
+        }
+
+        if product.stock < item_req.quantity {
             return Err(AppError::BadRequest(format!(
                 "「{}」の在庫が不足しています",
                 product.name
             )));
         }
 
+        let item_subtotal = item_req.price * item_req.quantity as i64;
+        subtotal += item_subtotal;
+
         order_items.push(OrderItem {
             product_id: product.id,
             product_name: product.name,
             product_sku: product.sku,
-            price: cart_item.price,
-            quantity: cart_item.quantity,
-            subtotal: cart_item.subtotal,
-            image_url: cart_item.image_url.clone(),
+            price: item_req.price,
+            quantity: item_req.quantity,
+            subtotal: item_subtotal,
+            image_url: product.images.first().cloned(),
         });
     }
 
     // 金額計算
-    let subtotal = cart.subtotal;
     let shipping_fee = calculate_shipping_fee(subtotal);
     let tax = calculate_tax(subtotal);
     let total = subtotal + shipping_fee + tax;
@@ -137,8 +170,10 @@ pub async fn create_order(
             .await?;
     }
 
-    // カートをクリア
-    cart_repo.clear(&session_id).await?;
+    // カートから注文した場合のみクリア（リクエストボディのitemsを使った場合はクリアしない）
+    if req.items.is_none() {
+        cart_repo.clear(&session_id).await?;
+    }
 
     Ok(Json(DataResponse::new(order)))
 }
@@ -147,8 +182,9 @@ pub async fn create_order(
 pub async fn list_orders(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
 ) -> Result<Json<PaginatedResponse<OrderSummary>>> {
-    let order_repo = OrderRepository::new(state.db.anonymous());
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     let orders = order_repo.find_by_user(auth_user.id, 50).await?;
     let total = orders.len() as i64;
@@ -160,9 +196,10 @@ pub async fn list_orders(
 pub async fn get_order(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataResponse<Order>>> {
-    let order_repo = OrderRepository::new(state.db.anonymous());
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     let order = order_repo
         .find_by_id(id)
@@ -181,10 +218,12 @@ pub async fn get_order(
 pub async fn cancel_order(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataResponse<Order>>> {
-    let order_repo = OrderRepository::new(state.db.anonymous());
-    let product_repo = ProductRepository::new(state.db.anonymous());
+    let db = state.db.with_auth(&token);
+    let order_repo = OrderRepository::new(db.clone());
+    let product_repo = ProductRepository::new(db);
 
     let order = order_repo
         .find_by_id(id)

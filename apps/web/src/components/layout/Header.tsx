@@ -1,11 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getCartCount } from '@/lib/cart';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    // 初期読み込み
+    setCartCount(getCartCount());
+
+    // カート更新イベントをリッスン
+    const handleCartUpdate = () => {
+      setCartCount(getCartCount());
+    };
+
+    window.addEventListener('cart-updated', handleCartUpdate);
+    return () => window.removeEventListener('cart-updated', handleCartUpdate);
+  }, []);
 
   return (
     <>
@@ -33,16 +48,47 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* 右上: ハンバーガーメニュー */}
-        <button
-          type="button"
-          className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex flex-col items-center justify-center gap-1.5 rounded hover:bg-gray-900 transition-colors duration-200 flex-shrink-0 pointer-events-auto"
-          onClick={() => setIsMenuOpen(true)}
-          aria-label="Open menu"
-        >
-          <span className="w-6 h-0.5 bg-current block"></span>
-          <span className="w-6 h-0.5 bg-current block"></span>
-        </button>
+        {/* 右上: カートアイコン + ハンバーガーメニュー */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {/* カートアイコン */}
+          <Link
+            href="/cart"
+            className="relative w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex items-center justify-center rounded hover:bg-gray-900 transition-colors duration-200"
+            aria-label="カートを見る"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-brand-green text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {cartCount > 99 ? '99+' : cartCount}
+              </span>
+            )}
+          </Link>
+
+          {/* ハンバーガーメニュー */}
+          <button
+            type="button"
+            className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex flex-col items-center justify-center gap-1.5 rounded hover:bg-gray-900 transition-colors duration-200 flex-shrink-0"
+            onClick={() => setIsMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <span className="w-6 h-0.5 bg-current block"></span>
+            <span className="w-6 h-0.5 bg-current block"></span>
+          </button>
+        </div>
       </header>
 
       {/* フルスクリーンメニューオーバーレイ */}

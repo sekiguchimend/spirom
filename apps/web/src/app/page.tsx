@@ -27,13 +27,14 @@ export default async function Home() {
       */}
       <section className="relative w-full h-[100svh] overflow-hidden flex flex-col">
 
-        {/* モバイル用サブテキスト - HTMLで表示 */}
-        <div className="absolute top-[38%] left-4 right-4 z-10 sm:hidden">
-          <p className="font-mono text-sm font-bold text-brand-black uppercase leading-relaxed">
-            We craft bold digital experiences<br/>
-            and curate exceptional products<br/>
-            for those who dare to stand out.
-          </p>
+        {/* モバイル用サブテキスト - HTMLで表示（階段形式） */}
+        <div className="absolute top-[48%] left-4 right-4 z-10 sm:hidden">
+          <div className="font-mono text-lg font-bold text-brand-black uppercase leading-loose flex flex-col">
+            <span>We craft bold</span>
+            <span>digital experiences and</span>
+            <span>curate exceptional products for</span>
+            <span>those who dare to stand out.</span>
+          </div>
         </div>
 
         {/* 背景の巨大文字 - モバイルとPCで別々のviewBoxを使用 */}
