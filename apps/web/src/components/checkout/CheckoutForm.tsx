@@ -62,7 +62,13 @@ export function CheckoutForm({
 
         // 2. PaymentIntent作成
         setStep('creating_payment');
-        const paymentResponse = await createPaymentIntent(order.id, token);
+        const paymentResponse = await createPaymentIntent(
+          {
+            items: orderItems,
+            shipping_address_id: shippingAddressId,
+          },
+          token
+        );
         setClientSecret(paymentResponse.data.client_secret);
 
         setStep('ready');
