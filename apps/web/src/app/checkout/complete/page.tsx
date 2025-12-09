@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 type PaymentStatus = 'loading' | 'succeeded' | 'processing' | 'failed';
 
-export default function CheckoutCompletePage() {
+function CheckoutCompleteContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<PaymentStatus>('loading');
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    const paymentIntent = searchParams.get('payment_intent');
-    const paymentIntentClientSecret = searchParams.get('payment_intent_client_secret');
     const redirectStatus = searchParams.get('redirect_status');
     const orderIdParam = searchParams.get('order_id');
 
@@ -202,5 +200,26 @@ export default function CheckoutCompletePage() {
         )}
       </div>
     </div>
+  );
+}
+
+function CheckoutCompleteLoading() {
+  return (
+    <div className="min-h-screen bg-[#FFFFF5] flex items-center justify-center px-4">
+      <div className="text-center">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 border-3 sm:border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4 sm:mb-6" />
+        <p className="font-black text-base sm:text-xl uppercase tracking-wider text-black">
+          読み込み中...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function CheckoutCompletePage() {
+  return (
+    <Suspense fallback={<CheckoutCompleteLoading />}>
+      <CheckoutCompleteContent />
+    </Suspense>
   );
 }
