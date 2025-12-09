@@ -48,7 +48,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <div className="max-w-7xl mx-auto px-4 py-20">
         {/* ページヘッダー */}
         <header className="text-center mb-16" aria-labelledby="page-title">
-          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             PRODUCTS
           </h1>
           <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">

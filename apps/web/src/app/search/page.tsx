@@ -66,7 +66,7 @@ function SearchContent() {
       <div className="max-w-7xl mx-auto px-4 py-20">
         {/* ページヘッダー */}
         <header className="text-center mb-16">
-          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             SEARCH
           </h1>
           <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">
@@ -105,7 +105,7 @@ function SearchContent() {
                 {/* Category Facets */}
                 {results.facets.categories.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="font-black text-lg uppercase tracking-tight mb-4 pb-2 border-b-3 border-black">
+                    <h3 className="font-black text-lg uppercase tracking-wide mb-4 pb-2 border-b-3 border-black text-black">
                       CATEGORIES
                     </h3>
                     <ul className="space-y-2">
@@ -137,7 +137,7 @@ function SearchContent() {
                 {/* Price Range Facets */}
                 {results.facets.price_ranges.length > 0 && (
                   <div>
-                    <h3 className="font-black text-lg uppercase tracking-tight mb-4 pb-2 border-b-3 border-black">
+                    <h3 className="font-black text-lg uppercase tracking-wide mb-4 pb-2 border-b-3 border-black text-black">
                       PRICE RANGE
                     </h3>
                     <ul className="space-y-2">
@@ -197,7 +197,7 @@ function SearchContent() {
                     <path d="M8 11h6"/>
                   </svg>
                 </div>
-                <h2 className="text-2xl font-black mb-4 uppercase tracking-tight">NO RESULTS FOUND</h2>
+                <h2 className="text-2xl font-black mb-4 uppercase tracking-wide text-black">NO RESULTS FOUND</h2>
                 <p className="text-gray-600 mb-8">
                   「{query}」に一致する商品が見つかりませんでした
                 </p>
@@ -231,7 +231,7 @@ function SearchContent() {
                           )}
                         </figure>
                         <div className="p-4">
-                          <h3 className="font-black text-sm md:text-base uppercase tracking-tight line-clamp-2 group-hover:text-[#ff2d78] transition-colors">
+                          <h3 className="font-black text-sm md:text-base uppercase tracking-wide line-clamp-2 group-hover:text-[#ff2d78] transition-colors">
                             {product.name}
                           </h3>
                           <p className="font-black text-lg mt-2">
@@ -276,7 +276,7 @@ function SearchContent() {
                     <path d="m21 21-4.3-4.3"/>
                   </svg>
                 </div>
-                <h2 className="text-2xl font-black mb-4 uppercase tracking-tight">WHAT ARE YOU LOOKING FOR?</h2>
+                <h2 className="text-2xl font-black mb-4 uppercase tracking-wide text-black">WHAT ARE YOU LOOKING FOR?</h2>
                 <p className="text-gray-600 mb-8">
                   検索キーワードを入力してください
                 </p>
@@ -300,7 +300,7 @@ function SearchLoading() {
     <div className="min-h-screen bg-[#FFFFF5]">
       <div className="max-w-7xl mx-auto px-4 py-20">
         <header className="text-center mb-16">
-          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+          <h1 className="text-6xl md:text-7xl font-black mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             SEARCH
           </h1>
           <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">

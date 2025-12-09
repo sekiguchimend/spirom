@@ -124,7 +124,7 @@ export default function AboutPage() {
           <header className="max-w-7xl mx-auto text-center">
             <h1
               id="page-title"
-              className="text-6xl md:text-8xl font-black mb-6 tracking-tighter"
+              className="text-6xl md:text-8xl font-black mb-6 tracking-wide text-black"
               style={{
                 fontFamily: 'var(--font-anton), sans-serif',
                 textShadow: '4px 4px 0px #7dff3a',
@@ -144,7 +144,7 @@ export default function AboutPage() {
             <div className="bg-white border-4 border-black rounded-3xl p-8 md:p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
               <h2
                 id="mission-heading"
-                className="text-3xl md:text-4xl font-black mb-6 uppercase tracking-tight"
+                className="text-3xl md:text-4xl font-black mb-6 uppercase tracking-wide text-black"
                 style={{ fontFamily: 'var(--font-anton), sans-serif' }}
               >
                 OUR MISSION
@@ -166,7 +166,7 @@ export default function AboutPage() {
           <div className="max-w-7xl mx-auto">
             <h2
               id="values-heading"
-              className="text-4xl md:text-5xl font-black text-white mb-12 text-center uppercase tracking-tight"
+              className="text-4xl md:text-5xl font-black text-white mb-12 text-center uppercase tracking-wide"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
               OUR VALUES
@@ -183,7 +183,7 @@ export default function AboutPage() {
                   >
                     <ValueIcon type={value.iconType} />
                   </div>
-                  <h3 className="font-black text-xl mb-3 uppercase tracking-tight">{value.title}</h3>
+                  <h3 className="font-black text-xl mb-3 uppercase tracking-wide">{value.title}</h3>
                   <p className="text-gray-600">{value.description}</p>
                 </li>
               ))}
@@ -196,7 +196,7 @@ export default function AboutPage() {
           <div className="max-w-7xl mx-auto">
             <h2
               id="team-heading"
-              className="text-4xl md:text-5xl font-black mb-12 text-center uppercase tracking-tight"
+              className="text-4xl md:text-5xl font-black mb-12 text-center uppercase tracking-wide text-black"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
               OUR TEAM
@@ -217,7 +217,7 @@ export default function AboutPage() {
                     />
                   </figure>
                   <div className="p-5 text-center">
-                    <h3 className="font-black text-xl">{member.name}</h3>
+                    <h3 className="font-black text-xl text-black">{member.name}</h3>
                     <p className="text-sm font-bold text-white bg-[#ff2d78] px-3 py-1 inline-block mt-2 uppercase tracking-wider border-2 border-black rounded-full">
                       {member.role}
                     </p>
@@ -234,7 +234,7 @@ export default function AboutPage() {
           <div className="max-w-3xl mx-auto">
             <h2
               id="history-heading"
-              className="text-4xl md:text-5xl font-black mb-12 text-center uppercase tracking-tight"
+              className="text-4xl md:text-5xl font-black mb-12 text-center uppercase tracking-wide text-black"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
               HISTORY
@@ -248,7 +248,7 @@ export default function AboutPage() {
                   <span className="text-2xl font-black bg-black text-white px-4 py-2 rounded-lg min-w-[80px] text-center">
                     {milestone.year}
                   </span>
-                  <span className="font-bold uppercase tracking-wide">{milestone.event}</span>
+                  <span className="font-bold uppercase tracking-wide text-black">{milestone.event}</span>
                 </li>
               ))}
             </ol>
@@ -260,7 +260,7 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto text-center">
             <h2
               id="cta-heading"
-              className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tight"
+              className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-wide text-black"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
               JOIN OUR JOURNEY

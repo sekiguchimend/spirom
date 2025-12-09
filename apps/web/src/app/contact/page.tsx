@@ -65,7 +65,7 @@ export default function ContactPage() {
             <Check size={48} strokeWidth={3} />
           </div>
           <h1
-            className="text-5xl md:text-6xl font-black mb-4 uppercase"
+            className="text-5xl md:text-6xl font-black mb-4 uppercase tracking-wide text-black"
             style={{
               fontFamily: 'var(--font-anton), sans-serif',
               textShadow: '3px 3px 0px #7dff3a',
@@ -96,7 +96,7 @@ export default function ContactPage() {
         <header className="max-w-4xl mx-auto text-center">
           <h1
             id="page-title"
-            className="text-6xl md:text-8xl font-black tracking-tighter mb-6"
+            className="text-6xl md:text-8xl font-black tracking-wide mb-6 text-black"
             style={{
               fontFamily: 'var(--font-anton), sans-serif',
               textShadow: '4px 4px 0px #ff2d78',
@@ -120,7 +120,7 @@ export default function ContactPage() {
             >
               {/* お名前 */}
               <div className="mb-6">
-                <label htmlFor="name" className="block font-black text-sm uppercase tracking-wider mb-2">
+                <label htmlFor="name" className="block font-black text-sm uppercase tracking-wider mb-2 text-black">
                   NAME <span className="text-[#ff2d78]" aria-hidden="true">*</span>
                   <span className="sr-only">（必須）</span>
                 </label>
@@ -132,14 +132,14 @@ export default function ContactPage() {
                   onChange={handleChange}
                   required
                   autoComplete="name"
-                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
+                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="山田 太郎"
                 />
               </div>
 
               {/* メール */}
               <div className="mb-6">
-                <label htmlFor="email" className="block font-black text-sm uppercase tracking-wider mb-2">
+                <label htmlFor="email" className="block font-black text-sm uppercase tracking-wider mb-2 text-black">
                   EMAIL <span className="text-[#ff2d78]" aria-hidden="true">*</span>
                   <span className="sr-only">（必須）</span>
                 </label>
@@ -151,14 +151,14 @@ export default function ContactPage() {
                   onChange={handleChange}
                   required
                   autoComplete="email"
-                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
+                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="your@email.com"
                 />
               </div>
 
               {/* お問い合わせ種別 */}
               <fieldset className="mb-6">
-                <legend className="block font-black text-sm uppercase tracking-wider mb-3">
+                <legend className="block font-black text-sm uppercase tracking-wider mb-3 text-black">
                   WHAT&apos;S UP? <span className="text-[#ff2d78]" aria-hidden="true">*</span>
                   <span className="sr-only">（必須）</span>
                 </legend>
@@ -173,7 +173,7 @@ export default function ContactPage() {
                         className={`px-4 py-2 font-bold text-sm border-3 border-black rounded-lg transition-all flex items-center gap-2 ${
                           formData.type === type.value
                             ? 'bg-black text-white shadow-none'
-                            : 'bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1'
+                            : 'bg-white text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1'
                         }`}
                       >
                         <Icon size={16} strokeWidth={2.5} />
@@ -186,7 +186,7 @@ export default function ContactPage() {
 
               {/* 注文番号 */}
               <div className="mb-6">
-                <label htmlFor="orderNumber" className="block font-black text-sm uppercase tracking-wider mb-2">
+                <label htmlFor="orderNumber" className="block font-black text-sm uppercase tracking-wider mb-2 text-black">
                   ORDER # <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
@@ -195,14 +195,14 @@ export default function ContactPage() {
                   name="orderNumber"
                   value={formData.orderNumber}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
+                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="SP-XXXX-XXXX"
                 />
               </div>
 
               {/* メッセージ */}
               <div className="mb-8">
-                <label htmlFor="message" className="block font-black text-sm uppercase tracking-wider mb-2">
+                <label htmlFor="message" className="block font-black text-sm uppercase tracking-wider mb-2 text-black">
                   MESSAGE <span className="text-[#ff2d78]" aria-hidden="true">*</span>
                   <span className="sr-only">（必須）</span>
                 </label>
@@ -213,7 +213,7 @@ export default function ContactPage() {
                   onChange={handleChange}
                   required
                   rows={5}
-                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium resize-none focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
+                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black resize-none focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="お問い合わせ内容をお書きください..."
                 />
               </div>
@@ -237,10 +237,10 @@ export default function ContactPage() {
           {/* サイドバー */}
           <aside className="lg:col-span-2 space-y-6">
             {/* 営業時間 */}
-            <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-black">
               <div className="flex items-center gap-3 mb-4">
                 <Clock size={24} strokeWidth={2.5} />
-                <h2 className="font-black text-lg uppercase tracking-tight">HOURS</h2>
+                <h2 className="font-black text-lg uppercase tracking-wide">HOURS</h2>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center py-2 border-b-2 border-gray-200">
@@ -259,7 +259,7 @@ export default function ContactPage() {
               <div className="flex items-center gap-3">
                 <Zap size={28} strokeWidth={2.5} />
                 <div>
-                  <h2 className="font-black text-lg uppercase">FAST REPLY</h2>
+                  <h2 className="font-black text-lg uppercase tracking-wide">FAST REPLY</h2>
                   <p className="text-sm mt-1">
                     通常<span className="font-black text-xl mx-1">2-3</span>営業日以内
                   </p>
@@ -271,7 +271,7 @@ export default function ContactPage() {
             <div className="bg-[#ffd93d] border-4 border-black rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
               <div className="flex items-center gap-2 mb-2">
                 <BookOpen size={24} strokeWidth={2.5} />
-                <h2 className="font-black text-lg uppercase">FAQ</h2>
+                <h2 className="font-black text-lg uppercase tracking-wide">FAQ</h2>
               </div>
               <p className="text-sm mb-4">
                 よくある質問はこちら

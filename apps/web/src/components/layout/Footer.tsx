@@ -8,29 +8,29 @@ export default function Footer() {
           <nav aria-labelledby="footer-shop">
             <h2 id="footer-shop" className="font-bold text-sm uppercase tracking-widest mb-6 text-gray-400">Shop</h2>
             <ul className="space-y-4">
-              <li><Link href="/products" className="text-sm hover:text-gray-300 transition-colors">Products</Link></li>
-              <li><Link href="/categories" className="text-sm hover:text-gray-300 transition-colors">Categories</Link></li>
+              <li><Link href="/products" className="text-sm font-bold hover:text-gray-300 transition-colors">Products</Link></li>
+              <li><Link href="/categories" className="text-sm font-bold hover:text-gray-300 transition-colors">Categories</Link></li>
             </ul>
           </nav>
           <nav aria-labelledby="footer-support">
             <h2 id="footer-support" className="font-bold text-sm uppercase tracking-widest mb-6 text-gray-400">Support</h2>
             <ul className="space-y-4">
-              <li><Link href="/help" className="text-sm hover:text-gray-300 transition-colors">FAQ</Link></li>
-              <li><Link href="/contact" className="text-sm hover:text-gray-300 transition-colors">Contact</Link></li>
+              <li><Link href="/faq" className="text-sm font-bold hover:text-gray-300 transition-colors">FAQ</Link></li>
+              <li><Link href="/contact" className="text-sm font-bold hover:text-gray-300 transition-colors">Contact</Link></li>
             </ul>
           </nav>
           <nav aria-labelledby="footer-company">
             <h2 id="footer-company" className="font-bold text-sm uppercase tracking-widest mb-6 text-gray-400">Company</h2>
             <ul className="space-y-4">
-              <li><Link href="/about" className="text-sm hover:text-gray-300 transition-colors">About</Link></li>
-              <li><Link href="/blog" className="text-sm hover:text-gray-300 transition-colors">Blog</Link></li>
+              <li><Link href="/about" className="text-sm font-bold hover:text-gray-300 transition-colors">About</Link></li>
+              <li><Link href="/blog" className="text-sm font-bold hover:text-gray-300 transition-colors">Blog</Link></li>
             </ul>
           </nav>
           <nav aria-labelledby="footer-legal">
             <h2 id="footer-legal" className="font-bold text-sm uppercase tracking-widest mb-6 text-gray-400">Legal</h2>
             <ul className="space-y-4">
-              <li><Link href="/privacy" className="text-sm hover:text-gray-300 transition-colors">Privacy</Link></li>
-              <li><Link href="/terms" className="text-sm hover:text-gray-300 transition-colors">Terms</Link></li>
+              <li><Link href="/privacy" className="text-sm font-bold hover:text-gray-300 transition-colors">Privacy</Link></li>
+              <li><Link href="/terms" className="text-sm font-bold hover:text-gray-300 transition-colors">Terms</Link></li>
             </ul>
           </nav>
         </div>

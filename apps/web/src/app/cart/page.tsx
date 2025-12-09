@@ -47,7 +47,7 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 py-20">
         {/* ページヘッダー */}
         <header className="text-center mb-16" aria-labelledby="page-title">
-          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-tighter" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             CART
           </h1>
           <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">
@@ -65,7 +65,7 @@ export default function CartPage() {
                 <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
               </svg>
             </div>
-            <h2 className="text-2xl font-black mb-4 uppercase tracking-tight">YOUR CART IS EMPTY</h2>
+            <h2 className="text-2xl font-black mb-4 uppercase tracking-wide text-black">YOUR CART IS EMPTY</h2>
             <p className="text-gray-600 mb-8">
               まだ商品がカートに入っていません。お買い物を始めましょう！
             </p>
@@ -164,7 +164,7 @@ export default function CartPage() {
             {/* 注文サマリー */}
             <aside>
               <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] sticky top-28">
-                <h2 className="text-xl font-black uppercase tracking-tight mb-6">ORDER SUMMARY</h2>
+                <h2 className="text-xl font-black uppercase tracking-wide mb-6 text-black">ORDER SUMMARY</h2>
 
                 <dl className="space-y-4">
                   <div className="flex justify-between">

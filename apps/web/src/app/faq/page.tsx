@@ -65,7 +65,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
           className="w-full text-left p-4 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
           aria-expanded={isOpen}
         >
-          <span className="font-bold text-base">{question}</span>
+          <span className="font-bold text-base text-black">{question}</span>
           <ChevronDown
             size={24}
             strokeWidth={3}
@@ -108,7 +108,7 @@ export default function FAQPage() {
           <header className="max-w-4xl mx-auto text-center">
             <h1
               id="page-title"
-              className="text-6xl md:text-8xl font-black tracking-tighter mb-6"
+              className="text-6xl md:text-8xl font-black tracking-wide mb-6 text-black"
               style={{
                 fontFamily: 'var(--font-anton), sans-serif',
                 textShadow: '4px 4px 0px #00d4ff',
@@ -163,7 +163,7 @@ export default function FAQPage() {
                     <Icon size={28} strokeWidth={2.5} />
                   </div>
                   <h2
-                    className="text-2xl md:text-3xl font-black uppercase tracking-tight"
+                    className="text-2xl md:text-3xl font-black uppercase tracking-wide text-black"
                     style={{ fontFamily: 'var(--font-anton), sans-serif' }}
                   >
                     {category.category}
@@ -189,7 +189,7 @@ export default function FAQPage() {
           <div className="bg-[#323232] text-white border-4 border-black rounded-2xl p-8 md:p-12 text-center shadow-[8px_8px_0px_0px_rgba(125,255,58,1)]">
             <h2
               id="cta-heading"
-              className="text-3xl md:text-4xl font-black mb-4 uppercase"
+              className="text-3xl md:text-4xl font-black mb-4 uppercase tracking-wide"
               style={{ fontFamily: 'var(--font-anton), sans-serif' }}
             >
               STILL CONFUSED?
