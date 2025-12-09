@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getProductBySlug, getFeaturedProducts } from '@/lib/supabase';
+import { AddToCartButton } from '@/components/product';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -161,35 +162,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <p className="text-white/85 leading-relaxed mb-10 text-lg font-medium">{product.description}</p>
               )}
 
-              {/* 数量 */}
-              <div className="mb-6">
-                <p className="text-xs tracking-[0.15em] text-white/70 uppercase mb-3 font-bold">Quantity</p>
-                <div className="inline-flex items-center bg-white/15 rounded-full">
-                  <button type="button" className="w-12 h-12 text-xl font-bold text-white hover:bg-white/25 rounded-full transition-colors">−</button>
-                  <span className="w-12 text-center font-bold text-lg text-white">1</span>
-                  <button type="button" className="w-12 h-12 text-xl font-bold text-white hover:bg-white/25 rounded-full transition-colors">+</button>
-                </div>
-                <span className="ml-4 text-sm text-white/70 font-bold">{inStock ? `${product.stock} in stock` : 'Out of stock'}</span>
-              </div>
-
-              {/* ボタン */}
-              <div className="flex gap-4 mb-10">
-                <button
-                  type="button"
-                  className="flex-1 py-5 bg-white text-[#4a7c59] font-bold text-sm tracking-wider rounded-full hover:bg-white/90 transition-all duration-300 disabled:bg-white/30 disabled:text-white/50"
-                  disabled={!inStock}
-                >
-                  ADD TO BAG
-                </button>
-                <button
-                  type="button"
-                  className="w-16 h-16 bg-white/15 rounded-full flex items-center justify-center hover:bg-white/25 transition-colors group"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="group-hover:scale-110 transition-transform">
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                  </svg>
-                </button>
-              </div>
+              {/* 数量とカートボタン */}
+              <AddToCartButton
+                productId={product.id}
+                slug={product.slug}
+                name={product.name}
+                price={product.price}
+                image={product.images[0] || '/placeholder-product.jpg'}
+                stock={product.stock}
+              />
 
               {/* 特典 */}
               <div className="space-y-3 pt-8 border-t border-white/20">

@@ -10,9 +10,9 @@ export default function Header() {
   return (
     <>
       {/* 固定ヘッダーではなく、絶対配置でオーバーレイさせるスタイルに変更 */}
-      <header className="absolute top-0 left-0 w-full z-50 p-3 md:p-4 flex justify-between items-start mix-blend-normal">
+      <header className="absolute top-0 left-0 w-full z-50 p-3 md:p-4 flex justify-between items-start mix-blend-normal pointer-events-none">
         {/* 左上: ロゴ */}
-        <Link href="/" className="block relative w-20 h-20 md:w-28 md:h-28" aria-label="Spirom Home">
+        <Link href="/" className="block relative w-20 h-20 md:w-28 md:h-28 pointer-events-auto" aria-label="Spirom Home">
           <Image
             src="/spirom.png"
             alt="Spirom Logo"
@@ -23,9 +23,9 @@ export default function Header() {
         </Link>
 
         {/* 中央上: 通知バー（PCのみ表示） */}
-        <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-4">
-          <Link 
-            href="/about" 
+        <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-4 pointer-events-auto">
+          <Link
+            href="/about"
             className="inline-flex text-black items-center gap-2 bg-brand-cream/90 backdrop-blur px-4 py-2 rounded text-xs font-bold uppercase tracking-widest border border-black/10 hover:bg-white transition-colors"
           >
             We rebranded with purpose. Read the story
@@ -36,7 +36,7 @@ export default function Header() {
         {/* 右上: ハンバーガーメニュー */}
         <button
           type="button"
-          className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex flex-col items-center justify-center gap-1.5 rounded hover:bg-gray-900 transition-colors duration-200 flex-shrink-0"
+          className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex flex-col items-center justify-center gap-1.5 rounded hover:bg-gray-900 transition-colors duration-200 flex-shrink-0 pointer-events-auto"
           onClick={() => setIsMenuOpen(true)}
           aria-label="Open menu"
         >

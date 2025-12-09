@@ -4,29 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckoutForm } from '@/components/checkout';
-
-// TODO: 実際の実装では認証状態とカートデータをグローバル状態から取得
-// モックデータ
-const mockCartItems = [
-  {
-    id: '1',
-    productId: '1',
-    slug: 'organic-cotton-tote',
-    name: 'オーガニックコットントート',
-    price: 3800,
-    quantity: 2,
-    image: '/products/tote.jpg',
-  },
-  {
-    id: '2',
-    productId: '4',
-    slug: 'wooden-coaster',
-    name: '天然木コースター 4枚組',
-    price: 1800,
-    quantity: 1,
-    image: '/products/coaster.jpg',
-  },
-];
+import { getCart, type CartItem } from '@/lib/cart';
 
 const mockAddresses = [
   {
@@ -54,10 +32,18 @@ export default function CheckoutPage() {
     mockAddresses.find((a) => a.is_default)?.id || ''
   );
   const [isReady, setIsReady] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const cartItems = mockCartItems;
   const addresses = mockAddresses;
   const token = mockToken;
+
+  // カートデータを取得
+  useEffect(() => {
+    const items = getCart();
+    setCartItems(items);
+    setIsLoading(false);
+  }, []);
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -72,6 +58,17 @@ export default function CheckoutPage() {
       setIsReady(true);
     }
   }, [selectedAddressId]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFFFF5] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-bold">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (

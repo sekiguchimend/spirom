@@ -13,7 +13,7 @@ import {
   calculateReadingTime,
   formatDate
 } from "@/lib/sanity";
-import { ContentCard } from "@/components/ui";
+import { ContentCard, Breadcrumb } from "@/components/ui";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -211,17 +211,15 @@ export default async function PostPage({ params }: PageProps) {
   return (
     <>
       <article className="min-h-screen bg-[#FFFFF5]">
-        <div className="max-w-4xl mx-auto py-16 px-4">
+        <div className="max-w-4xl mx-auto pt-24 sm:pt-16 pb-16 px-4">
           {/* パンくずリスト */}
-          <nav className="mb-8 text-sm" aria-label="パンくずリスト">
-            <ol className="flex items-center gap-2 text-gray-600">
-              <li><Link href="/" className="hover:underline">ホーム</Link></li>
-              <li>/</li>
-              <li><Link href="/blog" className="hover:underline">ブログ</Link></li>
-              <li>/</li>
-              <li className="text-gray-900">{post.title}</li>
-            </ol>
-          </nav>
+          <Breadcrumb
+            items={[
+              { label: 'ホーム', href: '/' },
+              { label: 'ブログ', href: '/blog' },
+              { label: post.title },
+            ]}
+          />
 
           {/* 記事ヘッダー */}
           <header className="mb-8">
@@ -240,7 +238,7 @@ export default async function PostPage({ params }: PageProps) {
             )}
 
             {/* タイトル */}
-            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: "#323232" }}>
+            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-wide text-black">
               {post.title}
             </h1>
 
@@ -351,7 +349,7 @@ export default async function PostPage({ params }: PageProps) {
         {relatedPosts.length > 0 && (
           <section className="bg-white py-16">
             <div className="max-w-7xl mx-auto px-4">
-              <h2 className="text-3xl font-black mb-8">関連記事</h2>
+              <h2 className="text-3xl font-black mb-8 tracking-wide text-black">関連記事</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {relatedPosts.map((relatedPost) => (
                   <ContentCard

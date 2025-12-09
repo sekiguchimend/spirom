@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getCategoryPage, formatPrice } from '@/lib/bff';
+import { Breadcrumb } from '@/components/ui';
 import type { Metadata } from 'next';
 
 interface CategoryPageProps {
@@ -54,32 +55,25 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         dangerouslySetInnerHTML={{ __html: json_ld }}
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Breadcrumbs */}
-        <nav className="mb-8" aria-label="パンくずリスト">
-          <ol className="flex items-center space-x-2 text-sm">
-            {breadcrumbs.map((crumb, index) => (
-              <li key={crumb.url} className="flex items-center">
-                {index > 0 && <span className="mx-2 text-gray-400">/</span>}
-                {index === breadcrumbs.length - 1 ? (
-                  <span className="text-gray-600">{crumb.name}</span>
-                ) : (
-                  <Link href={crumb.url} className="text-gray-900 hover:underline">
-                    {crumb.name}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
+      <div className="min-h-screen bg-[#FFFFF5]">
+        <div className="max-w-7xl mx-auto px-4 pt-24 sm:pt-16 pb-16">
+          {/* Breadcrumbs */}
+          <Breadcrumb
+            items={breadcrumbs.map((crumb, index) => ({
+              label: index === 0 ? 'ホーム' : crumb.name,
+              href: index === breadcrumbs.length - 1 ? undefined : crumb.url,
+            }))}
+          />
 
-        {/* Category Header */}
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">{category.name}</h1>
-          {category.description && (
-            <p className="text-gray-600">{category.description}</p>
-          )}
-        </header>
+          {/* Category Header */}
+          <header className="mb-8">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+              {category.name.toUpperCase()}
+            </h1>
+            {category.description && (
+              <p className="text-gray-600 text-base sm:text-lg">{category.description}</p>
+            )}
+          </header>
 
         {/* Subcategories */}
         {subcategories.length > 0 && (
@@ -164,6 +158,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             )}
           </nav>
         )}
+        </div>
       </div>
     </>
   );

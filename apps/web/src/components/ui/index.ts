@@ -8,3 +8,5 @@ export { CategoryPill } from './CategoryPill';
 export { ProductCard } from './ProductCard';
 export { ProductCardToon } from './ProductCardToon';
 export { ContentCard } from './ContentCard';
+export { Breadcrumb } from './Breadcrumb';
+export type { BreadcrumbItem } from './Breadcrumb';
