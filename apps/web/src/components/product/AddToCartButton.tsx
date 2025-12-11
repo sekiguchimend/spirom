@@ -17,7 +17,7 @@ interface AddToCartButtonProps {
   stock: number;
 }
 
-export default function AddToCartButton({
+export function AddToCartButton({
   productId,
   slug,
   name,

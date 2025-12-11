@@ -8,11 +8,11 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::config::AppState;
-use crate::db::repositories::OrderRepository;
+use crate::db::repositories::{OrderRepository, UserRepository};
 use crate::error::{AppError, Result};
 use crate::models::{AuthenticatedUser, DataResponse, OrderStatus, PaymentStatus};
 use crate::services::payment::{
-    CreateIntentParams, PaymentProvider, StripePaymentProvider, WebhookEventType,
+    CreateIntentParams, PaymentProvider, ShippingAddress, StripePaymentProvider, WebhookEventType,
 };
 
 /// PaymentIntent作成リクエスト
@@ -109,6 +109,19 @@ pub async fn create_payment_intent(
     let tax = (total as f64 * 0.1) as i64;
     total += tax;
 
+    // 住所情報を取得
+    let user_repo = UserRepository::new(state.db.service());
+    let shipping_address = user_repo
+        .find_address(auth_user.id, req.shipping_address_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("配送先住所が見つかりません".to_string()))?;
+
+    // ユーザー情報を取得（名前を取得するため）
+    let user = user_repo
+        .find_by_id(auth_user.id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+
     // Stripe PaymentIntent作成
     let stripe_key = std::env::var("STRIPE_SECRET_KEY")
         .map_err(|_| AppError::Internal("Stripe APIキーが設定されていません".to_string()))?;
@@ -129,13 +142,26 @@ pub async fn create_payment_intent(
         metadata.insert("notes".to_string(), notes.clone());
     }
 
+    // Stripe用の配送先住所情報を作成
+    let stripe_shipping_address = ShippingAddress {
+        name: user.name.clone(),
+        postal_code: shipping_address.postal_code.clone(),
+        prefecture: shipping_address.prefecture.clone(),
+        city: shipping_address.city.clone(),
+        address_line1: shipping_address.address_line1.clone(),
+        address_line2: shipping_address.address_line2.clone(),
+        phone: shipping_address.phone.clone(),
+    };
+
     let params = CreateIntentParams {
         order_id: Uuid::new_v4(), // 一時的なID（注文はまだ作成しない）
         amount: total,
         currency: "JPY".to_string(),
         customer_email: auth_user.email.clone(),
+        customer_name: Some(user.name.clone()),
         description: Some(format!("SPIROM 商品購入（{}点）", req.items.len())),
         metadata: Some(metadata),
+        shipping_address: Some(stripe_shipping_address),
     };
 
     let payment_intent = payment_provider.create_intent(params).await.map_err(|e| {

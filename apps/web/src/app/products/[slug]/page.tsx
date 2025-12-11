@@ -4,14 +4,12 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getProductBySlug, getFeaturedProducts } from '@/lib/supabase';
 import { AddToCartButton } from '@/components/product';
+import { formatPrice } from '@/lib/utils';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
-function formatPrice(price: number): string {
-  return `¥${price.toLocaleString()}`;
-}
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;

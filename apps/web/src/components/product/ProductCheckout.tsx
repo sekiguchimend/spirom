@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { createOrder, createPaymentIntent, type OrderItem } from '@/lib/api';
+import { createOrder, createPaymentIntent, getAddresses, type OrderItem, type Address } from '@/lib/api';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Product {
   id: string;
@@ -19,18 +21,6 @@ interface ProductCheckoutProps {
   quantity: number;
   onClose: () => void;
 }
-
-// 開発用アドレスとトークン
-const mockAddress = {
-  id: '00000000-0000-0000-0000-000000000002',
-  name: '開発ユーザー',
-  postal_code: '150-0001',
-  prefecture: '東京都',
-  city: '渋谷区',
-  address_line1: '神宮前1-2-3',
-  phone: '03-1234-5678',
-};
-const mockToken = 'dev-token';
 
 function formatPrice(price: number): string {
   return `¥${price.toLocaleString()}`;
@@ -127,17 +117,63 @@ export default function ProductCheckout({
   quantity,
   onClose,
 }: ProductCheckoutProps) {
-  const [step, setStep] = useState<'loading' | 'ready' | 'error'>('loading');
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'no-auth' | 'no-address'>('loading');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shippingAddress, setShippingAddress] = useState<Address | null>(null);
 
   const subtotal = product.price * quantity;
   const shipping = subtotal >= 5000 ? 0 : 550;
   const total = subtotal + shipping;
 
+  // 認証チェック
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user || !token) {
+        setStep('no-auth');
+        return;
+      }
+    }
+  }, [user, token, authLoading]);
+
+  // 住所を取得
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const fetchAddress = async () => {
+      try {
+        const response = await getAddresses(token);
+        // デフォルト住所を取得、なければ最初の住所を使用
+        const defaultAddress = response.data.find((a) => a.is_default) || response.data[0];
+        if (defaultAddress) {
+          setShippingAddress(defaultAddress);
+        } else {
+          setStep('no-address');
+        }
+      } catch (err) {
+        console.error('住所の取得に失敗しました:', err);
+        // 404エラーの場合は住所未登録とみなす
+        if (err instanceof Error && err.message.includes('404')) {
+          setStep('no-address');
+        } else {
+          setError('住所の取得に失敗しました。再度お試しください。');
+          setStep('error');
+        }
+      }
+    };
+
+    fetchAddress();
+  }, [token, user]);
+
   const initializeCheckout = async () => {
+    if (!shippingAddress) {
+      return;
+    }
+
     try {
       setStep('loading');
 
@@ -150,13 +186,19 @@ export default function ProductCheckout({
         },
       ];
 
+      if (!token) {
+        setError('認証が必要です');
+        setStep('error');
+        return;
+      }
+
       const paymentResponse = await createPaymentIntent(
         {
           items,
-          shipping_address_id: mockAddress.id,
+          shipping_address_id: shippingAddress.id,
           notes: undefined,
         },
-        mockToken
+        token
       );
 
       setClientSecret(paymentResponse.data.client_secret);
@@ -171,10 +213,13 @@ export default function ProductCheckout({
     }
   };
 
-  // モーダルを開いたら自動的に決済準備を開始
-  React.useEffect(() => {
-    initializeCheckout();
-  }, []);
+  // 住所が取得できたら決済準備を開始
+  useEffect(() => {
+    if (shippingAddress) {
+      initializeCheckout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingAddress]);
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto py-8">
@@ -265,18 +310,28 @@ export default function ProductCheckout({
                 </dl>
 
                 {/* 配送先 */}
-                <div className="bg-[#4a7c59]/5 rounded-lg p-3">
-                  <p className="text-xs font-bold text-[#4a7c59] mb-1.5 uppercase tracking-wider">
-                    配送先
-                  </p>
-                  <p className="text-xs font-bold text-[#323232] mb-1">{mockAddress.name}</p>
-                  <p className="text-xs text-gray-600">〒{mockAddress.postal_code}</p>
-                  <p className="text-xs text-gray-600">
-                    {mockAddress.prefecture}
-                    {mockAddress.city}
-                    {mockAddress.address_line1}
-                  </p>
-                </div>
+                {shippingAddress && (
+                  <div className="bg-[#4a7c59]/5 rounded-lg p-3">
+                    <p className="text-xs font-bold text-[#4a7c59] mb-1.5 uppercase tracking-wider">
+                      配送先
+                    </p>
+                    {shippingAddress.name && (
+                      <p className="text-xs font-bold text-[#323232] mb-1">{shippingAddress.name}</p>
+                    )}
+                    <p className="text-xs text-gray-600">〒{shippingAddress.postal_code}</p>
+                    <p className="text-xs text-gray-600">
+                      {shippingAddress.prefecture}
+                      {shippingAddress.city}
+                      {shippingAddress.address_line1}
+                    </p>
+                    {shippingAddress.address_line2 && (
+                      <p className="text-xs text-gray-600">{shippingAddress.address_line2}</p>
+                    )}
+                    {shippingAddress.phone && (
+                      <p className="text-xs text-gray-600 mt-1">{shippingAddress.phone}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -287,6 +342,86 @@ export default function ProductCheckout({
                   <div className="flex flex-col items-center justify-center py-10">
                     <div className="w-12 h-12 border-4 border-[#4a7c59] border-t-transparent rounded-full animate-spin mb-4" />
                     <p className="font-bold text-base text-[#323232]">準備中...</p>
+                  </div>
+                </div>
+              )}
+
+              {step === 'no-auth' && (
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                    </div>
+                    <p className="font-bold text-lg text-[#323232] mb-3">ログインが必要です</p>
+                    <p className="text-gray-600 text-center text-sm mb-5">
+                      購入するにはログインまたは新規登録が必要です
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          router.push('/login');
+                          onClose();
+                        }}
+                        className="px-5 py-2.5 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all text-sm"
+                      >
+                        ログイン
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/register');
+                          onClose();
+                        }}
+                        className="px-5 py-2.5 font-bold bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all text-sm"
+                      >
+                        新規登録
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {step === 'no-address' && (
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                    </div>
+                    <p className="font-bold text-lg text-[#323232] mb-3">配送先住所が登録されていません</p>
+                    <p className="text-gray-600 text-center text-sm mb-5">
+                      購入するには配送先住所の登録が必要です
+                    </p>
+                    <button
+                      onClick={() => {
+                        router.push('/account/addresses/new');
+                        onClose();
+                      }}
+                      className="px-5 py-2.5 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all text-sm"
+                    >
+                      住所を登録する
+                    </button>
                   </div>
                 </div>
               )}

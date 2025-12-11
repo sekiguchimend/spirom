@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getCartCount } from '@/lib/cart';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
+  const { user, isLoading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
@@ -48,8 +50,63 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* 右上: カートアイコン + ハンバーガーメニュー */}
+        {/* 右上: 認証アイコン + カートアイコン + ハンバーガーメニュー */}
         <div className="flex items-center gap-2 pointer-events-auto">
+          {/* 認証状態に応じたアイコン */}
+          {!isLoading && (
+            <>
+              {user ? (
+                // ログイン済み: プロフィールアイコン
+                <Link
+                  href="/account"
+                  className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex items-center justify-center rounded hover:bg-gray-900 transition-colors duration-200"
+                  aria-label="アカウント"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </Link>
+              ) : (
+                // 未登録: 登録アイコン（キーアイコン）
+                <Link
+                  href="/register"
+                  className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex items-center justify-center rounded hover:bg-gray-900 transition-colors duration-200 relative group"
+                  aria-label="新規登録・ログイン"
+                  title="新規登録・ログイン"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                  </svg>
+                  {/* ツールチップ */}
+                  <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    登録・ログイン
+                  </span>
+                </Link>
+              )}
+            </>
+          )}
+
           {/* カートアイコン */}
           <Link
             href="/cart"
@@ -113,6 +170,7 @@ export default function Header() {
               <li><Link href="/products" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>Shop</Link></li>
               <li><Link href="/blog" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>Blog</Link></li>
               <li><Link href="/about" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>About</Link></li>
+              <li><Link href="/account/addresses/new" className="text-2xl md:text-4xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>住所登録</Link></li>
             </ul>
           </nav>
         </div>

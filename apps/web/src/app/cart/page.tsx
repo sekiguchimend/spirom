@@ -4,10 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getCart, removeFromCart, updateCartQuantity, clearCart, type CartItem } from '@/lib/cart';
-
-function formatPrice(price: number): string {
-  return `¥${price.toLocaleString()}`;
-}
+import { formatPrice } from '@/lib/utils';
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -54,7 +51,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-[#FAFAFA] pb-10">
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
         {/* 左: カート内容 */}
         <div className="px-6 py-12 lg:px-16 lg:py-20 pt-32 lg:pt-32 pb-20 lg:pb-32">
@@ -217,12 +214,20 @@ export default function CartPage() {
 
             {/* チェックアウトボタン */}
             {cart.length > 0 && (
-              <Link
-                href="/checkout"
-                className="block w-full py-5 bg-white text-[#4a7c59] font-bold text-sm tracking-wider rounded-full hover:bg-white/90 transition-all duration-300 text-center"
-              >
-                CHECKOUT
-              </Link>
+              <>
+                <Link
+                  href="/checkout"
+                  className="block w-full py-5 bg-white text-[#4a7c59] font-bold text-sm tracking-wider rounded-full hover:bg-white/90 transition-all duration-300 text-center"
+                >
+                  CHECKOUT
+                </Link>
+                <Link
+                  href="/account/addresses/new"
+                  className="block w-full py-3 mt-3 text-white/80 font-bold text-xs tracking-wider text-center hover:text-white transition-colors"
+                >
+                  配送先住所を登録
+                </Link>
+              </>
             )}
 
             {/* 買い物を続ける */}

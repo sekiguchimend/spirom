@@ -1,42 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CheckoutForm } from '@/components/checkout';
 import { getCart, type CartItem } from '@/lib/cart';
-
-const mockAddresses = [
-  {
-    id: 'addr-1',
-    name: '山田 太郎',
-    postal_code: '150-0001',
-    prefecture: '東京都',
-    city: '渋谷区',
-    address_line1: '神宮前1-2-3',
-    address_line2: 'サンプルマンション101',
-    phone: '03-1234-5678',
-    is_default: true,
-  },
-];
-
-// モックトークン（実際の実装では認証から取得）
-const mockToken = 'mock-jwt-token';
-
-function formatPrice(price: number): string {
-  return `¥${price.toLocaleString()}`;
-}
+import { formatPrice } from '@/lib/utils';
+import { getAddresses, type Address } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 
 export default function CheckoutPage() {
-  const [selectedAddressId, setSelectedAddressId] = useState<string>(
-    mockAddresses.find((a) => a.is_default)?.id || ''
-  );
+  const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const addresses = mockAddresses;
-  const token = mockToken;
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
 
   // カートデータを取得
   useEffect(() => {
@@ -44,6 +27,42 @@ export default function CheckoutPage() {
     setCartItems(items);
     setIsLoading(false);
   }, []);
+
+  // 住所データを取得
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const fetchAddresses = async () => {
+      try {
+        setIsLoadingAddresses(true);
+        const response = await getAddresses(token);
+        setAddresses(response.data);
+        
+        // デフォルト住所を選択
+        const defaultAddress = response.data.find((a) => a.is_default);
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+        } else if (response.data.length > 0) {
+          setSelectedAddressId(response.data[0].id);
+        } else {
+          // 住所が登録されていない場合は住所登録ページへリダイレクト
+          router.push('/account/addresses/new');
+        }
+      } catch (error) {
+        console.error('住所の取得に失敗しました:', error);
+        // 404エラーの場合は住所未登録とみなす
+        if (error instanceof Error && error.message.includes('404')) {
+          router.push('/account/addresses/new');
+        } else {
+          setAddresses([]);
+        }
+      } finally {
+        setIsLoadingAddresses(false);
+      }
+    };
+
+    fetchAddresses();
+  }, [token, user, router]);
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -59,7 +78,7 @@ export default function CheckoutPage() {
     }
   }, [selectedAddressId]);
 
-  if (isLoading) {
+  if (authLoading || isLoading || isLoadingAddresses) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
         <div className="text-center">
@@ -68,6 +87,10 @@ export default function CheckoutPage() {
         </div>
       </div>
     );
+  }
+
+  if (!user || !token) {
+    return null;
   }
 
   if (cartItems.length === 0) {
@@ -141,6 +164,27 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* 住所追加ボタン */}
+                  <Link
+                    href="/account/addresses/new"
+                    className="block p-5 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#4a7c59] hover:bg-[#4a7c59]/5 transition-all text-center"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-[#4a7c59] font-bold">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      新しい住所を追加
+                    </div>
+                  </Link>
+                  
                   {addresses.map((address) => (
                     <label
                       key={address.id}
@@ -173,7 +217,9 @@ export default function CheckoutPage() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-[#323232] mb-2">{address.name}</p>
+                          <p className="font-bold text-[#323232] mb-2">
+                            {address.name || '（名前未設定）'}
+                          </p>
                           <p className="text-gray-600 text-sm">
                             〒{address.postal_code}
                           </p>
@@ -187,9 +233,11 @@ export default function CheckoutPage() {
                               {address.address_line2}
                             </p>
                           )}
-                          <p className="text-gray-600 text-sm mt-1">
-                            {address.phone}
-                          </p>
+                          {address.phone && (
+                            <p className="text-gray-600 text-sm mt-1">
+                              {address.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </label>
@@ -199,7 +247,7 @@ export default function CheckoutPage() {
             </section>
 
             {/* 決済フォーム */}
-            {isReady && (
+            {isReady && token && (
               <CheckoutForm
                 cartItems={cartItems}
                 shippingAddressId={selectedAddressId}

@@ -17,6 +17,7 @@ export default function Footer() {
             <ul className="space-y-4">
               <li><Link href="/faq" className="text-sm font-bold hover:text-gray-300 transition-colors">FAQ</Link></li>
               <li><Link href="/contact" className="text-sm font-bold hover:text-gray-300 transition-colors">Contact</Link></li>
+              <li><Link href="/account/addresses/new" className="text-sm font-bold hover:text-gray-300 transition-colors">住所登録</Link></li>
             </ul>
           </nav>
           <nav aria-labelledby="footer-company">

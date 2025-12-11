@@ -29,8 +29,22 @@ pub struct CreateIntentParams {
     pub amount: i64,
     pub currency: String,
     pub customer_email: String,
+    pub customer_name: Option<String>,
     pub description: Option<String>,
     pub metadata: Option<std::collections::HashMap<String, String>>,
+    pub shipping_address: Option<ShippingAddress>,
+}
+
+/// 配送先住所情報
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShippingAddress {
+    pub name: String,
+    pub postal_code: String,
+    pub prefecture: String,
+    pub city: String,
+    pub address_line1: String,
+    pub address_line2: Option<String>,
+    pub phone: Option<String>,
 }
 
 /// 決済インテント

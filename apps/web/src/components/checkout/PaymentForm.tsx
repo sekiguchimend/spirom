@@ -6,6 +6,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import { formatPrice } from '@/lib/utils';
 
 interface PaymentFormProps {
   orderId: string;
@@ -54,10 +55,6 @@ export function PaymentForm({
       // 通常はreturn_urlにリダイレクトされるのでここには来ない
       onSuccess();
     }
-  };
-
-  const formatPrice = (price: number): string => {
-    return `¥${price.toLocaleString()}`;
   };
 
   return (

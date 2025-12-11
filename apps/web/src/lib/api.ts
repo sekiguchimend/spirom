@@ -132,18 +132,80 @@ export async function confirmPayment(
 }
 
 // ============================================
+// 認証関連
+// ============================================
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface AuthResponse {
+  user: User;
+  tokens: TokenResponse;
+}
+
+export async function login(request: LoginRequest): Promise<AuthResponse> {
+  return fetchApi<AuthResponse>('/api/v1/auth/login', {
+    method: 'POST',
+    body: request,
+  });
+}
+
+export async function register(request: RegisterRequest): Promise<AuthResponse> {
+  return fetchApi<AuthResponse>('/api/v1/auth/register', {
+    method: 'POST',
+    body: request,
+  });
+}
+
+export async function logout(token: string): Promise<void> {
+  await fetchApi('/api/v1/auth/logout', {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function getMe(token: string): Promise<{ data: User }> {
+  return fetchApi<{ data: User }>('/api/v1/users/me', { token });
+}
+
+// ============================================
 // 住所関連
 // ============================================
 
 export interface Address {
   id: string;
-  name: string;
+  name?: string;
   postal_code: string;
   prefecture: string;
   city: string;
   address_line1: string;
   address_line2?: string;
-  phone: string;
+  phone?: string;
   is_default: boolean;
 }
 

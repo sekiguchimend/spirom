@@ -28,18 +28,43 @@ impl StripePaymentProvider {
 #[async_trait]
 impl PaymentProvider for StripePaymentProvider {
     async fn create_intent(&self, params: CreateIntentParams) -> Result<PaymentIntent, PaymentError> {
-        let mut form = vec![
-            ("amount", params.amount.to_string()),
-            ("currency", params.currency.to_lowercase()),
-            ("receipt_email", params.customer_email),
+        let mut form: Vec<(String, String)> = vec![
+            ("amount".to_string(), params.amount.to_string()),
+            ("currency".to_string(), params.currency.to_lowercase()),
+            ("receipt_email".to_string(), params.customer_email.clone()),
         ];
 
         if let Some(desc) = params.description {
-            form.push(("description", desc));
+            form.push(("description".to_string(), desc));
         }
 
         // メタデータ追加
-        form.push(("metadata[order_id]", params.order_id.to_string()));
+        form.push(("metadata[order_id]".to_string(), params.order_id.to_string()));
+        
+        // 追加のメタデータを追加
+        if let Some(metadata) = params.metadata {
+            for (key, value) in metadata {
+                let metadata_key = format!("metadata[{}]", key);
+                form.push((metadata_key, value));
+            }
+        }
+
+        // 配送先住所情報を追加（Stripe側にも保存）
+        if let Some(shipping) = params.shipping_address {
+            // 配送先住所をStripeの形式に変換
+            form.push(("shipping[name]".to_string(), shipping.name));
+            form.push(("shipping[address][line1]".to_string(), shipping.address_line1));
+            if let Some(line2) = shipping.address_line2 {
+                form.push(("shipping[address][line2]".to_string(), line2));
+            }
+            form.push(("shipping[address][city]".to_string(), shipping.city));
+            form.push(("shipping[address][state]".to_string(), shipping.prefecture));
+            form.push(("shipping[address][postal_code]".to_string(), shipping.postal_code));
+            form.push(("shipping[address][country]".to_string(), "JP".to_string()));
+            if let Some(phone) = shipping.phone {
+                form.push(("shipping[phone]".to_string(), phone));
+            }
+        }
 
         let response = self
             .client
