@@ -1,7 +1,7 @@
 use worker::*;
 use crate::cache::CacheManager;
 use crate::error::BffError;
-use crate::handlers::{BffHandlers, SeoHandlers, health_check, readiness_check};
+use crate::handlers::{BffHandlers, SeoHandlers, ApiProxy, health_check, readiness_check};
 use crate::middleware::{CorsMiddleware, RateLimiter, SecurityHeaders};
 use crate::services::{ApiClient, SanityClient, DataAggregator};
 
@@ -64,19 +64,30 @@ async fn route_request(
     method: Method,
     env: &Env,
 ) -> std::result::Result<Response, BffError> {
-    if method != Method::Get {
-        return Err(BffError::BadRequest("Only GET method is allowed".to_string()));
-    }
-
-    match path {
-        "/health" => return health_check(req, env.clone()).await.map_err(BffError::from),
-        "/ready" => return readiness_check(req, env.clone()).await.map_err(BffError::from),
-        _ => {}
+    // Health check endpoints (GET only)
+    if method == Method::Get {
+        match path {
+            "/health" => return health_check(req, env.clone()).await.map_err(BffError::from),
+            "/ready" => return readiness_check(req, env.clone()).await.map_err(BffError::from),
+            _ => {}
+        }
     }
 
     let api_base_url = env.var("API_BASE_URL")
         .map(|v| v.to_string())
-        .unwrap_or_else(|_| "https://api.spirom.com".to_string());
+        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+
+    // API Proxy: Forward /api/v1/* requests to backend API
+    // This must be checked before the GET-only check below
+    if path.starts_with("/api/v1/") {
+        let proxy = ApiProxy::new(api_base_url);
+        return proxy.proxy(req, path).await;
+    }
+
+    // Below routes are GET only
+    if method != Method::Get {
+        return Err(BffError::BadRequest("Only GET method is allowed for this endpoint".to_string()));
+    }
 
     let sanity_project_id = env.var("SANITY_PROJECT_ID")
         .map(|v| v.to_string())

@@ -1,4 +1,5 @@
-const BFF_BASE_URL = process.env.BFF_URL || 'https://bff.spirom.com';
+// サーバーサイド: BFF_URL, クライアントサイド: NEXT_PUBLIC_BFF_URL
+const BFF_BASE_URL = process.env.BFF_URL || process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8787';
 
 interface RequestOptions {
   revalidate?: number | false;

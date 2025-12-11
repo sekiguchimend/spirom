@@ -1,5 +1,6 @@
 // API Base URL（認証が必要なエンドポイント用）
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// 開発環境では直接APIサーバーに接続、本番環境ではBFF経由
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:3001';
 
 interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -31,8 +32,15 @@ async function fetchApi<T>(path: string, options: ApiRequestOptions = {}): Promi
   const response = await fetch(url, fetchOptions);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'API request failed' }));
-    throw new Error(error.message || `API request failed: ${response.status}`);
+    let errorMessage = `API request failed: ${response.status}`;
+    try {
+      const error = await response.json();
+      errorMessage = error.message || error.error || errorMessage;
+    } catch {
+      // JSON解析に失敗した場合はステータステキストを使用
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();

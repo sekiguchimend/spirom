@@ -10,8 +10,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Cloudflare Workers
-worker = "0.3"
-worker-macros = "0.3"
+worker = "0.7"
+worker-macros = "0.7"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
