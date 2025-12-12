@@ -90,14 +90,16 @@ pub async fn create_order(
         None
     };
 
-    // 在庫確認と注文アイテム作成
+    // 在庫確認と注文アイテム作成（N+1問題回避：一括取得）
+    let product_ids: Vec<_> = source_items.iter().map(|i| i.product_id).collect();
+    let products = product_repo.find_by_ids(&product_ids).await?;
+
     let mut order_items = Vec::new();
     let mut subtotal = 0i64;
 
     for item_req in &source_items {
-        let product = product_repo
-            .find_by_id(item_req.product_id)
-            .await?
+        let product = products
+            .get(&item_req.product_id)
             .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
 
         if !product.is_active {
@@ -119,8 +121,8 @@ pub async fn create_order(
 
         order_items.push(OrderItem {
             product_id: product.id,
-            product_name: product.name,
-            product_sku: product.sku,
+            product_name: product.name.clone(),
+            product_sku: product.sku.clone(),
             price: item_req.price,
             quantity: item_req.quantity,
             subtotal: item_subtotal,
@@ -162,11 +164,11 @@ pub async fn create_order(
 
     order_repo.create(&order).await?;
 
-    // 在庫を減らす
+    // 在庫を減らす（すでに取得済みのproductsを使用してN+1回避）
     for item in &order.items {
-        let product = product_repo.find_by_id(item.product_id).await?.unwrap();
+        let current_stock = products.get(&item.product_id).map(|p| p.stock).unwrap_or(0);
         product_repo
-            .update_stock(item.product_id, product.stock - item.quantity)
+            .update_stock(item.product_id, current_stock - item.quantity)
             .await?;
     }
 
@@ -250,10 +252,12 @@ pub async fn cancel_order(
         )
         .await?;
 
-    // 在庫を戻す
+    // 在庫を戻す（N+1問題回避：一括取得）
+    let product_ids: Vec<_> = order.items.iter().map(|i| i.product_id).collect();
+    let products = product_repo.find_by_ids(&product_ids).await?;
+
     for item in &order.items {
-        let product = product_repo.find_by_id(item.product_id).await?;
-        if let Some(product) = product {
+        if let Some(product) = products.get(&item.product_id) {
             product_repo
                 .update_stock(item.product_id, product.stock + item.quantity)
                 .await?;

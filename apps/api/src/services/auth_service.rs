@@ -79,9 +79,6 @@ impl AuthService {
             return Err(AppError::Unauthorized("メールアドレスまたはパスワードが正しくありません".to_string()));
         }
 
-        // 最終ログイン時刻更新
-        self.user_repo.update_last_login(user.id).await?;
-
         // トークン生成
         let tokens = self.generate_tokens(&user)?;
 

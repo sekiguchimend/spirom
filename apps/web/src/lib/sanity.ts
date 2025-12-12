@@ -1,6 +1,8 @@
 import { createClient } from "@sanity/client";
 import imageUrlBuilder from "@sanity/image-url";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 
 // Sanity client（projectIdが設定されていない場合はダミー値を使用）
 export const client = createClient({
@@ -146,6 +148,89 @@ export interface Category {
   sortOrder: number;
   postCount: number;
 }
+
+// ===========================================
+// キャッシュ付きデータ取得関数
+// ===========================================
+
+const getCachedPosts = unstable_cache(
+  async () => client.fetch<Post[]>(postsQuery),
+  ["sanity-posts"],
+  { revalidate: 60, tags: ["posts"] }
+);
+
+const getCachedCategories = unstable_cache(
+  async () => client.fetch<Category[]>(categoriesQuery),
+  ["sanity-categories"],
+  { revalidate: 60, tags: ["categories"] }
+);
+
+const getCachedPostBySlug = unstable_cache(
+  async (slug: string) => client.fetch<Post | null>(postBySlugQuery, { slug }),
+  ["sanity-post-by-slug"],
+  { revalidate: 60, tags: ["posts"] }
+);
+
+const getCachedFeaturedPosts = unstable_cache(
+  async () => client.fetch<Post[]>(featuredPostsQuery),
+  ["sanity-featured-posts"],
+  { revalidate: 60, tags: ["posts"] }
+);
+
+const getCachedRelatedPosts = unstable_cache(
+  async (slug: string, categorySlug: string, tags: string[]) =>
+    client.fetch<Post[]>(relatedPostsQuery, { slug, categorySlug, tags }),
+  ["sanity-related-posts"],
+  { revalidate: 60, tags: ["posts"] }
+);
+
+// React.cache()でリクエスト内重複排除
+export const getPosts = cache(async (): Promise<Post[]> => {
+  try {
+    return await getCachedPosts();
+  } catch (error) {
+    console.error("Failed to fetch posts:", error);
+    return [];
+  }
+});
+
+export const getCategories = cache(async (): Promise<Category[]> => {
+  try {
+    return await getCachedCategories();
+  } catch (error) {
+    console.error("Failed to fetch categories:", error);
+    return [];
+  }
+});
+
+export const getPostBySlug = cache(async (slug: string): Promise<Post | null> => {
+  try {
+    return await getCachedPostBySlug(slug);
+  } catch (error) {
+    console.error("Failed to fetch post:", error);
+    return null;
+  }
+});
+
+export const getFeaturedPosts = cache(async (): Promise<Post[]> => {
+  try {
+    return await getCachedFeaturedPosts();
+  } catch (error) {
+    console.error("Failed to fetch featured posts:", error);
+    return [];
+  }
+});
+
+export const getRelatedPosts = cache(
+  async (slug: string, categorySlug: string, tags: string[]): Promise<Post[]> => {
+    try {
+      return await getCachedRelatedPosts(slug, categorySlug, tags);
+    } catch (error) {
+      console.error("Failed to fetch related posts:", error);
+      return [];
+    }
+  }
+);
 
 // ヘルパー関数
 export function calculateReadingTime(body?: PortableTextBlock[]): number {

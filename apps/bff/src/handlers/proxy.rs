@@ -54,6 +54,35 @@ impl ApiProxy {
             .await
             .map_err(|e| BffError::UpstreamError(e.to_string()))?;
 
+        // 開発時は「どこに転送しているか」を必ず追えるようにヘッダを付与
+        // （クライアント側で Network タブから確認できる）
+        let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+        if env == "development" {
+            let mut res = response;
+            let headers = res.headers_mut();
+            headers
+                .set("x-bff-api-base-url", &self.api_base_url)
+                .map_err(BffError::from)?;
+            headers
+                .set("x-bff-upstream-url", &url)
+                .map_err(BffError::from)?;
+            headers
+                .set("x-bff-env", &env)
+                .map_err(BffError::from)?;
+
+            // 失敗時はBFF側ログにも残す（原因特定を確実にする）
+            if res.status_code() >= 400 {
+                console_log!(
+                    "[bff-proxy] {} {} -> {} (status={})",
+                    method.to_string(),
+                    path,
+                    url,
+                    res.status_code()
+                );
+            }
+            return Ok(res);
+        }
+
         // Return the response as-is (preserve status code, headers, body)
         Ok(response)
     }

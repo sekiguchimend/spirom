@@ -5,12 +5,19 @@ compatibility_date = "2024-01-01"
 # [build]
 # command = "cargo install -q worker-build@0.1.1 && worker-build --release"
 
+# デフォルトは開発環境（ローカル開発用）
+# 本番デプロイ時は --env production を使用するか、CI/CDで上書き
 [vars]
-ENVIRONMENT = "production"
-API_BASE_URL = "https://spirom.fly.dev"
+ENVIRONMENT = "development"
+API_BASE_URL = "http://localhost:3001"
 SANITY_PROJECT_ID = "ef16j1jl"
 SANITY_DATASET = "production"
-SITE_URL = "https://spirom.com"
+SITE_URL = "http://localhost:3000"
+
+# 本番環境
+[env.production]
+name = "spirom-bff"
+vars = { ENVIRONMENT = "production", API_BASE_URL = "https://spirom.fly.dev", SANITY_PROJECT_ID = "ef16j1jl", SANITY_DATASET = "production", SITE_URL = "https://spirom.com" }
 
 # KV Namespaces
 [[kv_namespaces]]

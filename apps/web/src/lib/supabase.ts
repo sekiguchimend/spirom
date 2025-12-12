@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -27,8 +29,11 @@ export interface Product {
   updated_at: string;
 }
 
-// ホームページ用の商品一覧を取得
-export async function getFeaturedProducts(limit: number = 4): Promise<Product[]> {
+// ===========================================
+// 内部フェッチ関数（キャッシュなし）
+// ===========================================
+
+async function fetchFeaturedProducts(limit: number): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
@@ -45,8 +50,7 @@ export async function getFeaturedProducts(limit: number = 4): Promise<Product[]>
   return data || [];
 }
 
-// すべての商品を取得
-export async function getAllProducts(): Promise<Product[]> {
+async function fetchAllProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
@@ -61,8 +65,7 @@ export async function getAllProducts(): Promise<Product[]> {
   return data || [];
 }
 
-// スラッグで商品を取得
-export async function getProductBySlug(slug: string): Promise<Product | null> {
+async function fetchProductBySlug(slug: string): Promise<Product | null> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
@@ -78,4 +81,42 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return data;
 }
 
+// ===========================================
+// unstable_cache でビルド/リクエスト間キャッシュ
+// revalidate: 60秒でキャッシュを更新
+// ===========================================
 
+const getCachedFeaturedProducts = unstable_cache(
+  async (limit: number) => fetchFeaturedProducts(limit),
+  ['featured-products'],
+  { revalidate: 60, tags: ['products'] }
+);
+
+const getCachedAllProducts = unstable_cache(
+  async () => fetchAllProducts(),
+  ['all-products'],
+  { revalidate: 60, tags: ['products'] }
+);
+
+const getCachedProductBySlug = unstable_cache(
+  async (slug: string) => fetchProductBySlug(slug),
+  ['product-by-slug'],
+  { revalidate: 60, tags: ['products'] }
+);
+
+// ===========================================
+// React.cache() でリクエスト内の重複排除
+// 同じリクエスト内で複数回呼ばれても1回のみ実行
+// ===========================================
+
+export const getFeaturedProducts = cache(async (limit: number = 4): Promise<Product[]> => {
+  return getCachedFeaturedProducts(limit);
+});
+
+export const getAllProducts = cache(async (): Promise<Product[]> => {
+  return getCachedAllProducts();
+});
+
+export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {
+  return getCachedProductBySlug(slug);
+});

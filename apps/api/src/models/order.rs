@@ -38,14 +38,14 @@ impl std::str::FromStr for OrderStatus {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "pending_payment" => Ok(OrderStatus::PendingPayment),
+            "pending" | "pending_payment" => Ok(OrderStatus::PendingPayment),
             "paid" => Ok(OrderStatus::Paid),
             "processing" => Ok(OrderStatus::Processing),
             "shipped" => Ok(OrderStatus::Shipped),
             "delivered" => Ok(OrderStatus::Delivered),
             "cancelled" => Ok(OrderStatus::Cancelled),
             "refunded" => Ok(OrderStatus::Refunded),
-            _ => Err(format!("Unknown order status: {}", s)),
+            _ => Ok(OrderStatus::PendingPayment), // デフォルト値としてPendingPaymentを返す
         }
     }
 }
@@ -140,6 +140,10 @@ pub struct OrderSummary {
     pub currency: String,
     pub item_count: i32,
     pub created_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipped_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivered_at: Option<DateTime<Utc>>,
 }
 
 impl From<Order> for OrderSummary {
@@ -153,6 +157,8 @@ impl From<Order> for OrderSummary {
             currency: o.currency,
             item_count,
             created_at: o.created_at,
+            shipped_at: o.shipped_at,
+            delivered_at: o.delivered_at,
         }
     }
 }

@@ -71,19 +71,19 @@ const team = [
   {
     name: '山田 太郎',
     role: 'CEO & FOUNDER',
-    image: '/team/yamada.jpg',
+    image: '/spirom.png',
     bio: '「良いものを長く使う」をモットーに、Spiromを創業。',
   },
   {
     name: '田中 花子',
     role: 'CREATIVE DIRECTOR',
-    image: '/team/tanaka.jpg',
+    image: '/spirom.png',
     bio: '商品セレクションからブランディングまでを担当。',
   },
   {
     name: '鈴木 一郎',
     role: 'HEAD BUYER',
-    image: '/team/suzuki.jpg',
+    image: '/spirom.png',
     bio: '国内外のこだわりアイテムを発掘。',
   },
 ];
@@ -210,7 +210,7 @@ export default function AboutPage() {
                   <figure className="aspect-square relative bg-gray-100 border-b-4 border-black">
                     <Image
                       src={member.image}
-                      alt=""
+                      alt={member.name}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 33vw"

@@ -22,14 +22,14 @@ export interface CreatePaymentIntentResponse {
   };
 }
 
-export interface OrderItem {
+export interface CreateOrderItemRequest {
   product_id: string;
   quantity: number;
   price: number;
 }
 
 export interface CreateOrderRequest {
-  items: OrderItem[];
+  items: CreateOrderItemRequest[];
   shipping_address_id: string;
   billing_address_id?: string;
   payment_method: 'credit_card' | 'paypay' | 'rakuten_pay' | 'konbini' | 'bank_transfer';

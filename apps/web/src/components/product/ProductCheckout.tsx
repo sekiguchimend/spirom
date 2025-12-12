@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { createOrder, createPaymentIntent, getAddresses, type OrderItem, type Address } from '@/lib/api';
+import { fetchAddresses, createPaymentIntentAction, type Address, type CreateOrderItemRequest } from '@/lib/actions';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -144,29 +144,27 @@ export default function ProductCheckout({
   useEffect(() => {
     if (!token || !user) return;
 
-    const fetchAddress = async () => {
-      try {
-        const response = await getAddresses(token);
-        // デフォルト住所を取得、なければ最初の住所を使用
-        const defaultAddress = response.data.find((a) => a.is_default) || response.data[0];
-        if (defaultAddress) {
-          setShippingAddress(defaultAddress);
+    const loadAddresses = async () => {
+      const result = await fetchAddresses();
+      if (!result.success) {
+        if (result.error === 'Not authenticated') {
+          setStep('no-auth');
         } else {
-          setStep('no-address');
-        }
-      } catch (err) {
-        console.error('住所の取得に失敗しました:', err);
-        // 404エラーの場合は住所未登録とみなす
-        if (err instanceof Error && err.message.includes('404')) {
-          setStep('no-address');
-        } else {
-          setError('住所の取得に失敗しました。再度お試しください。');
+          setError(result.error || '住所の取得に失敗しました。再度お試しください。');
           setStep('error');
         }
+        return;
+      }
+      // デフォルト住所を取得、なければ最初の住所を使用
+      const defaultAddress = result.data.find((a) => a.is_default) || result.data[0];
+      if (defaultAddress) {
+        setShippingAddress(defaultAddress);
+      } else {
+        setStep('no-address');
       }
     };
 
-    fetchAddress();
+    loadAddresses();
   }, [token, user]);
 
   const initializeCheckout = async () => {
@@ -178,7 +176,7 @@ export default function ProductCheckout({
       setStep('loading');
 
       // PaymentIntent作成（注文はまだ作成しない）
-      const items: OrderItem[] = [
+      const items: CreateOrderItemRequest[] = [
         {
           product_id: product.id,
           quantity: quantity,
@@ -186,23 +184,16 @@ export default function ProductCheckout({
         },
       ];
 
-      if (!token) {
-        setError('認証が必要です');
+      const paymentResult = await createPaymentIntentAction(items, shippingAddress.id);
+
+      if (!paymentResult.success || !paymentResult.data) {
+        setError(paymentResult.error || '決済の準備中にエラーが発生しました');
         setStep('error');
         return;
       }
 
-      const paymentResponse = await createPaymentIntent(
-        {
-          items,
-          shipping_address_id: shippingAddress.id,
-          notes: undefined,
-        },
-        token
-      );
-
-      setClientSecret(paymentResponse.data.client_secret);
-      setOrderId(paymentResponse.data.payment_intent_id); // 仮のID
+      setClientSecret(paymentResult.data.client_secret);
+      setOrderId(paymentResult.data.payment_intent_id); // 仮のID
       setOrderNumber('決済後に発行');
 
       setStep('ready');

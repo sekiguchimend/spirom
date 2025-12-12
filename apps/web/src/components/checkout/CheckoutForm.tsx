@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { createOrder, createPaymentIntent, type OrderItem } from '@/lib/api';
+import { createOrderAction, createPaymentIntentAction, type CreateOrderItemRequest } from '@/lib/actions';
 import { PaymentForm } from './PaymentForm';
 
 interface CartItem {
@@ -18,7 +18,6 @@ interface CartItem {
 interface CheckoutFormProps {
   cartItems: CartItem[];
   shippingAddressId: string;
-  token: string;
 }
 
 type CheckoutStep = 'creating_order' | 'creating_payment' | 'ready' | 'error';
@@ -26,7 +25,6 @@ type CheckoutStep = 'creating_order' | 'creating_payment' | 'ready' | 'error';
 export function CheckoutForm({
   cartItems,
   shippingAddressId,
-  token,
 }: CheckoutFormProps) {
   const [step, setStep] = useState<CheckoutStep>('creating_order');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -40,36 +38,36 @@ export function CheckoutForm({
       try {
         // 1. 注文作成
         setStep('creating_order');
-        const orderItems: OrderItem[] = cartItems.map((item) => ({
+        const orderItems: CreateOrderItemRequest[] = cartItems.map((item) => ({
           product_id: item.productId,
           quantity: item.quantity,
           price: item.price,
         }));
 
-        const orderResponse = await createOrder(
-          {
-            items: orderItems,
-            shipping_address_id: shippingAddressId,
-            payment_method: 'credit_card',
-          },
-          token
-        );
+        const orderResult = await createOrderAction({
+          items: orderItems,
+          shipping_address_id: shippingAddressId,
+          payment_method: 'credit_card',
+        });
 
-        const order = orderResponse.data;
+        if (!orderResult.success || !orderResult.data) {
+          throw new Error(orderResult.error || '注文の作成に失敗しました');
+        }
+
+        const order = orderResult.data;
         setOrderId(order.id);
         setOrderNumber(order.order_number);
         setTotal(order.total);
 
         // 2. PaymentIntent作成
         setStep('creating_payment');
-        const paymentResponse = await createPaymentIntent(
-          {
-            items: orderItems,
-            shipping_address_id: shippingAddressId,
-          },
-          token
-        );
-        setClientSecret(paymentResponse.data.client_secret);
+        const paymentResult = await createPaymentIntentAction(orderItems, shippingAddressId);
+
+        if (!paymentResult.success || !paymentResult.data) {
+          throw new Error(paymentResult.error || '決済の準備に失敗しました');
+        }
+
+        setClientSecret(paymentResult.data.client_secret);
 
         setStep('ready');
       } catch (err) {
@@ -80,7 +78,7 @@ export function CheckoutForm({
     };
 
     initializeCheckout();
-  }, [cartItems, shippingAddressId, token]);
+  }, [cartItems, shippingAddressId]);
 
   const handlePaymentSuccess = () => {
     // Stripe will redirect to return_url

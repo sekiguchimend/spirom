@@ -1,7 +1,7 @@
 use worker::*;
 use crate::cache::CacheManager;
 use crate::error::BffError;
-use crate::handlers::{BffHandlers, SeoHandlers, ApiProxy, health_check, readiness_check};
+use crate::handlers::{BffHandlers, SeoHandlers, ApiProxy, OrdersHandler, health_check, readiness_check};
 use crate::middleware::{CorsMiddleware, RateLimiter, SecurityHeaders};
 use crate::services::{ApiClient, SanityClient, DataAggregator};
 
@@ -132,8 +132,9 @@ async fn route_request(
     }
 
     if path.starts_with("/bff/v1/") {
-        let aggregator = DataAggregator::new(api_client, sanity_client, site_url);
+        let aggregator = DataAggregator::new(api_client.clone(), sanity_client, site_url);
         let bff_handlers = BffHandlers::new(aggregator, cache);
+        let orders_handler = OrdersHandler::new(api_client);
 
         let bff_path = &path[8..];
 
@@ -141,6 +142,7 @@ async fn route_request(
             "home" => bff_handlers.home(req).await,
             "search" => bff_handlers.search(req).await,
             "blog" => bff_handlers.blog_list(req).await,
+            "orders" => orders_handler.list(req).await,
             p if p.starts_with("products/") => {
                 let slug = &p[9..];
                 bff_handlers.product_detail(req, slug).await
@@ -152,6 +154,10 @@ async fn route_request(
             p if p.starts_with("blog/") => {
                 let slug = &p[5..];
                 bff_handlers.blog_detail(req, slug).await
+            }
+            p if p.starts_with("orders/") => {
+                let order_id = &p[7..];
+                orders_handler.detail(req, order_id).await
             }
             _ => Err(BffError::NotFound("BFF endpoint not found".to_string())),
         };

@@ -51,7 +51,7 @@ npm install
 cp apps/api/.env.example apps/api/.env
 
 # フロントエンド用  
-cp apps/web/.env.example apps/web/.env.local
+cp apps/web/.env.local.example apps/web/.env.local
 
 # 各ファイルを編集して実際のキーを設定
 ```
@@ -67,8 +67,8 @@ cd apps/api
 
 ```env
 # サーバー設定
-SERVER_PORT=8000
-SERVER_HOST=0.0.0.0
+PORT=8000
+HOST=0.0.0.0
 
 # Supabase設定
 SUPABASE_URL=https://your-project.supabase.co
@@ -77,7 +77,12 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # JWT設定
 JWT_SECRET=your-jwt-secret-key-change-this-in-production
-JWT_EXPIRES_IN=86400  # 24時間（秒）
+JWT_ACCESS_EXPIRY=3600       # アクセストークン（秒）
+JWT_REFRESH_EXPIRY=2592000   # リフレッシュトークン（秒、例: 30日）
+
+# デバッグ（原因特定用: Supabaseのエラー本文をレスポンスに含める）
+API_DEBUG_ERRORS=1
+ENVIRONMENT=local
 
 # Stripe設定（テストモード）
 STRIPE_SECRET_KEY=sk_test_xxxxx
@@ -337,8 +342,8 @@ netstat -ano | findstr :8000  # Windows
 lsof -i :8000                 # Mac/Linux
 
 # プロセスを終了するか、別のポートを使用
-# apps/api/.env で SERVER_PORT を変更
-SERVER_PORT=8001
+# apps/api/.env で PORT を変更
+PORT=8001
 ```
 
 ### エラー: "Next.js build failed"

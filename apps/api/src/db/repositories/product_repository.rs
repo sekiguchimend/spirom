@@ -50,6 +50,22 @@ impl ProductRepository {
         Ok(result.map(|r| r.into_product()))
     }
 
+    /// 複数IDで商品一括取得（N+1問題回避用）
+    pub async fn find_by_ids(&self, ids: &[Uuid]) -> Result<HashMap<Uuid, Product>> {
+        if ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let ids_str = ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(",");
+        let query = format!("id=in.({})", ids_str);
+        let results: Vec<ProductWithCategory> = self.client.select("products", &query).await?;
+
+        Ok(results.into_iter().map(|r| {
+            let product = r.into_product();
+            (product.id, product)
+        }).collect())
+    }
+
     /// スラッグで商品取得
     pub async fn find_by_slug(&self, slug: &str) -> Result<Option<Product>> {
         let query = format!("slug=eq.{}&select=*,categories(id,slug,name)", urlencoding::encode(slug));

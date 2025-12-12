@@ -87,9 +87,11 @@ impl AuthenticatedClient {
         headers.insert("Content-Type", "application/json".parse().unwrap());
         headers.insert("Prefer", "return=representation".parse().unwrap());
 
-        if let Some(jwt) = &self.jwt {
-            headers.insert("Authorization", format!("Bearer {}", jwt).parse().unwrap());
-        }
+        // Supabase(PostgREST)は `apikey` に加えて `Authorization: Bearer ...` を要求する。
+        // - jwt がある場合: そのJWTを使う
+        // - jwt がない場合(anon/service): APIキー自体を Bearer として送る
+        let bearer = self.jwt.as_deref().unwrap_or(&self.anon_key);
+        headers.insert("Authorization", format!("Bearer {}", bearer).parse().unwrap());
 
         headers
     }

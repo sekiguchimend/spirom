@@ -33,6 +33,8 @@ impl CorsMiddleware {
     pub fn with_development(mut self) -> Self {
         self.allowed_origins.push("http://localhost:3000".to_string());
         self.allowed_origins.push("http://127.0.0.1:3000".to_string());
+        self.allowed_origins.push("http://localhost:8787".to_string());
+        self.allowed_origins.push("http://127.0.0.1:8787".to_string());
         self
     }
 
@@ -78,7 +80,7 @@ impl CorsMiddleware {
     }
 
     pub fn apply_without_req(&self, mut response: Response, environment: &str) -> Result<Response> {
-        // In development, allow localhost origins
+        // In development, allow localhost origins (both localhost and 127.0.0.1)
         let allowed_origin = if environment == "development" {
             "http://localhost:3000"
         } else {

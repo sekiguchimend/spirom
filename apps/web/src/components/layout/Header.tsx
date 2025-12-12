@@ -34,6 +34,7 @@ export default function Header() {
             src="/spirom.png"
             alt="Spirom Logo"
             fill
+            sizes="(min-width: 768px) 112px, 80px"
             className="object-contain"
             priority
           />
@@ -148,32 +149,48 @@ export default function Header() {
         </div>
       </header>
 
-      {/* フルスクリーンメニューオーバーレイ */}
+      {/* メニューオーバーレイ */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-black text-brand-cream flex flex-col">
-          <div className="p-6 md:p-8 flex justify-end">
-             <button
-              type="button"
-              className="w-12 h-12 flex items-center justify-center text-brand-cream hover:text-white transition-colors duration-200"
-              onClick={() => setIsMenuOpen(false)}
-              aria-label="Close menu"
-            >
-              <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 6l20 20M6 26L26 6"/>
-              </svg>
-            </button>
+        <>
+          {/* スマホ: フルスクリーン / PC: サイドバー + 背景オーバーレイ */}
+
+          {/* 背景オーバーレイ（PCのみ表示） */}
+          <div
+            className="hidden md:block fixed inset-0 z-[99] bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setIsMenuOpen(false)}
+          />
+
+          {/* メニュー本体 */}
+          <div className={`
+            fixed z-[100] bg-black text-white flex flex-col
+            inset-0
+            md:inset-auto md:top-0 md:right-0 md:bottom-0 md:w-auto md:min-w-[280px]
+            md:shadow-2xl md:animate-slide-in-right
+          `}>
+            <div className="p-6 md:p-8 flex justify-end">
+              <button
+                type="button"
+                className="w-12 h-12 flex items-center justify-center text-white hover:text-white/70 transition-colors duration-200"
+                onClick={() => setIsMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="4">
+                  <path d="M8 8l16 16M8 24L24 8"/>
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 flex flex-col justify-center items-center md:items-start md:px-10">
+              <ul className="space-y-5 text-center md:text-left" style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif" }}>
+                <li><Link href="/" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Home</Link></li>
+                <li><Link href="/products" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Shop</Link></li>
+                <li><Link href="/blog" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Blog</Link></li>
+                <li><Link href="/about" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>About</Link></li>
+                <li><Link href="/account/addresses/new" className="block text-2xl md:text-2xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Address</Link></li>
+              </ul>
+            </nav>
           </div>
-          
-          <nav className="flex-1 flex flex-col justify-center items-center">
-            <ul className="space-y-6 text-center">
-              <li><Link href="/" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>Home</Link></li>
-              <li><Link href="/products" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>Shop</Link></li>
-              <li><Link href="/blog" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>Blog</Link></li>
-              <li><Link href="/about" className="text-4xl md:text-6xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>About</Link></li>
-              <li><Link href="/account/addresses/new" className="text-2xl md:text-4xl font-black uppercase tracking-tighter hover:text-brand-green transition-colors duration-200" onClick={() => setIsMenuOpen(false)}>住所登録</Link></li>
-            </ul>
-          </nav>
-        </div>
+        </>
       )}
     </>
   );

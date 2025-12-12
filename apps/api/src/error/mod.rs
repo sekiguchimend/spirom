@@ -92,6 +92,13 @@ impl ErrorResponse {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        let debug_errors = std::env::var("API_DEBUG_ERRORS")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false)
+            || std::env::var("ENVIRONMENT")
+                .map(|v| v == "development" || v == "local")
+                .unwrap_or(false);
+
         let (status, error_response) = match &self {
             AppError::Validation(msg) => (
                 StatusCode::BAD_REQUEST,
@@ -128,7 +135,14 @@ impl IntoResponse for AppError {
                 tracing::error!("Database error: {}", msg);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse::new(ErrorCode::DatabaseError, "データベースエラーが発生しました"),
+                    if debug_errors {
+                        ErrorResponse::new(ErrorCode::DatabaseError, format!("データベースエラー: {}", msg))
+                    } else {
+                        ErrorResponse::new(
+                            ErrorCode::DatabaseError,
+                            "データベースエラーが発生しました（API_DEBUG_ERRORS=1 で詳細を表示できます）"
+                        )
+                    },
                 )
             }
             AppError::ExternalService(msg) => {

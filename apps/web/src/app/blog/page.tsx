@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { ContentCard, CategoryPill } from "@/components/ui";
-import { client, postsQuery, categoriesQuery, Post, Category, urlFor, formatDate } from "@/lib/sanity";
+import { getPosts, getCategories, urlFor, formatDate } from "@/lib/sanity";
 
 export const metadata: Metadata = {
   title: "ブログ",
@@ -10,27 +10,6 @@ export const metadata: Metadata = {
     description: "暮らしのヒントや商品の使い方をお届けします。",
   },
 };
-
-// ISR: 5分ごとに再検証
-export const revalidate = 300;
-
-async function getPosts(): Promise<Post[]> {
-  try {
-    return await client.fetch<Post[]>(postsQuery);
-  } catch (error) {
-    console.error("Failed to fetch posts:", error);
-    return [];
-  }
-}
-
-async function getCategories(): Promise<Category[]> {
-  try {
-    return await client.fetch<Category[]>(categoriesQuery);
-  } catch (error) {
-    console.error("Failed to fetch categories:", error);
-    return [];
-  }
-}
 
 export default async function BlogPage() {
   const [posts, categories] = await Promise.all([

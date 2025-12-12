@@ -76,31 +76,48 @@ impl OrderRepository {
         }
     }
 
-    /// ユーザーの注文履歴取得
+    /// ユーザーの注文履歴取得（N+1問題回避済み）
     pub async fn find_by_user(&self, user_id: Uuid, limit: i32) -> Result<Vec<OrderSummary>> {
-        // 注文一覧取得
+        // 1. 注文一覧取得
         let query = format!(
             "user_id=eq.{}&order=created_at.desc&limit={}",
             user_id, limit
         );
         let orders: Vec<OrderRow> = self.client.select("orders", &query).await?;
 
-        let mut summaries = Vec::new();
-        for order in orders {
-            // 各注文のアイテム数を取得
-            let item_query = format!("order_id=eq.{}&select=id", order.id);
-            let items: Vec<IdOnly> = self.client.select("order_items", &item_query).await?;
-
-            summaries.push(OrderSummary {
-                id: order.id,
-                order_number: order.order_number,
-                status: order.status.parse().unwrap_or_default(),
-                total: order.total,
-                currency: order.currency,
-                item_count: items.len() as i32,
-                created_at: order.created_at,
-            });
+        if orders.is_empty() {
+            return Ok(vec![]);
         }
+
+        // 2. 全注文のIDを収集してアイテムを一括取得
+        let order_ids: Vec<String> = orders.iter().map(|o| o.id.to_string()).collect();
+        let item_query = format!("order_id=in.({})", order_ids.join(","));
+        let items: Vec<OrderItemWithOrderId> = self.client.select("order_items", &item_query).await?;
+
+        // 3. order_idごとにアイテム数をカウント
+        let mut item_counts: std::collections::HashMap<Uuid, i32> = std::collections::HashMap::new();
+        for item in items {
+            *item_counts.entry(item.order_id).or_insert(0) += 1;
+        }
+
+        // 4. サマリー作成
+        let summaries = orders
+            .into_iter()
+            .map(|order| {
+                let item_count = item_counts.get(&order.id).copied().unwrap_or(0);
+                OrderSummary {
+                    id: order.id,
+                    order_number: order.order_number,
+                    status: order.status.parse().unwrap_or_default(),
+                    total: order.total,
+                    currency: order.currency,
+                    item_count,
+                    created_at: order.created_at,
+                    shipped_at: order.shipped_at,
+                    delivered_at: order.delivered_at,
+                }
+            })
+            .collect();
 
         Ok(summaries)
     }
@@ -325,4 +342,11 @@ impl OrderItemRow {
 struct IdOnly {
     #[allow(dead_code)]
     id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
+struct OrderItemWithOrderId {
+    #[allow(dead_code)]
+    id: Uuid,
+    order_id: Uuid,
 }

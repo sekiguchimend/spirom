@@ -17,6 +17,10 @@ pub async fn auth_middleware(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
+    // トークンを抽出して Extension に追加
+    let token = extract_token(&request).unwrap_or_else(|_| "dev-token".to_string());
+    request.extensions_mut().insert(token);
+
     // 開発環境: 認証をバイパス
     let dev_user = AuthenticatedUser {
         id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),

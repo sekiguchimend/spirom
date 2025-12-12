@@ -2,6 +2,7 @@ use serde::de::DeserializeOwned;
 use worker::*;
 use crate::error::BffError;
 
+#[derive(Clone)]
 pub struct ApiClient {
     base_url: String,
 }

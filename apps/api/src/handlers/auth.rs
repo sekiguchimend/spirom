@@ -36,6 +36,19 @@ pub async fn login(
 
     let response = auth_service.login(req).await?;
 
+    // 最終ログイン時刻更新（失敗してもログイン自体は成功させる）
+    // RLSにより anon では更新できないため、可能なら service role で更新する
+    {
+        let user_repo_service = UserRepository::new(state.db.service());
+        if let Err(e) = user_repo_service.update_last_login(response.user.id).await {
+            tracing::warn!(
+                "Failed to update last_login_at (non-fatal). user_id={}, err={}",
+                response.user.id,
+                e
+            );
+        }
+    }
+
     Ok(Json(response))
 }
 
