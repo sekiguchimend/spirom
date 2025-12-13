@@ -6,6 +6,13 @@
   --color-brand-cream: #FFFFEB;
   --color-brand-black: #000000;
 
+  /* プライマリカラー（最も使用頻度が高い） */
+  --color-primary: #4a7c59;
+  --color-primary-dark: #3d6a4a;
+  --color-text-dark: #323232;
+  --color-bg-light: #FAFAFA;
+  --color-bg-cream: #FFFFF5;
+
   /* カートゥーンカラー */
   --color-cartoon-lime: #7dff3a;
   --color-cartoon-pink: #ff2d78;
@@ -13,6 +20,12 @@
   --color-cartoon-blue: #00d4ff;
   --color-cartoon-purple: #8b5cf6;
   --color-cartoon-yellow: #ffe135;
+
+  /* シャドウ */
+  --shadow-cartoon-sm: 3px 3px 0 #000000;
+  --shadow-cartoon-md: 4px 4px 0 #000000;
+  --shadow-cartoon-lg: 5px 5px 0 #000000;
+  --shadow-cartoon-xl: 6px 6px 0 #000000;
 }
 
 :root {

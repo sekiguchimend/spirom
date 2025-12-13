@@ -3,7 +3,10 @@ import { LegalPageLayout } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: '利用規約',
+  description: 'Spiromの利用規約。当サイトのご利用条件、購入・配送・返品に関する規定をご確認いただけます。',
+  alternates: {
+    canonical: '/terms',
+  },
 };
 
 export default function TermsPage() {

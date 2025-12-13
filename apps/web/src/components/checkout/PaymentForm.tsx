@@ -7,6 +7,9 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { formatPrice } from '@/lib/utils';
+import { getCheckoutCompleteUrl } from '@/lib/routes';
+import { PAYMENT_MESSAGES } from '@/lib/messages';
+import { LoadingSpinner } from '@/components/ui';
 
 interface PaymentFormProps {
   orderId: string;
@@ -41,15 +44,15 @@ export function PaymentForm({
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/complete?order_id=${orderId}`,
+        return_url: getCheckoutCompleteUrl(orderId),
       },
     });
 
     if (error) {
       // カード番号エラーなどの場合はここに来る
       // redirect_to_urlの場合は来ない
-      setErrorMessage(error.message || '決済処理中にエラーが発生しました');
-      onError(error.message || '決済処理中にエラーが発生しました');
+      setErrorMessage(error.message || PAYMENT_MESSAGES.FAILED);
+      onError(error.message || PAYMENT_MESSAGES.FAILED);
       setIsProcessing(false);
     } else {
       // 通常はreturn_urlにリダイレクトされるのでここには来ない
@@ -60,14 +63,14 @@ export function PaymentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 注文情報 */}
-      <div className="bg-[#4a7c59]/5 rounded-xl p-5">
+      <div className="bg-primary/5 rounded-xl p-5">
         <div className="flex justify-between items-center mb-3">
           <span className="text-gray-600">注文番号</span>
-          <span className="font-bold text-[#323232]">{orderNumber}</span>
+          <span className="font-bold text-text-dark">{orderNumber}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-600">お支払い金額</span>
-          <span className="text-2xl font-black text-[#4a7c59]">{formatPrice(total)}</span>
+          <span className="text-2xl font-black text-primary">{formatPrice(total)}</span>
         </div>
       </div>
 
@@ -91,27 +94,12 @@ export function PaymentForm({
       <button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full px-8 py-4 text-lg font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md disabled:hover:bg-[#4a7c59]"
+        className="w-full px-8 py-4 text-lg font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md disabled:hover:bg-primary"
       >
         {isProcessing ? (
           <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            処理中...
+            <LoadingSpinner size="sm" color="white" />
+            {PAYMENT_MESSAGES.PROCESSING}
           </span>
         ) : (
           `${formatPrice(total)} を支払う`

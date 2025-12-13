@@ -11,3 +11,5 @@ export { Breadcrumb } from './Breadcrumb';
 export type { BreadcrumbItem } from './Breadcrumb';
 export { LegalPageLayout } from './LegalPageLayout';
 export { Pagination } from './Pagination';
+export { LoadingSpinner } from './LoadingSpinner';
+export { SectionHeader } from './SectionHeader';

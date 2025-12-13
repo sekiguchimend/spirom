@@ -5,6 +5,8 @@ import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
 import { createOrderAction, createPaymentIntentAction, type CreateOrderItemRequest } from '@/lib/actions';
 import { PaymentForm } from './PaymentForm';
+import { LoadingSpinner } from '@/components/ui';
+import { ORDER_MESSAGES, PAYMENT_MESSAGES } from '@/lib/messages';
 
 /** チェックアウト用のカートアイテム型（表示用の最小限のフィールド） */
 interface CheckoutCartItem {
@@ -52,7 +54,7 @@ export function CheckoutForm({
         });
 
         if (!orderResult.success || !orderResult.data) {
-          throw new Error(orderResult.error || '注文の作成に失敗しました');
+          throw new Error(orderResult.error || ORDER_MESSAGES.CREATE_FAILED);
         }
 
         const order = orderResult.data;
@@ -65,7 +67,7 @@ export function CheckoutForm({
         const paymentResult = await createPaymentIntentAction(orderItems, shippingAddressId);
 
         if (!paymentResult.success || !paymentResult.data) {
-          throw new Error(paymentResult.error || '決済の準備に失敗しました');
+          throw new Error(paymentResult.error || PAYMENT_MESSAGES.INTENT_FAILED);
         }
 
         setClientSecret(paymentResult.data.client_secret);
@@ -73,7 +75,7 @@ export function CheckoutForm({
         setStep('ready');
       } catch (err) {
         console.error('Checkout initialization failed:', err);
-        setError(err instanceof Error ? err.message : '決済の準備中にエラーが発生しました');
+        setError(err instanceof Error ? err.message : PAYMENT_MESSAGES.FAILED);
         setStep('error');
       }
     };
@@ -94,8 +96,10 @@ export function CheckoutForm({
     return (
       <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 border-4 border-[#4a7c59] border-t-transparent rounded-full animate-spin mb-6" />
-          <p className="font-bold text-lg text-[#323232] text-center">
+          <div className="mb-6">
+            <LoadingSpinner size="lg" />
+          </div>
+          <p className="font-bold text-lg text-text-dark text-center">
             {step === 'creating_order' ? '注文を作成中...' : '決済を準備中...'}
           </p>
         </div>

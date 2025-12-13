@@ -3,7 +3,10 @@ import { LegalPageLayout } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'プライバシーポリシー',
+  description: 'Spiromのプライバシーポリシー。お客様の個人情報の取り扱いについて、収集・利用・保護の方針を説明しています。',
+  alternates: {
+    canonical: '/privacy',
+  },
 };
 
 export default function PrivacyPage() {

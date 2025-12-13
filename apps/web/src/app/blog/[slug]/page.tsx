@@ -3,18 +3,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PortableText } from "@portabletext/react";
-import { 
-  client, 
-  postBySlugQuery, 
-  postSlugsQuery, 
+import {
+  client,
+  postBySlugQuery,
+  postSlugsQuery,
   relatedPostsQuery,
-  urlFor, 
+  urlFor,
   Post,
   calculateReadingTime,
   formatDate
 } from "@/lib/sanity";
 import { ContentCard, Breadcrumb } from "@/components/ui";
 import { safeJsonLd } from "@/lib/safeJsonLd";
+import { SITE_URL, SITE_NAME } from "@/lib/config";
+import { ROUTES } from "@/lib/routes";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -72,21 +74,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com";
-
   return {
     title: post.seoTitle || post.title,
-    description: post.seoDescription || post.excerpt || `${post.title} - Spiromブログ`,
+    description: post.seoDescription || post.excerpt || `${post.title} - ${SITE_NAME}ブログ`,
     alternates: {
-      canonical: `${siteUrl}/blog/${slug}`,
+      canonical: `${SITE_URL}/blog/${slug}`,
     },
     openGraph: {
       title: post.seoTitle || post.title,
-      description: post.seoDescription || post.excerpt || `${post.title} - Spiromブログ`,
+      description: post.seoDescription || post.excerpt || `${post.title} - ${SITE_NAME}ブログ`,
       type: "article",
       publishedTime: post.publishedAt,
       authors: post.author ? [post.author.name] : undefined,
-      url: `${siteUrl}/blog/${slug}`,
+      url: `${SITE_URL}/blog/${slug}`,
       images: post.mainImage
         ? [{
             url: urlFor(post.mainImage).width(1200).height(630).url(),
@@ -99,7 +99,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: "summary_large_image",
       title: post.seoTitle || post.title,
-      description: post.seoDescription || post.excerpt || `${post.title} - Spiromブログ`,
+      description: post.seoDescription || post.excerpt || `${post.title} - ${SITE_NAME}ブログ`,
       images: post.mainImage
         ? [urlFor(post.mainImage).width(1200).height(630).url()]
         : undefined,
@@ -212,8 +212,8 @@ export default async function PostPage({ params }: PageProps) {
           {/* パンくずリスト */}
           <Breadcrumb
             items={[
-              { label: 'ホーム', href: '/' },
-              { label: 'ブログ', href: '/blog' },
+              { label: 'ホーム', href: ROUTES.HOME },
+              { label: 'ブログ', href: ROUTES.BLOG.INDEX },
               { label: post.title },
             ]}
           />
@@ -388,15 +388,15 @@ export default async function PostPage({ params }: PageProps) {
               : undefined,
             publisher: {
               "@type": "Organization",
-              name: "Spirom",
+              name: SITE_NAME,
               logo: {
                 "@type": "ImageObject",
-                url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com"}/spirom.png`,
+                url: `${SITE_URL}/spirom.png`,
               },
             },
             mainEntityOfPage: {
               "@type": "WebPage",
-              "@id": `${process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com"}/blog/${slug}`,
+              "@id": `${SITE_URL}/blog/${slug}`,
             },
           }),
         }}

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header, Footer } from "@/components/layout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { safeJsonLd } from "@/lib/safeJsonLd";
+import { SITE_URL, SITE_NAME } from "@/lib/config";
 
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -35,10 +36,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Spirom - 大人もきれるカートゥーン",
-    template: "%s | Spirom",
+    default: `${SITE_NAME} - 大人もきれるカートゥーン`,
+    template: `%s | ${SITE_NAME}`,
   },
   description: "遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。ポップでありながら上品な、他にはないスタイルを。",
   keywords: ["ファッション", "カートゥーン", "アパレル", "大人", "ポップ", "デザイナーズ"],
@@ -53,8 +54,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ja_JP",
-    siteName: "Spirom",
-    title: "Spirom - 大人もきれるカートゥーン",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} - 大人もきれるカートゥーン`,
     description: "遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。",
     images: [
       {
@@ -89,12 +90,12 @@ export const metadata: Metadata = {
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "@id": "https://spirom.com/#organization",
-  name: "Spirom",
-  url: "https://spirom.com",
+  "@id": `${SITE_URL}/#organization`,
+  name: SITE_NAME,
+  url: SITE_URL,
   logo: {
     "@type": "ImageObject",
-    url: "https://spirom.com/logo.png",
+    url: `${SITE_URL}/spirom.png`,
     width: 512,
     height: 512,
   },
@@ -113,17 +114,17 @@ const organizationJsonLd = {
 const webSiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "@id": "https://spirom.com/#website",
-  name: "Spirom",
-  url: "https://spirom.com",
+  "@id": `${SITE_URL}/#website`,
+  name: SITE_NAME,
+  url: SITE_URL,
   publisher: {
-    "@id": "https://spirom.com/#organization",
+    "@id": `${SITE_URL}/#organization`,
   },
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://spirom.com/search?q={search_term_string}",
+      urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
     },
     "query-input": "required name=search_term_string",
   },
@@ -133,9 +134,9 @@ const webSiteJsonLd = {
 const onlineStoreJsonLd = {
   "@context": "https://schema.org",
   "@type": "OnlineStore",
-  "@id": "https://spirom.com/#store",
-  name: "Spirom",
-  url: "https://spirom.com",
+  "@id": `${SITE_URL}/#store`,
+  name: SITE_NAME,
+  url: SITE_URL,
   description: "大人もきれるカートゥーンファッションブランド",
   currenciesAccepted: "JPY",
   paymentAccepted: "Credit Card, PayPay, Convenience Store Payment",
@@ -145,7 +146,7 @@ const onlineStoreJsonLd = {
     name: "Japan",
   },
   brand: {
-    "@id": "https://spirom.com/#organization",
+    "@id": `${SITE_URL}/#organization`,
   },
 };
 

@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateEmail, validateRequired } from '@/lib/validation';
+import { AUTH_MESSAGES } from '@/lib/messages';
+import { ROUTES } from '@/lib/routes';
+import { SectionHeader } from '@/components/ui';
 
 interface FieldErrors {
   email?: string;
@@ -19,16 +23,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const validateEmail = (value: string): string | undefined => {
-    if (!value.trim()) return '必須';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(value)) return '正しいメールアドレスを入力してください';
-    return undefined;
-  };
-
-  const validatePassword = (value: string): string | undefined => {
-    if (!value) return '必須';
-    return undefined;
+  const validatePasswordField = (value: string): string | undefined => {
+    return validateRequired(value);
   };
 
   const handleEmailChange = (value: string) => {
@@ -39,7 +35,7 @@ export default function LoginPage() {
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
-    const error = validatePassword(value);
+    const error = validatePasswordField(value);
     setFieldErrors(prev => ({ ...prev, password: error }));
   };
 
@@ -50,7 +46,7 @@ export default function LoginPage() {
     // 全フィールドのバリデーション
     const errors: FieldErrors = {
       email: validateEmail(email),
-      password: validatePassword(password),
+      password: validatePasswordField(password),
     };
     setFieldErrors(errors);
 
@@ -63,33 +59,24 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/');
+      router.push(ROUTES.HOME);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ログインに失敗しました');
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.LOGIN_FAILED);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-bg-light py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        <div className="bg-[#4a7c59]/5 rounded-2xl p-6 md:p-8">
+        <div className="bg-primary/5 rounded-2xl p-6 md:p-8">
           <div className="mb-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="h-0.5 w-8 bg-[#4a7c59]" />
-              <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase font-bold">
-                Login
-              </p>
-              <div className="h-0.5 w-8 bg-[#4a7c59]" />
-            </div>
-            <h2 className="text-center text-xl text-[#323232]" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>
-              ログイン
-            </h2>
+            <SectionHeader label="Login" title="ログイン" />
             <p className="mt-2 text-center text-sm text-gray-600">
               または{' '}
-              <Link href="/register" className="font-medium text-[#4a7c59] hover:text-[#3d6a4a]">
+              <Link href={ROUTES.AUTH.REGISTER} className="font-medium text-primary hover:text-primary-dark">
                 新規登録
               </Link>
             </p>
@@ -102,7 +89,7 @@ export default function LoginPage() {
             )}
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-xs font-bold text-[#323232] mb-2">
+                <label htmlFor="email" className="block text-xs font-bold text-text-dark mb-2">
                   メールアドレス <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -110,10 +97,10 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  className={`appearance-none relative block w-full px-4 py-3 border-2 placeholder-gray-400 text-[#323232] rounded-xl focus:outline-none text-sm transition-colors ${
+                  className={`appearance-none relative block w-full px-4 py-3 border-2 placeholder-gray-400 text-text-dark rounded-xl focus:outline-none text-sm transition-colors ${
                     fieldErrors.email
                       ? 'border-red-300 bg-red-50 focus:border-red-400'
-                      : 'border-gray-200 focus:border-[#4a7c59]'
+                      : 'border-gray-200 focus:border-primary'
                   }`}
                   placeholder="example@email.com"
                   value={email}
@@ -124,7 +111,7 @@ export default function LoginPage() {
                 )}
               </div>
               <div>
-                <label htmlFor="password" className="block text-xs font-bold text-[#323232] mb-2">
+                <label htmlFor="password" className="block text-xs font-bold text-text-dark mb-2">
                   パスワード <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -132,10 +119,10 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   autoComplete="current-password"
-                  className={`appearance-none relative block w-full px-4 py-3 border-2 placeholder-gray-400 text-[#323232] rounded-xl focus:outline-none text-sm transition-colors ${
+                  className={`appearance-none relative block w-full px-4 py-3 border-2 placeholder-gray-400 text-text-dark rounded-xl focus:outline-none text-sm transition-colors ${
                     fieldErrors.password
                       ? 'border-red-300 bg-red-50 focus:border-red-400'
-                      : 'border-gray-200 focus:border-[#4a7c59]'
+                      : 'border-gray-200 focus:border-primary'
                   }`}
                   placeholder="パスワード"
                   value={password}
@@ -151,7 +138,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-bold rounded-full text-white bg-[#4a7c59] hover:bg-[#3d6a4a] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-bold rounded-full text-white bg-primary hover:bg-primary-dark focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>

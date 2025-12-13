@@ -9,12 +9,7 @@
   "icons": [
     {
       "src": "/spirom.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/spirom.png",
-      "sizes": "512x512",
+      "sizes": "1413x532",
       "type": "image/png"
     }
   ]

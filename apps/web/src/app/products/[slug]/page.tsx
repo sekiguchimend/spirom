@@ -6,6 +6,8 @@ import { getProductBySlug, getFeaturedProducts } from '@/lib/supabase';
 import { AddToCartButton } from '@/components/product';
 import { formatPrice } from '@/lib/utils';
 import { safeJsonLd } from '@/lib/safeJsonLd';
+import { SITE_URL, SITE_NAME } from '@/lib/config';
+import { ROUTES } from '@/lib/routes';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -15,7 +17,6 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://spirom.com';
 
   if (!product) {
     return { title: '商品が見つかりません' };
@@ -25,15 +26,15 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     title: product.name,
     description: product.description || '',
     alternates: {
-      canonical: `${siteUrl}/products/${slug}`,
+      canonical: `${SITE_URL}/products/${slug}`,
     },
     openGraph: {
-      title: `${product.name} | Spirom`,
+      title: `${product.name} | ${SITE_NAME}`,
       description: product.description || '',
-      url: `${siteUrl}/products/${slug}`,
+      url: `${SITE_URL}/products/${slug}`,
       type: 'website',
       images: product.images[0] ? [{
-        url: product.images[0].startsWith('http') ? product.images[0] : `${siteUrl}${product.images[0]}`,
+        url: product.images[0].startsWith('http') ? product.images[0] : `${SITE_URL}${product.images[0]}`,
         width: 1200,
         height: 630,
         alt: product.name,
@@ -54,7 +55,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const relatedProducts = await getFeaturedProducts(4);
   const filteredRelated = relatedProducts.filter(p => p.id !== product.id).slice(0, 4);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://spirom.com';
   const inStock = product.stock > 0;
 
   const jsonLd = {
@@ -62,22 +62,22 @@ export default async function ProductPage({ params }: ProductPageProps) {
     '@type': 'Product',
     name: product.name,
     description: product.description,
-    image: product.images.map(img => img.startsWith('http') ? img : `${siteUrl}${img}`),
+    image: product.images.map(img => img.startsWith('http') ? img : `${SITE_URL}${img}`),
     sku: product.sku || product.id,
     brand: {
       '@type': 'Brand',
-      name: 'Spirom',
+      name: SITE_NAME,
     },
     offers: {
       '@type': 'Offer',
-      url: `${siteUrl}/products/${product.slug}`,
+      url: `${SITE_URL}/products/${product.slug}`,
       priceCurrency: product.currency || 'JPY',
       price: product.price,
       availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: {
         '@type': 'Organization',
-        name: 'Spirom',
+        name: SITE_NAME,
       },
     },
   };
@@ -91,15 +91,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
-      <div className="min-h-screen bg-[#FAFAFA]">
+      <div className="min-h-screen bg-bg-light">
         {/* メインコンテンツ */}
         <article className="grid grid-cols-1 lg:grid-cols-2">
           {/* 左: 画像エリア - フル高さ、スティッキー */}
-          <div className="lg:sticky lg:top-0 lg:h-screen bg-[#FAFAFA] flex items-center justify-center p-8 lg:p-16">
+          <div className="lg:sticky lg:top-0 lg:h-screen bg-bg-light flex items-center justify-center p-8 lg:p-16">
             <div className="relative w-full max-w-lg">
               {isNew && (
                 <div className="absolute -top-2 -right-2 z-10">
-                  <div className="bg-white text-[#323232] text-xs font-black px-3 py-1.5 rounded-full transform rotate-12 shadow-lg border border-[#323232]/10">
+                  <div className="bg-white text-text-dark text-xs font-black px-3 py-1.5 rounded-full transform rotate-12 shadow-lg border border-text-dark/10">
                     NEW
                   </div>
                 </div>
@@ -127,7 +127,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     <button
                       key={index}
                       type="button"
-                      className={`w-14 h-14 relative bg-white rounded-lg overflow-hidden transition-all ${index === 0 ? 'ring-2 ring-[#4a7c59] scale-110' : 'opacity-60 hover:opacity-100'}`}
+                      className={`w-14 h-14 relative bg-white rounded-lg overflow-hidden transition-all ${index === 0 ? 'ring-2 ring-primary scale-110' : 'opacity-60 hover:opacity-100'}`}
                     >
                       <Image src={image} alt="" fill className="object-contain p-1" sizes="56px" />
                     </button>
@@ -197,20 +197,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         {/* 関連商品 */}
         {filteredRelated.length > 0 && (
-          <section className="px-6 py-20 lg:px-16 bg-[#FAFAFA]">
+          <section className="px-6 py-20 lg:px-16 bg-bg-light">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-end justify-between mb-12">
                 <div>
-                  <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase mb-2 font-bold">You may also like</p>
-                  <h2 className="text-3xl md:text-4xl font-black text-[#323232]">More to explore</h2>
+                  <p className="text-xs tracking-[0.2em] text-primary uppercase mb-2 font-bold">You may also like</p>
+                  <h2 className="text-3xl md:text-4xl font-black text-text-dark">More to explore</h2>
                 </div>
-                <Link href="/products" className="text-sm font-bold text-[#4a7c59] hover:underline underline-offset-4">
+                <Link href={ROUTES.PRODUCTS.INDEX} className="text-sm font-bold text-primary hover:underline underline-offset-4">
                   View all →
                 </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {filteredRelated.map((item) => (
-                  <Link key={item.id} href={`/products/${item.slug}`} className="group">
+                  <Link key={item.id} href={ROUTES.PRODUCTS.DETAIL(item.slug)} className="group">
                     <div className="aspect-square relative bg-white rounded-2xl overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-shadow duration-300">
                       <Image
                         src={item.images[0] || '/placeholder-product.jpg'}
@@ -220,8 +220,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
                         sizes="(max-width: 768px) 50vw, 25vw"
                       />
                     </div>
-                    <h3 className="font-bold mb-1 text-[#323232] group-hover:text-[#4a7c59] transition-colors">{item.name}</h3>
-                    <p className="text-[#323232] font-bold">¥{item.price.toLocaleString()}</p>
+                    <h3 className="font-bold mb-1 text-text-dark group-hover:text-primary transition-colors">{item.name}</h3>
+                    <p className="text-text-dark font-bold">¥{item.price.toLocaleString()}</p>
                   </Link>
                 ))}
               </div>

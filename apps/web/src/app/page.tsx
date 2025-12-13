@@ -120,7 +120,7 @@ export default async function Home() {
           <div className="relative w-[70vw] h-[70vw] sm:w-[45vh] sm:h-[45vh] md:w-[80vh] md:h-[80vh] flex items-center justify-center translate-y-[5%] sm:translate-y-[20%]">
              <Image
                src="/s.png"
-               alt="Main Visual"
+               alt="Spirom カートゥーンファッション メインビジュアル"
                fill
                className="object-contain"
                priority

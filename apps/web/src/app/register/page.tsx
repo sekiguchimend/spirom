@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { validateEmail, validateRequired, VALIDATION_PATTERNS } from '@/lib/validation';
+import { AUTH_MESSAGES } from '@/lib/messages';
+import { ROUTES } from '@/lib/routes';
+import { SectionHeader } from '@/components/ui';
 
 interface FieldErrors {
   name?: string;
@@ -24,30 +28,27 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const validateName = (value: string): string | undefined => {
-    if (!value.trim()) return '必須';
+    const required = validateRequired(value);
+    if (required) return required;
     if (value.trim().length < 2) return '2文字以上で入力してください';
     return undefined;
   };
 
-  const validateEmail = (value: string): string | undefined => {
-    if (!value.trim()) return '必須';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(value)) return '正しいメールアドレスを入力してください';
-    return undefined;
-  };
-
-  const validatePassword = (value: string): string | undefined => {
-    if (!value) return '必須';
+  const validatePasswordField = (value: string): string | undefined => {
+    const required = validateRequired(value);
+    if (required) return required;
     if (value.length < 8) return '8文字以上で入力してください';
     if (!/[A-Za-z]/.test(value)) return '英字を含めてください';
     if (!/[0-9]/.test(value)) return '数字を含めてください';
     return undefined;
   };
 
-  const validatePhone = (value: string): string | undefined => {
-    if (!value.trim()) return '必須';
-    const phoneRegex = /^[0-9-]{10,14}$/;
-    if (!phoneRegex.test(value.replace(/\s/g, ''))) return '正しい電話番号を入力してください';
+  const validatePhoneField = (value: string): string | undefined => {
+    const required = validateRequired(value);
+    if (required) return required;
+    if (!VALIDATION_PATTERNS.PHONE.test(value.replace(/\s/g, ''))) {
+      return '正しい電話番号を入力してください';
+    }
     return undefined;
   };
 
@@ -65,13 +66,13 @@ export default function RegisterPage() {
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
-    const error = validatePassword(value);
+    const error = validatePasswordField(value);
     setFieldErrors(prev => ({ ...prev, password: error }));
   };
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
-    const error = validatePhone(value);
+    const error = validatePhoneField(value);
     setFieldErrors(prev => ({ ...prev, phone: error }));
   };
 
@@ -83,8 +84,8 @@ export default function RegisterPage() {
     const errors: FieldErrors = {
       name: validateName(name),
       email: validateEmail(email),
-      password: validatePassword(password),
-      phone: validatePhone(phone),
+      password: validatePasswordField(password),
+      phone: validatePhoneField(phone),
     };
     setFieldErrors(errors);
 
@@ -97,33 +98,24 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, name, phone);
-      router.push('/account/addresses/new');
+      router.push(ROUTES.ACCOUNT.NEW_ADDRESS);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '登録に失敗しました');
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.REGISTER_FAILED);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-bg-light py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        <div className="bg-[#4a7c59]/5 rounded-2xl p-6 md:p-8">
+        <div className="bg-primary/5 rounded-2xl p-6 md:p-8">
           <div className="mb-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div className="h-0.5 w-8 bg-[#4a7c59]" />
-              <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase font-bold">
-                Register
-              </p>
-              <div className="h-0.5 w-8 bg-[#4a7c59]" />
-            </div>
-            <h2 className="text-center text-xl text-[#323232]" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>
-              新規登録
-            </h2>
+            <SectionHeader label="Register" title="新規登録" />
             <p className="mt-2 text-center text-sm text-gray-600">
               すでにアカウントをお持ちの方は{' '}
-              <Link href="/login" className="font-medium text-[#4a7c59] hover:text-[#3d6a4a]">
+              <Link href={ROUTES.AUTH.LOGIN} className="font-medium text-primary hover:text-primary-dark">
                 ログイン
               </Link>
             </p>

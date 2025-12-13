@@ -1,62 +1,62 @@
 import { MetadataRoute } from "next";
 import { client, postSlugsQuery } from "@/lib/sanity";
 import { supabase } from "@/lib/supabase";
+import { SITE_URL } from "@/lib/config";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com";
 
   // 静的ページ
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: SITE_URL,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: `${baseUrl}/products`,
+      url: `${SITE_URL}/products`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/categories`,
+      url: `${SITE_URL}/categories`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/blog`,
+      url: `${SITE_URL}/blog`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/about`,
+      url: `${SITE_URL}/about`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/contact`,
+      url: `${SITE_URL}/contact`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/faq`,
+      url: `${SITE_URL}/faq`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/privacy`,
+      url: `${SITE_URL}/privacy`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/terms`,
+      url: `${SITE_URL}/terms`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
@@ -74,7 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (products) {
       productPages = products.map((product) => ({
-        url: `${baseUrl}/products/${product.slug}`,
+        url: `${SITE_URL}/products/${product.slug}`,
         lastModified: new Date(product.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.8,
@@ -91,7 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (process.env.NEXT_PUBLIC_SANITY_PROJECT_ID) {
       const posts = await client.fetch<{ slug: string }[]>(postSlugsQuery);
       blogPages = posts.map((post) => ({
-        url: `${baseUrl}/blog/${post.slug}`,
+        url: `${SITE_URL}/blog/${post.slug}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.8,

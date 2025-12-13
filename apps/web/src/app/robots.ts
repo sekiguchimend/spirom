@@ -1,8 +1,7 @@
 import { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/config";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com";
-
   return {
     rules: {
       userAgent: "*",
@@ -18,6 +17,6 @@ export default function robots(): MetadataRoute.Robots {
         "/orders/",
       ],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

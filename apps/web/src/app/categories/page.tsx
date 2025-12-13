@@ -3,7 +3,10 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Categories',
-  description: '商品カテゴリー一覧',
+  description: 'Spiromの商品カテゴリー一覧。トップス、ボトムス、アウター、アクセサリーなど、大人もきれるカートゥーンファッションをカテゴリーから探せます。',
+  alternates: {
+    canonical: '/categories',
+  },
 };
 
 // TODO: 実際の実装ではAPIからカテゴリーを取得
