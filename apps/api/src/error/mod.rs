@@ -92,12 +92,11 @@ impl ErrorResponse {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        // 詳細エラーは「明示的に」API_DEBUG_ERRORS=1 のときのみ返す
+        // （ENVIRONMENT=local/development でもデフォルトは秘匿して漏えいリスクを下げる）
         let debug_errors = std::env::var("API_DEBUG_ERRORS")
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false)
-            || std::env::var("ENVIRONMENT")
-                .map(|v| v == "development" || v == "local")
-                .unwrap_or(false);
+            .unwrap_or(false);
 
         let (status, error_response) = match &self {
             AppError::Validation(msg) => (

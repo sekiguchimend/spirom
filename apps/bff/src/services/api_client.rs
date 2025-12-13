@@ -31,7 +31,7 @@ impl ApiClient {
             .await
             .map_err(|e| BffError::UpstreamError(e.to_string()))?;
 
-        if !response.status_code() >= 200 && response.status_code() < 300 {
+        if !(response.status_code() >= 200 && response.status_code() < 300) {
             let status = response.status_code();
             let body = response.text().await.unwrap_or_default();
             return Err(BffError::UpstreamError(

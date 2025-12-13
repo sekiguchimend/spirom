@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
-use tower_http::cors::{Any, CorsLayer};
+use std::net::IpAddr;
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -31,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     // 設定読み込み
-    let config = Config::from_env();
+    let config = Config::from_env()?;
     tracing::info!("Configuration loaded");
 
     // Supabaseクライアント作成
@@ -48,19 +49,39 @@ async fn main() -> anyhow::Result<()> {
     // アプリケーション状態
     let state = AppState::new(config.clone(), supabase);
 
-    // CORSの設定
+    // CORSの設定（許可リスト方式）
+    let allowed_origins: Vec<axum::http::HeaderValue> = config
+        .cors
+        .allowed_origins
+        .iter()
+        .map(|s| s.parse::<axum::http::HeaderValue>())
+        .collect::<Result<Vec<_>, _>>()?;
+
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(AllowOrigin::list(allowed_origins))
+        .allow_methods(AllowMethods::list([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+            axum::http::Method::OPTIONS,
+        ]))
+        .allow_headers(AllowHeaders::list([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+            axum::http::HeaderName::from_static("x-session-id"),
+            axum::http::HeaderName::from_static("x-dev-bypass-token"),
+        ]));
 
     // ルーターの構築
     let app = create_router(state)
         .layer(cors)
         .layer(TraceLayer::new_for_http());
 
-    // サーバーの起動
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.server.port));
+    // サーバーの起動（HOST/PORT を尊重）
+    let host: IpAddr = config.server.host.parse()?;
+    let addr = SocketAddr::from((host, config.server.port));
     tracing::info!("Starting server on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

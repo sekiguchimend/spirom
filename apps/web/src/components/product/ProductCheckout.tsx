@@ -5,9 +5,12 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { fetchAddresses, createPaymentIntentAction, type Address, type CreateOrderItemRequest } from '@/lib/actions';
+import { fetchAddresses, createOrderAction, createPaymentIntentAction } from '@/lib/actions';
+import type { Address, CreateOrderItemRequest } from '@/types';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useAuth } from '@/contexts/AuthContext';
+import { ROUTES } from '@/lib/routes';
+import { PAYMENT_MESSAGES } from '@/lib/messages';
 
 interface Product {
   id: string;
@@ -65,14 +68,14 @@ function PaymentFormInner({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="bg-[#4a7c59]/5 rounded-lg p-4">
+      <div className="bg-primary/5 rounded-lg p-4">
         <div className="flex justify-between items-center mb-2.5">
           <span className="text-gray-600 text-xs">注文番号</span>
-          <span className="font-bold text-[#323232] text-xs">{orderNumber}</span>
+          <span className="font-bold text-text-dark text-xs">{orderNumber}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-600 text-sm">お支払い金額</span>
-          <span className="text-xl font-black text-[#4a7c59]">{formatPrice(total)}</span>
+          <span className="text-xl font-black text-primary">{formatPrice(total)}</span>
         </div>
       </div>
 
@@ -89,7 +92,7 @@ function PaymentFormInner({
       <button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full px-6 py-3 text-base font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-6 py-3 text-base font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isProcessing ? '処理中...' : `${formatPrice(total)} を支払う`}
       </button>
@@ -123,12 +126,12 @@ export default function ProductCheckout({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [subtotal, setSubtotal] = useState<number>(0);
+  const [shippingFee, setShippingFee] = useState<number>(0);
+  const [tax, setTax] = useState<number>(0);
+  const [total, setTotal] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [shippingAddress, setShippingAddress] = useState<Address | null>(null);
-
-  const subtotal = product.price * quantity;
-  const shipping = subtotal >= 5000 ? 0 : 550;
-  const total = subtotal + shipping;
 
   // 認証チェック
   useEffect(() => {
@@ -175,16 +178,36 @@ export default function ProductCheckout({
     try {
       setStep('loading');
 
-      // PaymentIntent作成（注文はまだ作成しない）
+      // 1) 注文作成（サーバー側で金額/税/送料/在庫ロックを確定）
       const items: CreateOrderItemRequest[] = [
         {
           product_id: product.id,
           quantity: quantity,
-          price: product.price,
         },
       ];
 
-      const paymentResult = await createPaymentIntentAction(items, shippingAddress.id);
+      const orderResult = await createOrderAction({
+        items,
+        shipping_address_id: shippingAddress.id,
+        payment_method: 'credit_card',
+      });
+
+      if (!orderResult.success || !orderResult.data) {
+        setError(orderResult.error || '注文の作成に失敗しました');
+        setStep('error');
+        return;
+      }
+
+      const order = orderResult.data;
+      setOrderId(order.id);
+      setOrderNumber(order.order_number);
+      setSubtotal(order.subtotal);
+      setShippingFee(order.shipping_fee);
+      setTax(order.tax);
+      setTotal(order.total);
+
+      // 2) PaymentIntent作成（注文IDに紐付け）
+      const paymentResult = await createPaymentIntentAction(order.id);
 
       if (!paymentResult.success || !paymentResult.data) {
         setError(paymentResult.error || '決済の準備中にエラーが発生しました');
@@ -193,13 +216,10 @@ export default function ProductCheckout({
       }
 
       setClientSecret(paymentResult.data.client_secret);
-      setOrderId(paymentResult.data.payment_intent_id); // 仮のID
-      setOrderNumber('決済後に発行');
 
       setStep('ready');
     } catch (err) {
-      console.error('Checkout initialization failed:', err);
-      setError(err instanceof Error ? err.message : '決済の準備中にエラーが発生しました');
+      setError(err instanceof Error ? err.message : PAYMENT_MESSAGES.FAILED);
       setStep('error');
     }
   };
@@ -239,19 +259,19 @@ export default function ProductCheckout({
           {/* ヘッダー */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-0.5 w-8 bg-[#4a7c59]" />
-              <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase font-bold">
+              <div className="h-0.5 w-8 bg-primary" />
+              <p className="text-xs tracking-[0.2em] text-primary uppercase font-bold">
                 Checkout
               </p>
             </div>
-            <h2 className="text-xl text-[#323232]" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>お支払い</h2>
+            <h2 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>お支払い</h2>
           </div>
 
           <div className="grid md:grid-cols-5 gap-6">
             {/* 左: 商品情報（見積書風） */}
             <div className="md:col-span-2">
               <div className="bg-white rounded-xl p-5 shadow-sm sticky top-8">
-                <h3 className="text-base font-black text-[#323232] mb-5">注文内容</h3>
+                <h3 className="text-base font-black text-text-dark mb-5">注文内容</h3>
 
                 {/* 商品サムネイル */}
                 <div className="flex gap-3 mb-5 pb-5 border-b-2 border-gray-100">
@@ -265,11 +285,11 @@ export default function ProductCheckout({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#323232] text-xs mb-1 line-clamp-2">
+                    <p className="font-bold text-text-dark text-xs mb-1 line-clamp-2">
                       {product.name}
                     </p>
                     <p className="text-xs text-gray-600 mb-1.5">数量: {quantity}</p>
-                    <p className="font-bold text-[#4a7c59] text-sm">
+                    <p className="font-bold text-primary text-sm">
                       {formatPrice(product.price)}
                     </p>
                   </div>
@@ -279,35 +299,35 @@ export default function ProductCheckout({
                 <dl className="space-y-2.5 mb-5">
                   <div className="flex justify-between text-xs text-gray-600">
                     <dt>小計</dt>
-                    <dd className="font-bold text-[#323232]">{formatPrice(subtotal)}</dd>
+                    <dd className="font-bold text-text-dark">{formatPrice(subtotal)}</dd>
                   </div>
                   <div className="flex justify-between text-xs text-gray-600">
                     <dt>送料</dt>
-                    <dd className="font-bold text-[#323232]">
-                      {shipping === 0 ? (
-                        <span className="text-[#4a7c59] bg-[#4a7c59]/10 px-2 py-0.5 rounded-full text-xs font-bold">
+                    <dd className="font-bold text-text-dark">
+                      {shippingFee === 0 ? (
+                        <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs font-bold">
                           無料
                         </span>
                       ) : (
-                        formatPrice(shipping)
+                        formatPrice(shippingFee)
                       )}
                     </dd>
                   </div>
                   <div className="pt-2.5 border-t-2 border-gray-100 flex justify-between items-baseline">
-                    <dt className="font-bold text-[#323232] text-sm">合計</dt>
-                    <dd className="text-xl font-black text-[#4a7c59]">{formatPrice(total)}</dd>
+                    <dt className="font-bold text-text-dark text-sm">合計</dt>
+                    <dd className="text-xl font-black text-primary">{formatPrice(total)}</dd>
                   </div>
                   <p className="text-xs text-gray-500 text-right">（税込）</p>
                 </dl>
 
                 {/* 配送先 */}
                 {shippingAddress && (
-                  <div className="bg-[#4a7c59]/5 rounded-lg p-3">
-                    <p className="text-xs font-bold text-[#4a7c59] mb-1.5 uppercase tracking-wider">
+                  <div className="bg-primary/5 rounded-lg p-3">
+                    <p className="text-xs font-bold text-primary mb-1.5 uppercase tracking-wider">
                       配送先
                     </p>
                     {shippingAddress.name && (
-                      <p className="text-xs font-bold text-[#323232] mb-1">{shippingAddress.name}</p>
+                      <p className="text-xs font-bold text-text-dark mb-1">{shippingAddress.name}</p>
                     )}
                     <p className="text-xs text-gray-600">〒{shippingAddress.postal_code}</p>
                     <p className="text-xs text-gray-600">
@@ -331,8 +351,8 @@ export default function ProductCheckout({
               {step === 'loading' && (
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <div className="flex flex-col items-center justify-center py-10">
-                    <div className="w-12 h-12 border-4 border-[#4a7c59] border-t-transparent rounded-full animate-spin mb-4" />
-                    <p className="font-bold text-base text-[#323232]">準備中...</p>
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="font-bold text-base text-text-dark">準備中...</p>
                   </div>
                 </div>
               )}
@@ -355,23 +375,23 @@ export default function ProductCheckout({
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                       </svg>
                     </div>
-                    <p className="font-bold text-lg text-[#323232] mb-3">ログインが必要です</p>
+                    <p className="font-bold text-lg text-text-dark mb-3">ログインが必要です</p>
                     <p className="text-gray-600 text-center text-sm mb-5">
                       購入するにはログインまたは新規登録が必要です
                     </p>
                     <div className="flex gap-3">
                       <button
                         onClick={() => {
-                          router.push('/login');
+                          router.push(ROUTES.AUTH.LOGIN);
                           onClose();
                         }}
-                        className="px-5 py-2.5 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all text-sm"
+                        className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                       >
                         ログイン
                       </button>
                       <button
                         onClick={() => {
-                          router.push('/register');
+                          router.push(ROUTES.AUTH.REGISTER);
                           onClose();
                         }}
                         className="px-5 py-2.5 font-bold bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all text-sm"
@@ -400,16 +420,16 @@ export default function ProductCheckout({
                         <circle cx="12" cy="10" r="3" />
                       </svg>
                     </div>
-                    <p className="font-bold text-lg text-[#323232] mb-3">配送先住所が登録されていません</p>
+                    <p className="font-bold text-lg text-text-dark mb-3">配送先住所が登録されていません</p>
                     <p className="text-gray-600 text-center text-sm mb-5">
                       購入するには配送先住所の登録が必要です
                     </p>
                     <button
                       onClick={() => {
-                        router.push('/account/addresses/new');
+                        router.push(ROUTES.ACCOUNT.NEW_ADDRESS);
                         onClose();
                       }}
-                      className="px-5 py-2.5 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all text-sm"
+                      className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                     >
                       住所を登録する
                     </button>
@@ -437,7 +457,7 @@ export default function ProductCheckout({
                     <p className="text-gray-600 text-center text-sm mb-5">{error}</p>
                     <button
                       onClick={initializeCheckout}
-                      className="px-5 py-2.5 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all text-sm"
+                      className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                     >
                       再試行
                     </button>

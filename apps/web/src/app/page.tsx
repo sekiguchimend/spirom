@@ -2,23 +2,19 @@ import { CategoryPill, ProductCard } from '@/components/ui';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getFeaturedProducts } from '@/lib/supabase';
+import { getFeaturedProducts, getTopLevelCategories } from '@/lib/supabase';
 
 export const metadata: Metadata = {
   title: 'Spirom - 大人もきれるカートゥーン',
   description: '遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。',
 };
 
-const categories = [
-  { slug: 'tops', name: 'Tops' },
-  { slug: 'bottoms', name: 'Bottoms' },
-  { slug: 'outerwear', name: 'Outerwear' },
-  { slug: 'accessories', name: 'Accessories' },
-];
-
 export default async function Home() {
   // Supabaseから注目商品を取得
-  const products = await getFeaturedProducts(4);
+  const [products, categories] = await Promise.all([
+    getFeaturedProducts(4),
+    getTopLevelCategories(12),
+  ]);
   return (
     <div className="flex flex-col w-full">
       {/* SEO用h1（視覚的に非表示） */}

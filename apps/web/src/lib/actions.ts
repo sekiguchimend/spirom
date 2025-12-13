@@ -11,7 +11,6 @@ import type {
   User,
   Address,
   Order,
-  OrderItem,
   CreateOrderItemRequest,
   CreateOrderRequest,
   TokenResponse,
@@ -20,19 +19,7 @@ import type {
   RegisterRequest,
 } from '@/types';
 
-// Re-export types for backwards compatibility
-export type {
-  User,
-  Address,
-  Order,
-  OrderItem,
-  CreateOrderItemRequest,
-  CreateOrderRequest,
-  TokenResponse,
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-};
+// Note: Types should be imported from @/types directly
 
 async function getToken(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -50,7 +37,6 @@ async function setAuthCookies(tokens: TokenResponse) {
   const cookieStore = await cookies();
   const secure = process.env.NODE_ENV === 'production';
 
-  // access
   cookieStore.set(COOKIE_NAMES.ACCESS_TOKEN, tokens.access_token, {
     httpOnly: true,
     secure,
@@ -59,7 +45,6 @@ async function setAuthCookies(tokens: TokenResponse) {
     path: '/',
   });
 
-  // refresh（ローテーション前提で常に更新）
   cookieStore.set(COOKIE_NAMES.REFRESH_TOKEN, tokens.refresh_token, {
     httpOnly: true,
     secure,
@@ -113,8 +98,7 @@ export async function fetchAddresses(): Promise<{ success: boolean; data: Addres
 
     const result = await response.json();
     return { success: true, data: result.data || [] };
-  } catch (error) {
-    console.error('Failed to fetch addresses:', error);
+  } catch {
     return { success: false, data: [], error: 'Failed to fetch addresses' };
   }
 }
@@ -145,7 +129,6 @@ export async function createAddressAction(
     const result = await response.json();
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Failed to create address:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create address' };
   }
 }
@@ -155,9 +138,7 @@ export async function createAddressAction(
 // ============================================
 
 export async function createPaymentIntentAction(
-  items: CreateOrderItemRequest[],
-  shippingAddressId: string,
-  notes?: string
+  orderId: string
 ): Promise<{ success: boolean; data?: { client_secret: string; payment_intent_id: string }; error?: string }> {
   const token = await getToken();
   if (!token) {
@@ -171,7 +152,7 @@ export async function createPaymentIntentAction(
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ items, shipping_address_id: shippingAddressId, notes }),
+      body: JSON.stringify({ order_id: orderId }),
     });
 
     if (!response.ok) {
@@ -182,7 +163,6 @@ export async function createPaymentIntentAction(
     const result = await response.json();
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Failed to create payment intent:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create payment intent' };
   }
 }
@@ -217,7 +197,6 @@ export async function createOrderAction(
     const result = await response.json();
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Failed to create order:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create order' };
   }
 }
@@ -265,8 +244,7 @@ export async function refreshSessionAction(): Promise<{ success: boolean; error?
     await setAuthCookies(tokens);
     // started_at は最初のログイン時刻を維持（更新しない）
     return { success: true };
-  } catch (error) {
-    console.error('Refresh session failed:', error);
+  } catch {
     await clearAuthCookies();
     return { success: false, error: 'Session expired' };
   }
@@ -275,18 +253,22 @@ export async function refreshSessionAction(): Promise<{ success: boolean; error?
 export async function loginAction(
   request: LoginRequest
 ): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
+  const targetUrl = `${BFF_BASE_URL}/api/v1/auth/login`;
+
   try {
-    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/login`, {
+    const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Connection': 'close',
       },
       body: JSON.stringify(request),
+      cache: 'no-store',
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Login failed: ${response.status}`);
+      throw new Error(errorData.error?.message || errorData.message || `Login failed: ${response.status}`);
     }
 
     const result: AuthResponse = await response.json();
@@ -296,7 +278,6 @@ export async function loginAction(
 
     return { success: true, data: result };
   } catch (error) {
-    console.error('Login failed:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Login failed' };
   }
 }
@@ -304,18 +285,22 @@ export async function loginAction(
 export async function registerAction(
   request: RegisterRequest
 ): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
+  const targetUrl = `${BFF_BASE_URL}/api/v1/auth/register`;
+
   try {
-    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/register`, {
+    const response = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Connection': 'close',
       },
       body: JSON.stringify(request),
+      cache: 'no-store',
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Registration failed: ${response.status}`);
+      throw new Error(errorData.error?.message || errorData.message || `Registration failed: ${response.status}`);
     }
 
     const result: AuthResponse = await response.json();
@@ -325,7 +310,6 @@ export async function registerAction(
 
     return { success: true, data: result };
   } catch (error) {
-    console.error('Registration failed:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Registration failed' };
   }
 }
@@ -343,9 +327,8 @@ export async function logoutAction(): Promise<{ success: boolean; error?: string
         },
       });
     }
-  } catch (error) {
-    console.error('Logout API call failed:', error);
-    // Continue to clear cookie even if API fails
+  } catch {
+    // Continue to clear cookies even if API fails
   }
 
   await clearAuthCookies();
@@ -380,7 +363,6 @@ export async function getMeAction(): Promise<{ success: boolean; data?: User; er
     const result = await response.json();
     return { success: true, data: result.data };
   } catch (error) {
-    console.error('Failed to get user:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to get user' };
   }
 }

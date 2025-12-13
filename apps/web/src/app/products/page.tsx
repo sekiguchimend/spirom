@@ -48,13 +48,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <div className="min-h-screen bg-[#FFFFF5]">
-      <div className="max-w-7xl mx-auto px-4 py-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-32 pb-8 sm:pt-28 sm:pb-20">
         {/* ページヘッダー */}
-        <header className="text-center mb-16" aria-labelledby="page-title">
-          <h1 id="page-title" className="text-6xl md:text-7xl font-black mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
+        <header className="text-center mb-8 sm:mb-16" aria-labelledby="page-title">
+          <h1 id="page-title" className="text-4xl sm:text-6xl md:text-7xl font-black mb-2 sm:mb-4 tracking-wide text-black" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>
             PRODUCTS
           </h1>
-          <p className="text-lg text-gray-600 font-bold uppercase tracking-wider">
+          <p className="text-sm sm:text-lg text-gray-600 font-bold uppercase tracking-wider">
             {filteredProducts.length} ITEMS AVAILABLE
           </p>
         </header>

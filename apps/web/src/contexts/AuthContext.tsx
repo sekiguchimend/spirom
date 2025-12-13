@@ -8,9 +8,10 @@ import {
   logoutAction,
   getMeAction,
   refreshSessionAction,
-  type User,
 } from '@/lib/actions';
+import type { User } from '@/types';
 import { SESSION_REFRESH_INTERVAL_MS } from '@/lib/config';
+import { ROUTES } from '@/lib/routes';
 
 interface AuthContextType {
   user: User | null;
@@ -91,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleLogout = useCallback(async () => {
     await logoutAction();
     setUser(null);
-    router.push('/login');
+    router.push(ROUTES.AUTH.LOGIN);
   }, [router]);
 
   // ユーザー情報を更新（依存関係を安定化）
@@ -112,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // セッション終了
         await logoutAction();
         setUser(null);
-        router.push('/login');
+        router.push(ROUTES.AUTH.LOGIN);
       }
       return;
     }

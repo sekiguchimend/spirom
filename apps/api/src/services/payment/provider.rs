@@ -33,6 +33,8 @@ pub struct CreateIntentParams {
     pub description: Option<String>,
     pub metadata: Option<std::collections::HashMap<String, String>>,
     pub shipping_address: Option<ShippingAddress>,
+    /// Stripe等の多重生成防止用（同一注文の再試行で同じIntentを返す）
+    pub idempotency_key: Option<String>,
 }
 
 /// 配送先住所情報
@@ -110,6 +112,7 @@ pub enum RefundStatus {
 /// Webhookイベント
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookEvent {
+    pub event_id: String,
     pub event_type: WebhookEventType,
     pub payment_id: String,
     pub order_id: Option<Uuid>,
@@ -183,6 +186,7 @@ impl PaymentProvider for DummyPaymentProvider {
 
     fn verify_webhook(&self, _payload: &[u8], _signature: &str) -> Result<WebhookEvent, PaymentError> {
         Ok(WebhookEvent {
+            event_id: "evt_dummy".to_string(),
             event_type: WebhookEventType::PaymentSucceeded,
             payment_id: "dummy".to_string(),
             order_id: None,

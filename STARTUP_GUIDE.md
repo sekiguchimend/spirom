@@ -72,8 +72,8 @@ HOST=0.0.0.0
 
 # Supabase設定
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_ANON_KEY=<SUPABASE_ANON_KEY>
+SUPABASE_SERVICE_ROLE_KEY=<SUPABASE_SERVICE_ROLE_KEY>
 
 # JWT設定
 JWT_SECRET=your-jwt-secret-key-change-this-in-production
@@ -108,11 +108,9 @@ NEXT_PUBLIC_BFF_URL=http://localhost:8787
 # Stripe公開キー（テストモード）
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
 
-# Stripe価格ID（作成済み）
-NEXT_PUBLIC_STRIPE_PRICE_STANDARD_ONETIME=price_1SbLwHQTple2GeZDSAtSHRQe
-NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ONETIME=price_1SbLwIQTple2GeZDzqHlYMMI
-NEXT_PUBLIC_STRIPE_PRICE_STANDARD_MONTHLY=price_1SbLwJQTple2GeZDl02mKRu6
-NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY=price_1SbLwKQTple2GeZD6KjSe4dl
+# ⚠️ 注意: StripeのPrice ID / Product ID を `NEXT_PUBLIC_*` に置かないでください。
+# クライアント公開すると不正購入や改ざんの足がかりになります。
+# 本実装ではDB上の商品ID + サーバー側の金額確定（/api/v1/orders → /api/v1/payments/intent）を使用します。
 
 # Sanity設定
 NEXT_PUBLIC_SANITY_PROJECT_ID=your-project-id

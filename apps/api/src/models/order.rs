@@ -169,7 +169,6 @@ pub struct OrderItemRequest {
     pub product_id: Uuid,
     #[validate(range(min = 1))]
     pub quantity: i32,
-    pub price: i64,
 }
 
 /// 注文作成リクエスト

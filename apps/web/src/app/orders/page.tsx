@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, getServerOrders } from '@/lib/server-api';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatDate } from '@/lib/utils';
 import { OrderProgress } from '@/components/orders/OrderProgress';
+import { ROUTES } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,27 +33,18 @@ function getStatusColor(status: string): string {
   return colorMap[status] || 'bg-gray-100 text-gray-800';
 }
 
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
 export default async function OrdersPage() {
   // Server Componentで認証チェック
   const authenticated = await isAuthenticated();
   if (!authenticated) {
-    redirect('/login');
+    redirect(ROUTES.AUTH.LOGIN);
   }
 
   // Server ComponentからBFFを直接叩く（Route Handler経由しない）
   const orders = await getServerOrders();
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-bg-light pt-24 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {orders.length === 0 ? (
           <div className="text-center py-12">
@@ -63,13 +55,13 @@ export default async function OrdersPage() {
             {/* ヘッダー */}
             <div className="mb-8">
               <div className="flex items-center justify-center gap-2 mb-3">
-                <div className="h-0.5 w-8 bg-[#4a7c59]" />
-                <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase font-bold">
+                <div className="h-0.5 w-8 bg-primary" />
+                <p className="text-xs tracking-[0.2em] text-primary uppercase font-bold">
                   Orders
                 </p>
-                <div className="h-0.5 w-8 bg-[#4a7c59]" />
+                <div className="h-0.5 w-8 bg-primary" />
               </div>
-              <h1 className="text-center text-2xl text-[#323232]" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>
+              <h1 className="text-center text-2xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>
                 注文履歴
               </h1>
             </div>
@@ -84,7 +76,7 @@ export default async function OrdersPage() {
                   {/* 注文ヘッダー */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-6 border-b border-gray-200">
                     <div>
-                      <h3 className="text-lg font-bold text-[#323232] mb-1">
+                      <h3 className="text-lg font-bold text-text-dark mb-1">
                         注文番号: {order.order_number}
                       </h3>
                       <p className="text-sm text-gray-500">
@@ -97,7 +89,7 @@ export default async function OrdersPage() {
                       >
                         {getStatusLabel(order.status)}
                       </span>
-                      <p className="text-xl font-bold text-[#323232]">
+                      <p className="text-xl font-bold text-text-dark">
                         {formatPrice(order.total)}
                       </p>
                     </div>
@@ -111,8 +103,8 @@ export default async function OrdersPage() {
                   {/* 注文詳細リンク */}
                   <div className="flex justify-end">
                     <Link
-                      href={`/orders/${order.id}`}
-                      className="flex items-center gap-2 text-sm font-bold text-[#4a7c59] hover:text-[#3a6c49] transition-colors"
+                      href={ROUTES.ORDERS.DETAIL(order.id)}
+                      className="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-dark transition-colors"
                     >
                       詳細を見る
                       <svg

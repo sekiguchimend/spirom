@@ -115,6 +115,63 @@ impl ProductRepository {
         Ok(())
     }
 
+    /// 在庫確保（原子操作: 同時購入で在庫マイナスにならないようにする）
+    /// - `items`: [(product_id, quantity), ...]
+    pub async fn reserve_stock_bulk(&self, items: &[(Uuid, i32)]) -> Result<bool> {
+        #[derive(Serialize)]
+        struct Item {
+            product_id: Uuid,
+            quantity: i32,
+        }
+        #[derive(Serialize)]
+        struct Params {
+            p_items: serde_json::Value,
+        }
+
+        let payload = items
+            .iter()
+            .map(|(product_id, quantity)| Item {
+                product_id: *product_id,
+                quantity: *quantity,
+            })
+            .collect::<Vec<_>>();
+
+        let params = Params {
+            p_items: serde_json::to_value(payload).unwrap_or_else(|_| serde_json::json!([])),
+        };
+
+        let ok: bool = self.client.rpc("reserve_stock_bulk", &params).await?;
+        Ok(ok)
+    }
+
+    /// 在庫解放（原子操作）
+    pub async fn release_stock_bulk(&self, items: &[(Uuid, i32)]) -> Result<bool> {
+        #[derive(Serialize)]
+        struct Item {
+            product_id: Uuid,
+            quantity: i32,
+        }
+        #[derive(Serialize)]
+        struct Params {
+            p_items: serde_json::Value,
+        }
+
+        let payload = items
+            .iter()
+            .map(|(product_id, quantity)| Item {
+                product_id: *product_id,
+                quantity: *quantity,
+            })
+            .collect::<Vec<_>>();
+
+        let params = Params {
+            p_items: serde_json::to_value(payload).unwrap_or_else(|_| serde_json::json!([])),
+        };
+
+        let ok: bool = self.client.rpc("release_stock_bulk", &params).await?;
+        Ok(ok)
+    }
+
     /// 商品削除
     pub async fn delete(&self, id: Uuid) -> Result<()> {
         let query = format!("id=eq.{}", id);

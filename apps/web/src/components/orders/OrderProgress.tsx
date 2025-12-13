@@ -1,6 +1,6 @@
 'use client';
 
-import { Order } from '@/lib/actions';
+import type { Order } from '@/types';
 
 interface OrderProgressProps {
   order: Order;
@@ -56,7 +56,7 @@ export function OrderProgress({ order }: OrderProgressProps) {
         {/* プログレスバー */}
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200">
           <div
-            className="h-full bg-[#4a7c59] transition-all duration-500"
+            className="h-full bg-primary transition-all duration-500"
             style={{
               width: `${(activeStepIndex / (steps.length - 1)) * 100}%`,
             }}
@@ -75,9 +75,9 @@ export function OrderProgress({ order }: OrderProgressProps) {
                 <div
                   className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isCompleted
-                      ? 'bg-[#4a7c59] text-white'
+                      ? 'bg-primary text-white'
                       : isActive
-                      ? 'bg-[#4a7c59] text-white ring-4 ring-[#4a7c59]/20'
+                      ? 'bg-primary text-white ring-4 ring-primary/20'
                       : 'bg-gray-200 text-gray-400'
                   }`}
                 >
@@ -105,7 +105,7 @@ export function OrderProgress({ order }: OrderProgressProps) {
                   <p
                     className={`text-xs font-bold ${
                       isCompleted || isActive
-                        ? 'text-[#323232]'
+                        ? 'text-text-dark'
                         : 'text-gray-400'
                     }`}
                   >

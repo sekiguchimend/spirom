@@ -61,7 +61,6 @@ pub async fn create_order(
             .map(|item| crate::models::OrderItemRequest {
                 product_id: item.product_id,
                 quantity: item.quantity,
-                price: item.price,
             })
             .collect()
     };
@@ -96,6 +95,7 @@ pub async fn create_order(
 
     let mut order_items = Vec::new();
     let mut subtotal = 0i64;
+    let mut stock_reserve_items: Vec<(Uuid, i32)> = Vec::new();
 
     for item_req in &source_items {
         let product = products
@@ -116,18 +116,22 @@ pub async fn create_order(
             )));
         }
 
-        let item_subtotal = item_req.price * item_req.quantity as i64;
+        // 価格は常にサーバー側の最新の商品価格を採用（クライアント/カートの価格は信頼しない）
+        let item_price = product.price;
+        let item_subtotal = item_price * item_req.quantity as i64;
         subtotal += item_subtotal;
 
         order_items.push(OrderItem {
             product_id: product.id,
             product_name: product.name.clone(),
             product_sku: product.sku.clone(),
-            price: item_req.price,
+            price: item_price,
             quantity: item_req.quantity,
             subtotal: item_subtotal,
             image_url: product.images.first().cloned(),
         });
+
+        stock_reserve_items.push((product.id, item_req.quantity));
     }
 
     // 金額計算
@@ -162,14 +166,16 @@ pub async fn create_order(
         delivered_at: None,
     };
 
-    order_repo.create(&order).await?;
+    // 在庫を原子的に確保（同時購入で在庫マイナスになるのを防ぐ）
+    let reserved = product_repo.reserve_stock_bulk(&stock_reserve_items).await?;
+    if !reserved {
+        return Err(AppError::BadRequest("在庫が不足しています".to_string()));
+    }
 
-    // 在庫を減らす（すでに取得済みのproductsを使用してN+1回避）
-    for item in &order.items {
-        let current_stock = products.get(&item.product_id).map(|p| p.stock).unwrap_or(0);
-        product_repo
-            .update_stock(item.product_id, current_stock - item.quantity)
-            .await?;
+    // 注文作成（失敗したら在庫を戻す）
+    if let Err(e) = order_repo.create(&order).await {
+        let _ = product_repo.release_stock_bulk(&stock_reserve_items).await;
+        return Err(e);
     }
 
     // カートから注文した場合のみクリア（リクエストボディのitemsを使った場合はクリアしない）
@@ -225,7 +231,8 @@ pub async fn cancel_order(
 ) -> Result<Json<DataResponse<Order>>> {
     let db = state.db.with_auth(&token);
     let order_repo = OrderRepository::new(db.clone());
-    let product_repo = ProductRepository::new(db);
+    // 在庫操作は service_role のRPCでのみ許可（クライアント直叩き防止）
+    let product_repo = ProductRepository::new(state.db.service());
 
     let order = order_repo
         .find_by_id(id)
@@ -237,8 +244,8 @@ pub async fn cancel_order(
         return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
     }
 
-    // キャンセル可能かチェック
-    if order.status != OrderStatus::PendingPayment && order.status != OrderStatus::Paid {
+    // キャンセル可能かチェック（支払い前のみ。支払い後のキャンセル/返金は管理者フローで行う）
+    if order.status != OrderStatus::PendingPayment {
         return Err(AppError::BadRequest("この注文はキャンセルできません".to_string()));
     }
 
@@ -252,17 +259,9 @@ pub async fn cancel_order(
         )
         .await?;
 
-    // 在庫を戻す（N+1問題回避：一括取得）
-    let product_ids: Vec<_> = order.items.iter().map(|i| i.product_id).collect();
-    let products = product_repo.find_by_ids(&product_ids).await?;
-
-    for item in &order.items {
-        if let Some(product) = products.get(&item.product_id) {
-            product_repo
-                .update_stock(item.product_id, product.stock + item.quantity)
-                .await?;
-        }
-    }
+    // 在庫を戻す（原子操作）
+    let release_items: Vec<(Uuid, i32)> = order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+    let _ = product_repo.release_stock_bulk(&release_items).await?;
 
     // 更新後の注文を取得
     let updated_order = order_repo.find_by_id(id).await?.unwrap();

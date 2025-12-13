@@ -51,6 +51,9 @@ export interface Order {
   order_number: string;
   status: string;
   payment_status?: string;
+  subtotal?: number;
+  shipping_fee?: number;
+  tax?: number;
   total: number;
   currency: string;
   created_at: string;
@@ -63,7 +66,6 @@ export interface Order {
 export interface CreateOrderItemRequest {
   product_id: string;
   quantity: number;
-  price: number;
 }
 
 export type PaymentMethod = 'credit_card' | 'paypay' | 'rakuten_pay' | 'konbini' | 'bank_transfer';
@@ -135,6 +137,7 @@ export interface CreatePaymentIntentResponse {
   data: {
     client_secret: string;
     payment_intent_id: string;
+    order_id: string;
   };
 }
 

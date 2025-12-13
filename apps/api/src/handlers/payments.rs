@@ -8,11 +8,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::config::AppState;
-use crate::db::repositories::{OrderRepository, ProductRepository, UserRepository};
+use crate::db::repositories::{OrderRepository, ProductRepository};
 use crate::error::{AppError, Result};
 use crate::models::{
-    AuthenticatedUser, DataResponse, Order, OrderAddress, OrderItem, OrderStatus, PaymentMethod,
-    PaymentStatus, generate_order_number,
+    AuthenticatedUser, DataResponse, OrderStatus, PaymentStatus, UserRole,
 };
 use crate::services::payment::{
     CreateIntentParams, PaymentProvider, ShippingAddress, StripePaymentProvider, WebhookEventType,
@@ -21,22 +20,7 @@ use crate::services::payment::{
 /// PaymentIntent作成リクエスト
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreatePaymentIntentRequest {
-    #[validate(length(min = 1, message = "商品が選択されていません"))]
-    pub items: Vec<PaymentIntentItem>,
-    pub shipping_address_id: Uuid,
-    #[validate(length(max = 500))]
-    pub notes: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Validate)]
-pub struct PaymentIntentItem {
-    pub product_id: Uuid,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub product_name: Option<String>,
-    #[validate(range(min = 1, message = "数量は1以上である必要があります"))]
-    pub quantity: i32,
-    #[validate(range(min = 1, message = "価格は1以上である必要があります"))]
-    pub price: i64,
+    pub order_id: Uuid,
 }
 
 /// PaymentIntent作成レスポンス
@@ -44,127 +28,88 @@ pub struct PaymentIntentItem {
 pub struct CreatePaymentIntentResponse {
     pub client_secret: String,
     pub payment_intent_id: String,
+    pub order_id: Uuid,
 }
 
-/// PaymentIntent作成（注文は作成しない。決済成功後にWebhookで作成する）
+/// PaymentIntent作成（必ず既存注文に紐付ける）
 pub async fn create_payment_intent(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Json(req): Json<CreatePaymentIntentRequest>,
 ) -> Result<Json<DataResponse<CreatePaymentIntentResponse>>> {
-    // 手動でitemsの各要素を検証
-    for item in &req.items {
-        item.validate()?;
-    }
     req.validate()?;
 
-    let product_repo = crate::db::repositories::ProductRepository::new(state.db.service());
-    
-    // 商品情報を取得して金額を計算
-    let mut total: i64 = 0;
-    let mut items_with_names = Vec::new();
-    
-    for item in &req.items {
-        let product = product_repo
-            .find_by_id(item.product_id)
-            .await
-            .map_err(|e| {
-                tracing::error!("商品取得エラー: product_id={}, error={}", item.product_id, e);
-                AppError::Internal(format!("商品情報の取得に失敗しました: {}", e))
-            })?
-            .ok_or_else(|| {
-                tracing::warn!("商品が見つかりません: product_id={}", item.product_id);
-                AppError::NotFound(format!("商品ID {} が見つかりません", item.product_id))
-            })?;
-        
-        // 価格検証
-        if product.price != item.price {
-            return Err(AppError::BadRequest(format!(
-                "商品「{}」の価格が一致しません",
-                product.name
-            )));
-        }
-        
-        // 在庫チェック
-        if product.stock < item.quantity {
-            return Err(AppError::BadRequest(format!(
-                "「{}」の在庫が不足しています",
-                product.name
-            )));
-        }
-        
-        let item_total = product.price * item.quantity as i64;
-        total += item_total;
-        
-        items_with_names.push(PaymentIntentItem {
-            product_id: item.product_id,
-            product_name: Some(product.name),
-            quantity: item.quantity,
-            price: item.price,
-        });
+    // 注文取得（RLS/認可はJWTで担保しつつ、念のためuser_idも検証）
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
+    let order = order_repo
+        .find_by_id(req.order_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+    if order.user_id != auth_user.id {
+        return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
     }
-    
-    // 送料計算（5000円以上で無料）
-    let shipping_fee = if total >= 5000 { 0 } else { 550 };
-    total += shipping_fee;
-    
-    // 税計算（10%）
-    let tax = (total as f64 * 0.1) as i64;
-    total += tax;
 
-    // 住所情報を取得
-    let user_repo = UserRepository::new(state.db.service());
-    let shipping_address = user_repo
-        .find_address(auth_user.id, req.shipping_address_id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("配送先住所が見つかりません".to_string()))?;
+    // 期限切れの「古い決済」を防止（価格変更後の古い決済成立も抑止）
+    let max_age_seconds: i64 = std::env::var("PAYMENT_INTENT_MAX_AGE_SECONDS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1800);
+    let age_seconds = (chrono::Utc::now() - order.created_at).num_seconds();
+    if age_seconds > max_age_seconds {
+        // 期限切れは自動キャンセルして在庫を解放（Webhook到達前提の業務フローを避ける）
+        let service_order_repo = OrderRepository::new(state.db.service());
+        let product_repo = ProductRepository::new(state.db.service());
+        let release_items: Vec<(Uuid, i32)> =
+            order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+        let _ = product_repo.release_stock_bulk(&release_items).await;
+        let _ = service_order_repo
+            .update_status(order.id, order.user_id, OrderStatus::Cancelled, order.created_at.timestamp_millis())
+            .await;
+        let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Failed).await;
 
-    // ユーザー情報を取得（名前を取得するため）
-    let user = user_repo
-        .find_by_id(auth_user.id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+        return Err(AppError::BadRequest("この注文は有効期限切れです。再度ご注文ください。".to_string()));
+    }
+
+    if order.status != OrderStatus::PendingPayment || order.payment_status != PaymentStatus::Pending {
+        return Err(AppError::BadRequest("この注文は決済できません".to_string()));
+    }
 
     // Stripe PaymentIntent作成
     let stripe_key = std::env::var("STRIPE_SECRET_KEY")
         .map_err(|_| AppError::Internal("Stripe APIキーが設定されていません".to_string()))?;
-    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
-        .map_err(|_| AppError::Internal("Webhook秘密鍵が設定されていません".to_string()))?;
+    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secrets = std::env::var("STRIPE_WEBHOOK_SECRETS").ok();
 
-    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret);
+    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
 
-    // metadataに注文情報を含める（決済成功後にWebhookで注文を作成）
+    // metadataに最小限の注文情報のみを含める（itemsや金額内訳はDBの注文を正とする）
     let mut metadata = std::collections::HashMap::new();
     metadata.insert("user_id".to_string(), auth_user.id.to_string());
-    metadata.insert("shipping_address_id".to_string(), req.shipping_address_id.to_string());
-    metadata.insert("items".to_string(), serde_json::to_string(&items_with_names)
-        .map_err(|e| AppError::Internal(format!("商品情報のシリアライズに失敗しました: {}", e)))?);
-    metadata.insert("shipping_fee".to_string(), shipping_fee.to_string());
-    metadata.insert("tax".to_string(), tax.to_string());
-    if let Some(notes) = &req.notes {
-        metadata.insert("notes".to_string(), notes.clone());
-    }
+    metadata.insert("order_id".to_string(), order.id.to_string());
 
     // Stripe用の配送先住所情報を作成
     let stripe_shipping_address = ShippingAddress {
-        name: user.name.clone(),
-        postal_code: shipping_address.postal_code.clone(),
-        prefecture: shipping_address.prefecture.clone(),
-        city: shipping_address.city.clone(),
-        address_line1: shipping_address.address_line1.clone(),
-        address_line2: shipping_address.address_line2.clone(),
-        phone: shipping_address.phone.clone(),
+        name: order.shipping_address.name.clone(),
+        postal_code: order.shipping_address.postal_code.clone(),
+        prefecture: order.shipping_address.prefecture.clone(),
+        city: order.shipping_address.city.clone(),
+        address_line1: order.shipping_address.address_line1.clone(),
+        address_line2: order.shipping_address.address_line2.clone(),
+        phone: order.shipping_address.phone.clone(),
     };
 
     let params = CreateIntentParams {
-        order_id: Uuid::new_v4(), // 一時的なID（注文はまだ作成しない）
-        amount: total,
+        order_id: order.id,
+        amount: order.total,
         currency: "JPY".to_string(),
         customer_email: auth_user.email.clone(),
-        customer_name: Some(user.name.clone()),
-        description: Some(format!("SPIROM 商品購入（{}点）", req.items.len())),
+        customer_name: Some(order.shipping_address.name.clone()),
+        description: Some(format!("SPIROM 注文 {}", order.order_number)),
         metadata: Some(metadata),
         shipping_address: Some(stripe_shipping_address),
+        idempotency_key: Some(format!("pi_order_{}", order.id)),
     };
 
     let payment_intent = payment_provider.create_intent(params).await.map_err(|e| {
@@ -172,9 +117,14 @@ pub async fn create_payment_intent(
         AppError::Internal(format!("PaymentIntent作成に失敗しました: {}", e))
     })?;
 
+    // 注文にPaymentIntent IDを紐付け（同一注文の二重生成を防ぐ）
+    let service_order_repo = OrderRepository::new(state.db.service());
+    service_order_repo.update_payment_id(order.id, order.user_id, &payment_intent.id).await?;
+
     Ok(Json(DataResponse::new(CreatePaymentIntentResponse {
         client_secret: payment_intent.client_secret,
         payment_intent_id: payment_intent.id,
+        order_id: order.id,
     })))
 }
 
@@ -193,10 +143,10 @@ pub async fn handle_webhook(
     // Stripe PaymentProvider初期化
     let stripe_key = std::env::var("STRIPE_SECRET_KEY")
         .map_err(|_| AppError::Internal("Stripe APIキーが設定されていません".to_string()))?;
-    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
-        .map_err(|_| AppError::Internal("Webhook秘密鍵が設定されていません".to_string()))?;
+    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secrets = std::env::var("STRIPE_WEBHOOK_SECRETS").ok();
 
-    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret);
+    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
 
     // Webhook検証
     let event = payment_provider
@@ -204,9 +154,28 @@ pub async fn handle_webhook(
         .map_err(|e| AppError::BadRequest(format!("Webhook検証に失敗しました: {}", e)))?;
 
     // WebhookはStripeからのリクエストなので、service_roleを使用
-    let order_repo = OrderRepository::new(state.db.service());
-    let product_repo = ProductRepository::new(state.db.service());
-    let user_repo = UserRepository::new(state.db.service());
+    let db = state.db.service();
+    let order_repo = OrderRepository::new(db.clone());
+    let product_repo = ProductRepository::new(db.clone());
+
+    // ---- 冪等性: Stripe Event ID を保存して多重実行を防ぐ ----
+    // Supabase RPC（record_stripe_event）が未導入の場合でも落とさず処理は続ける（ログで検知可能にする）
+    let recorded: Option<bool> = db
+        .rpc(
+            "record_stripe_event",
+            &serde_json::json!({
+                "p_event_id": event.event_id.clone(),
+                "p_event_type": format!("{:?}", event.event_type),
+                "p_payment_intent_id": event.payment_id.clone(),
+                "p_order_id": event.order_id,
+                "p_payload": event.data.clone(),
+            }),
+        )
+        .await
+        .ok();
+    if let Some(false) = recorded {
+        return Ok(StatusCode::OK);
+    }
 
     // イベント処理
     match event.event_type {
@@ -215,143 +184,70 @@ pub async fn handle_webhook(
                 .order_id
                 .ok_or_else(|| AppError::BadRequest("注文IDが見つかりません".to_string()))?;
 
-            // idempotency: 既に注文が作成済みならOK（Stripeは同一イベントを再送する）
-            if let Some(existing) = order_repo.find_by_id(order_id).await? {
-                tracing::info!(
-                    "決済成功Webhook: 既存注文を検出。order_id={}, payment_id={}",
-                    existing.id,
-                    event.payment_id
+            let order = order_repo
+                .find_by_id(order_id)
+                .await?
+                .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+            // Stripe側の金額/通貨を再検証（乖離は自動返金&キャンセル）
+            let stripe_amount = event.data["data"]["object"]["amount"].as_i64().unwrap_or(0);
+            let stripe_currency = event.data["data"]["object"]["currency"]
+                .as_str()
+                .unwrap_or("jpy")
+                .to_uppercase();
+
+            if stripe_amount != order.total || stripe_currency != order.currency.to_uppercase() {
+                tracing::error!(
+                    "Stripe/DB金額乖離検知: order_id={}, stripe_amount={}, db_total={}, stripe_currency={}, db_currency={}",
+                    order_id,
+                    stripe_amount,
+                    order.total,
+                    stripe_currency,
+                    order.currency
                 );
-                order_repo.update_payment_id(order_id, existing.user_id, &event.payment_id).await?;
-                order_repo.update_payment_status(order_id, PaymentStatus::Paid).await?;
+
+                // 自動返金（安全側に倒す）
+                let _ = payment_provider.refund(&event.payment_id, None).await;
+
+                // 注文キャンセル扱い + 在庫復旧（後続でRPC化する）
+                order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
+                order_repo.update_payment_status(order_id, PaymentStatus::Failed).await?;
                 order_repo
-                    .update_status(order_id, existing.user_id, OrderStatus::Paid, existing.created_at.timestamp_millis())
+                    .update_status(order_id, order.user_id, OrderStatus::Cancelled, order.created_at.timestamp_millis())
                     .await?;
+
+                // 在庫復旧（原子操作 / best-effort）
+                let release_items: Vec<(Uuid, i32)> =
+                    order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+                let _ = product_repo.release_stock_bulk(&release_items).await?;
+
                 return Ok(StatusCode::OK);
             }
 
-            let metadata = &event.data["data"]["object"]["metadata"];
-            let user_id = metadata["user_id"]
-                .as_str()
-                .and_then(|s| s.parse::<Uuid>().ok())
-                .ok_or_else(|| AppError::BadRequest("user_id が不正です".to_string()))?;
-            let shipping_address_id = metadata["shipping_address_id"]
-                .as_str()
-                .and_then(|s| s.parse::<Uuid>().ok())
-                .ok_or_else(|| AppError::BadRequest("shipping_address_id が不正です".to_string()))?;
-
-            let items_json = metadata["items"]
-                .as_str()
-                .ok_or_else(|| AppError::BadRequest("items が不正です".to_string()))?;
-            let items: Vec<PaymentIntentItem> = serde_json::from_str(items_json)
-                .map_err(|_| AppError::BadRequest("items が不正です".to_string()))?;
-
-            let shipping_fee = metadata["shipping_fee"]
-                .as_str()
-                .and_then(|s| s.parse::<i64>().ok())
-                .unwrap_or(0);
-            let tax = metadata["tax"]
-                .as_str()
-                .and_then(|s| s.parse::<i64>().ok())
-                .unwrap_or(0);
-            let notes = metadata["notes"].as_str().map(|s| s.to_string());
-
-            // ユーザー/住所を取得（埋め込み用）
-            let user = user_repo
-                .find_by_id(user_id)
-                .await?
-                .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
-            let shipping_address = user_repo
-                .find_address(user_id, shipping_address_id)
-                .await?
-                .ok_or_else(|| AppError::NotFound("配送先住所が見つかりません".to_string()))?;
-
-            // 商品情報を取得して注文アイテム/金額を確定（改ざん検知）
-            let product_ids: Vec<_> = items.iter().map(|i| i.product_id).collect();
-            let products = product_repo.find_by_ids(&product_ids).await?;
-
-            let mut order_items = Vec::new();
-            let mut subtotal = 0i64;
-
-            for item in &items {
-                let product = products
-                    .get(&item.product_id)
-                    .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
-
-                if !product.is_active {
-                    return Err(AppError::BadRequest(format!("「{}」は現在販売されていません", product.name)));
-                }
-                if product.price != item.price {
-                    return Err(AppError::BadRequest(format!("商品「{}」の価格が一致しません", product.name)));
-                }
-                if product.stock < item.quantity {
-                    return Err(AppError::BadRequest(format!("「{}」の在庫が不足しています", product.name)));
-                }
-
-                let item_subtotal = item.price * item.quantity as i64;
-                subtotal += item_subtotal;
-
-                order_items.push(OrderItem {
-                    product_id: product.id,
-                    product_name: product.name.clone(),
-                    product_sku: product.sku.clone(),
-                    price: item.price,
-                    quantity: item.quantity,
-                    subtotal: item_subtotal,
-                    image_url: product.images.first().cloned(),
-                });
-            }
-
-            let total = subtotal + shipping_fee + tax;
-            let now = chrono::Utc::now();
-
-            let order = Order {
-                id: order_id,
-                user_id,
-                order_number: generate_order_number(),
-                status: OrderStatus::Paid,
-                items: order_items,
-                subtotal,
-                shipping_fee,
-                tax,
-                total,
-                currency: "JPY".to_string(),
-                shipping_address: OrderAddress::from_address(&shipping_address, user.name.clone()),
-                billing_address: None,
-                payment_method: PaymentMethod::CreditCard,
-                payment_status: PaymentStatus::Paid,
-                payment_id: Some(event.payment_id.clone()),
-                notes,
-                created_at: now,
-                updated_at: now,
-                shipped_at: None,
-                delivered_at: None,
-            };
-
-            // 注文作成（同一order_idで競合した場合は、作成済み扱いで継続）
-            if let Err(e) = order_repo.create(&order).await {
-                tracing::warn!("注文作成に失敗。再取得して継続します。order_id={}, err={}", order_id, e);
-                if order_repo.find_by_id(order_id).await?.is_none() {
-                    return Err(e);
-                }
-            }
-
-            // 在庫を減らす（N+1回避: 取得済み products を利用）
-            for item in &order.items {
-                let current_stock = products.get(&item.product_id).map(|p| p.stock).unwrap_or(0);
-                product_repo
-                    .update_stock(item.product_id, current_stock - item.quantity)
-                    .await?;
-            }
-
-            tracing::info!(
-                "決済成功Webhook: 注文作成完了。order_id={}, payment_id={}",
-                order_id,
-                event.payment_id
-            );
+            order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
+            order_repo.update_payment_status(order_id, PaymentStatus::Paid).await?;
+            order_repo
+                .update_status(order_id, order.user_id, OrderStatus::Paid, order.created_at.timestamp_millis())
+                .await?;
         }
         WebhookEventType::PaymentFailed => {
-            tracing::warn!("決済失敗: payment_id={}", event.payment_id);
+            if let Some(order_id) = event.order_id {
+                if let Some(order) = order_repo.find_by_id(order_id).await? {
+                    tracing::warn!("決済失敗Webhook: order_id={}, payment_id={}", order_id, event.payment_id);
+                    order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
+                    order_repo.update_payment_status(order_id, PaymentStatus::Failed).await?;
+                    order_repo
+                        .update_status(order_id, order.user_id, OrderStatus::Cancelled, order.created_at.timestamp_millis())
+                        .await?;
+
+                    // 在庫復旧（原子操作 / best-effort）
+                    let release_items: Vec<(Uuid, i32)> =
+                        order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+                    let _ = product_repo.release_stock_bulk(&release_items).await?;
+                }
+            } else {
+                tracing::warn!("決済失敗: payment_id={} (order_id不明)", event.payment_id);
+            }
         }
         WebhookEventType::RefundSucceeded => {
             if let Some(order_id) = event.order_id {
@@ -389,12 +285,19 @@ pub async fn confirm_payment(
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;
 
+    // テスト用エンドポイントは開発環境のみ許可（本番での誤用防止）
+    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+    let is_dev = env == "development" || env == "local";
+    if !is_dev {
+        return Err(AppError::Forbidden("このエンドポイントは開発環境のみ利用可能です".to_string()));
+    }
+
     let stripe_key = std::env::var("STRIPE_SECRET_KEY")
         .map_err(|_| AppError::Internal("Stripe APIキーが設定されていません".to_string()))?;
-    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
-        .map_err(|_| AppError::Internal("Webhook秘密鍵が設定されていません".to_string()))?;
+    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secrets = std::env::var("STRIPE_WEBHOOK_SECRETS").ok();
 
-    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret);
+    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
 
     // 決済確認
     let result = payment_provider
@@ -428,6 +331,11 @@ pub async fn create_refund(
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;
 
+    // 返金は管理者のみ許可（不正返金対策）
+    if auth_user.role != UserRole::Admin {
+        return Err(AppError::Forbidden("返金には管理者権限が必要です".to_string()));
+    }
+
     let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     // 注文取得
@@ -454,10 +362,10 @@ pub async fn create_refund(
 
     let stripe_key = std::env::var("STRIPE_SECRET_KEY")
         .map_err(|_| AppError::Internal("Stripe APIキーが設定されていません".to_string()))?;
-    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")
-        .map_err(|_| AppError::Internal("Webhook秘密鍵が設定されていません".to_string()))?;
+    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secrets = std::env::var("STRIPE_WEBHOOK_SECRETS").ok();
 
-    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret);
+    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
 
     // 返金実行
     let refund = payment_provider

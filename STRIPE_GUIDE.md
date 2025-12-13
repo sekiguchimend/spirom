@@ -90,15 +90,8 @@ Stripeがホストする決済ページを使用。最も簡単で安全。
 # apps/web/.env.local
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
 
-# Stripe価格ID（作成済み）
-NEXT_PUBLIC_STRIPE_PRICE_STANDARD_ONETIME=price_1SbLwHQTple2GeZDSAtSHRQe
-NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ONETIME=price_1SbLwIQTple2GeZDzqHlYMMI
-NEXT_PUBLIC_STRIPE_PRICE_STANDARD_MONTHLY=price_1SbLwJQTple2GeZDl02mKRu6
-NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY=price_1SbLwKQTple2GeZD6KjSe4dl
-
-# Stripe商品ID（作成済み）
-NEXT_PUBLIC_STRIPE_PRODUCT_STANDARD=prod_TYSrfQiSqQWnqs
-NEXT_PUBLIC_STRIPE_PRODUCT_PREMIUM=prod_TYSr3ILommxe9T
+# ⚠️ 注意: StripeのPrice ID / Product ID を `NEXT_PUBLIC_*` で公開しないでください。
+# 本実装では「DBの商品ID」を送って、サーバー側で金額/税/送料/在庫ロックを確定します。
 ```
 
 ```toml
@@ -113,106 +106,22 @@ npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-### 2. Checkout Session作成 API (BFF)
+### 2. ✅ 推奨フロー（本実装）
 
-```rust
-// apps/bff/src/handlers/stripe.rs
+**クライアントに金額/税/送料/通貨/割引計算をさせない**前提で、以下のAPIを利用してください。
 
-use serde::{Deserialize, Serialize};
-use worker::*;
+- `POST /api/v1/orders`（itemsは`product_id`と`quantity`のみ）
+- `POST /api/v1/payments/intent`（`order_id`のみ）
+- Webhook: `POST /api/v1/webhooks/stripe`（署名検証 + 冪等性 + 金額再検証）
 
-#[derive(Deserialize)]
-pub struct CreateCheckoutRequest {
-    pub items: Vec<CartItem>,
-    pub success_url: String,
-    pub cancel_url: String,
-}
+### 3. ❌ 非推奨（危険な例）
+以下は要件上NGです:
 
-#[derive(Deserialize)]
-pub struct CartItem {
-    pub name: String,
-    pub price: u64,  // 円単位
-    pub quantity: u32,
-    pub image_url: Option<String>,
-}
+- クライアントが `price`/`amount` を渡して決済を作る
+- `success_url` / `cancel_url` をクライアントから動的に渡す
+- StripeのPrice ID / Product ID をクライアントに公開する
 
-#[derive(Serialize)]
-pub struct CheckoutResponse {
-    pub url: String,
-}
-
-pub async fn create_checkout_session(
-    req: Request,
-    ctx: &RouteContext<()>,
-) -> Result<Response> {
-    let secret_key = ctx.secret("STRIPE_SECRET_KEY")?.to_string();
-    let body: CreateCheckoutRequest = req.json().await?;
-
-    // Stripe APIを呼び出してCheckout Session作成
-    let line_items: Vec<_> = body.items.iter().map(|item| {
-        serde_json::json!({
-            "price_data": {
-                "currency": "jpy",
-                "product_data": {
-                    "name": item.name,
-                    "images": item.image_url.as_ref().map(|url| vec![url]).unwrap_or_default(),
-                },
-                "unit_amount": item.price,
-            },
-            "quantity": item.quantity,
-        })
-    }).collect();
-
-    let params = serde_json::json!({
-        "mode": "payment",
-        "line_items": line_items,
-        "success_url": body.success_url,
-        "cancel_url": body.cancel_url,
-        "shipping_address_collection": {
-            "allowed_countries": ["JP"]
-        },
-    });
-
-    // Stripe API呼び出し
-    let client = reqwest::Client::new();
-    let response = client
-        .post("https://api.stripe.com/v1/checkout/sessions")
-        .header("Authorization", format!("Bearer {}", secret_key))
-        .form(&params)
-        .send()
-        .await
-        .map_err(|e| Error::from(e.to_string()))?;
-
-    let session: serde_json::Value = response.json().await
-        .map_err(|e| Error::from(e.to_string()))?;
-
-    let url = session["url"].as_str().unwrap_or_default();
-
-    Response::from_json(&CheckoutResponse { url: url.to_string() })
-}
-```
-
-### 3. フロントエンド実装
-
-```tsx
-// apps/web/src/app/cart/actions.ts
-'use server'
-
-export async function createCheckoutSession(items: CartItem[]) {
-  const response = await fetch(`${process.env.BFF_URL}/api/stripe/checkout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      items,
-      success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/cart`,
-    }),
-  });
-
-  const { url } = await response.json();
-  return url;
-}
-```
+（上記NG例に該当するCheckout Session実装サンプルは、セキュリティ要件に反するため本ガイドから削除しました）
 
 ```tsx
 // apps/web/src/components/checkout/CheckoutButton.tsx
@@ -436,73 +345,12 @@ stripe trigger payment_intent.succeeded
 
 ---
 
-## 作成済みのStripeリソース
+## 参考: Stripeリソース管理（重要）
 
-Stripe MCPを使用して、以下のリソースをテスト環境に作成しました。
+- **StripeのProduct/Price/Customer IDや支払いリンクURL、APIキー等の実値はリポジトリに書かないでください。**
+- 本番/テストのリソースIDは、StripeダッシュボードやSecrets管理で運用してください。
 
-### 商品 (Products)
-
-| 商品ID | 商品名 | 説明 |
-|--------|--------|------|
-| `prod_TYSrfQiSqQWnqs` | Spirom - スタンダードプラン | 基本的な機能を含むスタンダードプラン |
-| `prod_TYSr3ILommxe9T` | Spirom - プレミアムプラン | すべての機能と優先サポートを含むプレミアムプラン |
-
-### 価格 (Prices)
-
-| 価格ID | 商品 | 金額 | タイプ | 備考 |
-|--------|------|------|--------|------|
-| `price_1SbLwHQTple2GeZDSAtSHRQe` | スタンダード | ¥500 | 一回払い | 単品購入用 |
-| `price_1SbLwIQTple2GeZDzqHlYMMI` | プレミアム | ¥1,500 | 一回払い | 単品購入用 |
-| `price_1SbLwJQTple2GeZDl02mKRu6` | スタンダード | ¥5,000/月 | サブスク | 月額プラン |
-| `price_1SbLwKQTple2GeZD6KjSe4dl` | プレミアム | ¥15,000/月 | サブスク | 月額プラン |
-
-### テスト用支払いリンク
-
-すぐに使えるテスト用の支払いリンクを作成しました:
-
-- **スタンダードプラン（¥500）**: [https://buy.stripe.com/test_9B6cN7bhg5mL9VXepFgjC00](https://buy.stripe.com/test_9B6cN7bhg5mL9VXepFgjC00)
-- **プレミアムプラン（¥1,500）**: [https://buy.stripe.com/test_dRmcN71GG02r1prftJgjC01](https://buy.stripe.com/test_dRmcN71GG02r1prftJgjC01)
-
-### クーポン (Coupons)
-
-| クーポンID | 名前 | 割引内容 | 使用回数 |
-|-----------|------|---------|---------|
-| `qgsfMzP5` | 初回購入10%オフ | 10%割引 | 1回限り |
-| `SLIFsDCT` | 500円オフクーポン | ¥500割引 | 1回限り |
-
-### テスト用顧客
-
-| 顧客ID | 名前 | メール |
-|--------|------|--------|
-| `cus_TYSsApg3pPlahj` | テストユーザー | test@spirom.example.com |
-
-### 実装時の使用例
-
-```typescript
-// Checkout Session作成時の例
-const session = await stripe.checkout.sessions.create({
-  mode: 'payment',
-  line_items: [{
-    price: 'price_1SbLwHQTple2GeZDSAtSHRQe', // スタンダードプラン
-    quantity: 1,
-  }],
-  success_url: 'https://your-domain.com/success',
-  cancel_url: 'https://your-domain.com/cancel',
-  discounts: [{
-    coupon: 'qgsfMzP5', // クーポン適用
-  }],
-});
-```
-
-```typescript
-// サブスクリプション作成時の例
-const subscription = await stripe.subscriptions.create({
-  customer: 'cus_TYSsApg3pPlahj',
-  items: [{
-    price: 'price_1SbLwJQTple2GeZDl02mKRu6', // 月額プラン
-  }],
-});
-```
+本実装では **「DBの商品ID」→サーバー側で金額確定→PaymentIntent作成→Webhookで確定** を前提にしています。
 
 ---
 
@@ -670,7 +518,7 @@ STRIPE_SECRET_KEY=sk_test_... npx -y @stripe/mcp --tools=all
 2. Stripe MCPの設定（開発効率化のため推奨）
 3. パッケージインストール
 4. 環境変数設定
-5. BFFにCheckout Session作成APIを実装
+5. BFF/BackendにPaymentIntent作成API（注文IDベース）を実装
 6. フロントエンドにCheckoutボタン実装
 7. Webhook処理を実装
 8. テストモードで動作確認（Stripe MCPでテストデータ作成も可）
@@ -746,7 +594,7 @@ const docs = await mcp_stripe_search_stripe_documentation({
 - [ ] Stripe MCP設定（開発環境）
 - [ ] パッケージインストール完了
 - [ ] 環境変数設定完了
-- [ ] Checkout Session作成API実装
+- [ ] PaymentIntent作成API（注文IDベース）実装
 - [ ] Webhook処理実装
 - [ ] Webhook署名検証実装
 - [ ] フロントエンド実装

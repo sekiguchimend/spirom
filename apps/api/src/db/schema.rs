@@ -246,6 +246,26 @@ CREATE POLICY "Users can create order items" ON order_items
         )
     );
 
+-- ========== Stripe Webhook（冪等性） ==========
+
+CREATE TABLE IF NOT EXISTS stripe_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    payment_intent_id TEXT,
+    order_id UUID REFERENCES orders(id),
+    payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE stripe_events ENABLE ROW LEVEL SECURITY;
+
+-- 原則: 通常ユーザーは参照不可（機微情報/不正利用防止）
+-- 管理者のみ参照可能（運用トラブルシュート用）
+CREATE POLICY "Admins can view stripe events" ON stripe_events
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM users WHERE id::text = auth.uid()::text AND role = 'admin')
+    );
+
 -- ========== レビュー関連 ==========
 
 CREATE TABLE IF NOT EXISTS reviews (
@@ -298,6 +318,104 @@ ALTER TABLE refresh_tokens ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage own tokens" ON refresh_tokens
     FOR ALL USING (auth.uid()::text = user_id::text);
+
+-- ========== RPC: Stripe Event 記録（冪等性） ==========
+CREATE OR REPLACE FUNCTION record_stripe_event(
+    p_event_id TEXT,
+    p_event_type TEXT,
+    p_payment_intent_id TEXT,
+    p_order_id UUID,
+    p_payload JSONB
+)
+RETURNS BOOLEAN AS $$
+BEGIN
+    INSERT INTO stripe_events(event_id, event_type, payment_intent_id, order_id, payload, created_at)
+    VALUES (p_event_id, p_event_type, p_payment_intent_id, p_order_id, p_payload, NOW())
+    ON CONFLICT (event_id) DO NOTHING;
+
+    -- FOUND は直近SQLで行が挿入されたかどうかを表す
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION record_stripe_event(TEXT, TEXT, TEXT, UUID, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION record_stripe_event(TEXT, TEXT, TEXT, UUID, JSONB) TO service_role;
+
+-- ========== RPC: 在庫の原子ロック/解放 ==========
+CREATE OR REPLACE FUNCTION reserve_stock_bulk(p_items JSONB)
+RETURNS BOOLEAN AS $$
+DECLARE
+    item JSONB;
+    pid UUID;
+    qty INT;
+    current_stock INT;
+BEGIN
+    IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
+        RETURN FALSE;
+    END IF;
+
+    -- 先に対象行をロックして在庫確認（同時購入の競合対策）
+    FOR item IN SELECT * FROM jsonb_array_elements(p_items)
+    LOOP
+        pid := (item->>'product_id')::uuid;
+        qty := (item->>'quantity')::int;
+        IF qty IS NULL OR qty <= 0 THEN
+            RETURN FALSE;
+        END IF;
+
+        SELECT stock INTO current_stock FROM products WHERE id = pid FOR UPDATE;
+        IF current_stock IS NULL OR current_stock < qty THEN
+            RETURN FALSE;
+        END IF;
+    END LOOP;
+
+    -- 在庫確保（減算）
+    FOR item IN SELECT * FROM jsonb_array_elements(p_items)
+    LOOP
+        pid := (item->>'product_id')::uuid;
+        qty := (item->>'quantity')::int;
+        UPDATE products
+        SET stock = stock - qty, updated_at = NOW()
+        WHERE id = pid;
+    END LOOP;
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION reserve_stock_bulk(JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION reserve_stock_bulk(JSONB) TO service_role;
+
+CREATE OR REPLACE FUNCTION release_stock_bulk(p_items JSONB)
+RETURNS BOOLEAN AS $$
+DECLARE
+    item JSONB;
+    pid UUID;
+    qty INT;
+BEGIN
+    IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
+        RETURN FALSE;
+    END IF;
+
+    FOR item IN SELECT * FROM jsonb_array_elements(p_items)
+    LOOP
+        pid := (item->>'product_id')::uuid;
+        qty := (item->>'quantity')::int;
+        IF qty IS NULL OR qty <= 0 THEN
+            RETURN FALSE;
+        END IF;
+
+        UPDATE products
+        SET stock = stock + qty, updated_at = NOW()
+        WHERE id = pid;
+    END LOOP;
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION release_stock_bulk(JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION release_stock_bulk(JSONB) TO service_role;
 "#;
 
 /// インデックス作成SQL

@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::sync::Arc;
 use crate::db::SupabaseClient;
+use anyhow::{anyhow, bail, Context};
 
 /// アプリケーション設定
 #[derive(Debug, Clone, Deserialize)]
@@ -36,24 +37,26 @@ pub struct CorsConfig {
 }
 
 impl Config {
-    pub fn from_env() -> Self {
-        let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-        validate_jwt_secret(&jwt_secret);
+    pub fn from_env() -> anyhow::Result<Self> {
+        let jwt_secret = std::env::var("JWT_SECRET")
+            .context("JWT_SECRET が設定されていません（例: `openssl rand -hex 32` で生成）")?;
+        validate_jwt_secret(&jwt_secret)?;
 
         let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
         let is_dev = env == "development" || env == "local";
+        validate_stripe_env(&env)?;
 
-        Self {
+        Ok(Self {
             server: ServerConfig {
                 port: std::env::var("PORT")
                     .unwrap_or_else(|_| "3001".to_string())
                     .parse()
-                    .expect("PORT must be a number"),
+                    .map_err(|e| anyhow!("PORT must be a number: {}", e))?,
                 host: std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             },
             database: DatabaseConfig {
-                url: std::env::var("SUPABASE_URL").expect("SUPABASE_URL must be set"),
-                anon_key: std::env::var("SUPABASE_ANON_KEY").expect("SUPABASE_ANON_KEY must be set"),
+                url: std::env::var("SUPABASE_URL").context("SUPABASE_URL must be set")?,
+                anon_key: std::env::var("SUPABASE_ANON_KEY").context("SUPABASE_ANON_KEY must be set")?,
             },
             jwt: JwtConfig {
                 secret: jwt_secret,
@@ -76,19 +79,40 @@ impl Config {
                             None
                         }
                     })
-                    .unwrap_or_else(|| {
-                        panic!("CORS_ORIGINS must be set in production");
-                    })
+                    .ok_or_else(|| anyhow!("CORS_ORIGINS must be set in production"))?
                     .split(',')
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())
                     .collect(),
             },
-        }
+        })
     }
 }
 
-fn validate_jwt_secret(secret: &str) {
+fn validate_stripe_env(environment: &str) -> anyhow::Result<()> {
+    // Stripeは決済系エンドポイントで必須。productionではテストキー混入を防ぐ。
+    let is_prod = environment == "production";
+
+    if let Ok(sk) = std::env::var("STRIPE_SECRET_KEY") {
+        if is_prod && sk.starts_with("sk_test_") {
+            bail!("本番環境でSTRIPE_SECRET_KEYにsk_test_が設定されています。sk_live_を設定してください。");
+        }
+    } else if is_prod {
+        bail!("本番環境ではSTRIPE_SECRET_KEYが必須です。");
+    }
+
+    // Webhook secretはローテーション対応（CSV）
+    let wh_single = std::env::var("STRIPE_WEBHOOK_SECRET").ok().unwrap_or_default();
+    let wh_multi = std::env::var("STRIPE_WEBHOOK_SECRETS").ok().unwrap_or_default();
+    let has_any = !wh_single.trim().is_empty() || !wh_multi.trim().is_empty();
+    if is_prod && !has_any {
+        bail!("本番環境ではSTRIPE_WEBHOOK_SECRET または STRIPE_WEBHOOK_SECRETS が必須です。");
+    }
+
+    Ok(())
+}
+
+fn validate_jwt_secret(secret: &str) -> anyhow::Result<()> {
     // ローカル開発でどうしても弱い値を使う場合は明示的に許可する（デフォルトは拒否）
     let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
     let is_dev = env == "development" || env == "local";
@@ -98,7 +122,7 @@ fn validate_jwt_secret(secret: &str) {
         .unwrap_or(false);
 
     if is_dev && allow_weak {
-        return;
+        return Ok(());
     }
 
     let s = secret.trim();
@@ -113,10 +137,12 @@ fn validate_jwt_secret(secret: &str) {
         || lower.contains("spirom-2024");
 
     if s.is_empty() || too_short || looks_default {
-        panic!(
-            "JWT_SECRET が弱すぎます。32文字以上のランダムな値に変更してください（例: openssl rand -hex 32）。"
+        bail!(
+            "JWT_SECRET が弱すぎます。32文字以上のランダムな値に変更してください（例: `openssl rand -hex 32`）。"
         );
     }
+
+    Ok(())
 }
 
 /// アプリケーション状態

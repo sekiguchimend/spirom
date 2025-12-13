@@ -89,18 +89,69 @@ function CheckoutCompleteContent() {
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    const redirectStatus = searchParams.get('redirect_status');
     const orderIdParam = searchParams.get('order_id');
 
     setOrderId(orderIdParam);
 
-    if (redirectStatus === 'succeeded') {
-      setStatus('succeeded');
-    } else if (redirectStatus === 'processing') {
-      setStatus('processing');
-    } else {
+    if (!orderIdParam) {
       setStatus('failed');
+      return;
     }
+
+    // Stripeのredirect_statusは信頼しない（URL直叩き/改ざん対策）
+    // 注文APIから決済状態を取得して表示する
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 30; // 30 * 2s = 60s
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/v1/orders/${orderIdParam}`, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'Accept': 'application/json' },
+        });
+
+        if (!res.ok) {
+          // 認証切れ/権限なし等
+          setStatus('failed');
+          return;
+        }
+
+        const json = await res.json();
+        const order = json?.data;
+        const paymentStatus = String(order?.payment_status || '').toLowerCase();
+        const orderStatus = String(order?.status || '').toLowerCase();
+
+        if (paymentStatus === 'paid' || orderStatus === 'paid') {
+          setStatus('succeeded');
+          return;
+        }
+
+        if (paymentStatus === 'failed' || orderStatus === 'cancelled') {
+          setStatus('failed');
+          return;
+        }
+
+        // pending / processing の場合は継続
+        setStatus('processing');
+      } catch {
+        // ネットワーク等は一旦processing扱いで継続
+        setStatus('processing');
+      }
+
+      attempts += 1;
+      if (!cancelled && attempts < maxAttempts) {
+        setTimeout(poll, 2000);
+      }
+    };
+
+    poll();
+
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams]);
 
   if (status === 'loading') {

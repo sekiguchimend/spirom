@@ -1,6 +1,6 @@
 export default function BlogLoading() {
   return (
-    <div className="min-h-screen bg-[#FFFFF5]">
+    <div className="min-h-screen bg-bg-cream">
       <div className="max-w-7xl mx-auto px-4 py-20">
         <header className="text-center mb-16 animate-pulse">
           <div className="h-16 bg-gray-200 rounded-lg w-48 mx-auto mb-4" />

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { createOrderAction, createPaymentIntentAction, type CreateOrderItemRequest } from '@/lib/actions';
+import { createOrderAction, createPaymentIntentAction } from '@/lib/actions';
+import type { CreateOrderItemRequest } from '@/types';
 import { PaymentForm } from './PaymentForm';
 import { LoadingSpinner } from '@/components/ui';
 import { ORDER_MESSAGES, PAYMENT_MESSAGES } from '@/lib/messages';
@@ -44,7 +45,6 @@ export function CheckoutForm({
         const orderItems: CreateOrderItemRequest[] = cartItems.map((item) => ({
           product_id: item.productId,
           quantity: item.quantity,
-          price: item.price,
         }));
 
         const orderResult = await createOrderAction({
@@ -64,7 +64,7 @@ export function CheckoutForm({
 
         // 2. PaymentIntent作成
         setStep('creating_payment');
-        const paymentResult = await createPaymentIntentAction(orderItems, shippingAddressId);
+        const paymentResult = await createPaymentIntentAction(order.id);
 
         if (!paymentResult.success || !paymentResult.data) {
           throw new Error(paymentResult.error || PAYMENT_MESSAGES.INTENT_FAILED);
@@ -74,7 +74,6 @@ export function CheckoutForm({
 
         setStep('ready');
       } catch (err) {
-        console.error('Checkout initialization failed:', err);
         setError(err instanceof Error ? err.message : PAYMENT_MESSAGES.FAILED);
         setStep('error');
       }
@@ -133,7 +132,7 @@ export function CheckoutForm({
           <p className="text-gray-600 text-center mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-md hover:shadow-lg"
+            className="px-6 py-3 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg"
           >
             再試行
           </button>
@@ -152,13 +151,13 @@ export function CheckoutForm({
   return (
     <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-[#4a7c59]/10 rounded-full flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a7c59" strokeWidth="2">
+        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
             <rect width="20" height="14" x="2" y="5" rx="2"/>
             <path d="M2 10h20"/>
           </svg>
         </div>
-        <h2 className="text-xl sm:text-2xl font-black text-[#323232]">
+        <h2 className="text-xl sm:text-2xl font-black text-text-dark">
           お支払い情報
         </h2>
       </div>

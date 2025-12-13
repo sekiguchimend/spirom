@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getTopLevelCategories } from '@/lib/supabase';
 
 export const metadata: Metadata = {
   title: 'Categories',
@@ -9,46 +10,11 @@ export const metadata: Metadata = {
   },
 };
 
-// TODO: 実際の実装ではAPIからカテゴリーを取得
-const mockCategories = [
-  {
-    id: '1',
-    slug: 'bags',
-    name: 'バッグ',
-    description: 'トートバッグ、ショルダーバッグなど',
-    image: '/categories/bags.jpg',
-    productCount: 12,
-  },
-  {
-    id: '2',
-    slug: 'interior',
-    name: 'インテリア',
-    description: 'コースター、花瓶、キャンドルなど',
-    image: '/categories/interior.jpg',
-    productCount: 8,
-  },
-  {
-    id: '3',
-    slug: 'accessories',
-    name: 'アクセサリー',
-    description: 'ピアス、ネックレス、リングなど',
-    image: '/categories/accessories.jpg',
-    productCount: 15,
-  },
-  {
-    id: '4',
-    slug: 'stationery',
-    name: 'ステーショナリー',
-    description: 'ノート、ペンケース、カードなど',
-    image: '/categories/stationery.jpg',
-    productCount: 6,
-  },
-];
-
-export default function CategoriesPage() {
+export default async function CategoriesPage() {
+  const categories = await getTopLevelCategories(48);
   return (
     <div className="min-h-screen bg-[#FFFFF5]">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8 sm:py-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-32 pb-8 sm:pt-28 sm:pb-20">
         {/* ページヘッダー */}
         <header className="text-center mb-8 sm:mb-16">
           <h1
@@ -66,7 +32,7 @@ export default function CategoriesPage() {
         <section aria-labelledby="categories-list-heading">
           <h2 id="categories-list-heading" className="sr-only">カテゴリー一覧</h2>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {mockCategories.map((category) => (
+            {categories.map((category) => (
               <li key={category.id}>
                 <Link
                   href={`/categories/${category.slug}`}
@@ -82,10 +48,10 @@ export default function CategoriesPage() {
                   <div className="p-4 sm:p-5">
                     <h3 className="font-black text-lg sm:text-xl mb-1 text-black">{category.name}</h3>
                     <p className="text-gray-600 text-xs sm:text-sm mb-2 line-clamp-2">
-                      {category.description}
+                      {category.description || ''}
                     </p>
                     <p className="text-xs sm:text-sm font-bold text-gray-400">
-                      {category.productCount} items
+                      {category.product_count} items
                     </p>
                   </div>
                 </Link>

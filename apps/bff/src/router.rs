@@ -25,7 +25,7 @@ pub async fn handle_request(req: Request, env: Env, _ctx: Context) -> Result<Res
     }
 
     let rate_limit_kv = env.kv("RATE_LIMIT")?;
-    let rate_limiter = RateLimiter::new(rate_limit_kv);
+    let rate_limiter = RateLimiter::new(rate_limit_kv.clone());
 
     // Rate limit のキーに使うIPは「信頼できる境界」からのみ取得する。
     // - 本番: Cloudflare が付与する `CF-Ray` がある場合のみ `CF-Connecting-IP` を信頼
@@ -55,6 +55,18 @@ pub async fn handle_request(req: Request, env: Env, _ctx: Context) -> Result<Res
     } else {
         "unknown".to_string()
     };
+
+    // 決済系はより厳格に（PaymentIntent無制限生成/ブルートフォース対策）
+    if path.starts_with("/api/v1/payments/") || (path == "/api/v1/orders" && method == Method::Post) {
+        let strict = RateLimiter::with_limits(rate_limit_kv.clone(), 60, 10);
+        let strict_key = format!("{}:payments", client_ip);
+        let strict_result = strict.check(&strict_key).await
+            .map_err(|e| worker::Error::from(e.to_response().unwrap_err().to_string()))?;
+        if !strict_result.allowed {
+            let response = BffError::RateLimited.to_response()?;
+            return strict.add_headers(response, &strict_result);
+        }
+    }
 
     let rate_result = rate_limiter.check(&client_ip).await
         .map_err(|e| worker::Error::from(e.to_response().unwrap_err().to_string()))?;
@@ -100,7 +112,7 @@ async fn route_request(
 
     let api_base_url = env.var("API_BASE_URL")
         .map(|v| v.to_string())
-        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+        .unwrap_or_else(|_| "http://localhost:8000".to_string());
 
     // API Proxy: Forward /api/v1/* requests to backend API
     // This must be checked before the GET-only check below

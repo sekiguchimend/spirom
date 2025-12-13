@@ -81,19 +81,39 @@ pub struct AuthenticatedClient {
 
 impl AuthenticatedClient {
     /// 共通ヘッダーを設定
-    fn headers(&self) -> header::HeaderMap {
+    fn headers(&self) -> Result<header::HeaderMap> {
         let mut headers = header::HeaderMap::new();
-        headers.insert("apikey", self.anon_key.parse().unwrap());
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-        headers.insert("Prefer", "return=representation".parse().unwrap());
+        headers.insert(
+            "apikey",
+            self.anon_key
+                .parse()
+                .map_err(|e| AppError::Database(format!("Invalid apikey header value: {}", e)))?,
+        );
+        headers.insert(
+            "Content-Type",
+            "application/json"
+                .parse()
+                .map_err(|e| AppError::Database(format!("Invalid content-type header value: {}", e)))?,
+        );
+        headers.insert(
+            "Prefer",
+            "return=representation"
+                .parse()
+                .map_err(|e| AppError::Database(format!("Invalid prefer header value: {}", e)))?,
+        );
 
         // Supabase(PostgREST)は `apikey` に加えて `Authorization: Bearer ...` を要求する。
         // - jwt がある場合: そのJWTを使う
         // - jwt がない場合(anon/service): APIキー自体を Bearer として送る
         let bearer = self.jwt.as_deref().unwrap_or(&self.anon_key);
-        headers.insert("Authorization", format!("Bearer {}", bearer).parse().unwrap());
+        headers.insert(
+            "Authorization",
+            format!("Bearer {}", bearer)
+                .parse()
+                .map_err(|e| AppError::Database(format!("Invalid authorization header value: {}", e)))?,
+        );
 
-        headers
+        Ok(headers)
     }
 
     /// SELECT: データ取得
@@ -106,7 +126,7 @@ impl AuthenticatedClient {
 
         let response = self.client
             .get(&url)
-            .headers(self.headers())
+            .headers(self.headers()?)
             .send()
             .await
             .map_err(|e| AppError::Database(format!("Select failed: {}", e)))?;
@@ -129,8 +149,13 @@ impl AuthenticatedClient {
     ) -> Result<Option<T>> {
         let url = format!("{}/rest/v1/{}?{}", self.url, table, query);
 
-        let mut headers = self.headers();
-        headers.insert("Accept", "application/vnd.pgrst.object+json".parse().unwrap());
+        let mut headers = self.headers()?;
+        headers.insert(
+            "Accept",
+            "application/vnd.pgrst.object+json"
+                .parse()
+                .map_err(|e| AppError::Database(format!("Invalid accept header value: {}", e)))?,
+        );
 
         let response = self.client
             .get(&url)
@@ -166,7 +191,7 @@ impl AuthenticatedClient {
 
         let response = self.client
             .post(&url)
-            .headers(self.headers())
+            .headers(self.headers()?)
             .json(data)
             .send()
             .await
@@ -197,7 +222,7 @@ impl AuthenticatedClient {
 
         let response = self.client
             .patch(&url)
-            .headers(self.headers())
+            .headers(self.headers()?)
             .json(data)
             .send()
             .await
@@ -219,7 +244,7 @@ impl AuthenticatedClient {
 
         let response = self.client
             .delete(&url)
-            .headers(self.headers())
+            .headers(self.headers()?)
             .send()
             .await
             .map_err(|e| AppError::Database(format!("Delete failed: {}", e)))?;
@@ -241,8 +266,13 @@ impl AuthenticatedClient {
     ) -> Result<R> {
         let url = format!("{}/rest/v1/{}", self.url, table);
 
-        let mut headers = self.headers();
-        headers.insert("Prefer", format!("resolution=merge-duplicates,return=representation").parse().unwrap());
+        let mut headers = self.headers()?;
+        headers.insert(
+            "Prefer",
+            format!("resolution=merge-duplicates,return=representation")
+                .parse()
+                .map_err(|e| AppError::Database(format!("Invalid prefer header value: {}", e)))?,
+        );
 
         let response = self.client
             .post(&url)
@@ -276,7 +306,7 @@ impl AuthenticatedClient {
 
         let response = self.client
             .post(&url)
-            .headers(self.headers())
+            .headers(self.headers()?)
             .json(params)
             .send()
             .await

@@ -10,7 +10,7 @@ interface LegalPageLayoutProps {
 export function LegalPageLayout({ title, subtitle, lastUpdated, children }: LegalPageLayoutProps) {
   return (
     <div className="min-h-screen bg-[#FFFFF5]">
-      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-8 sm:py-20">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 pt-32 pb-8 sm:pt-28 sm:pb-20">
         <header className="text-center mb-8 sm:mb-16">
           <h1
             className="text-4xl sm:text-6xl md:text-7xl font-black mb-2 sm:mb-4 tracking-wide text-black"

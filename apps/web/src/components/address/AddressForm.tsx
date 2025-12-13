@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createAddressAction, type Address } from '@/lib/actions';
+import { createAddressAction } from '@/lib/actions';
+import type { Address } from '@/types';
+import { ROUTES } from '@/lib/routes';
+import { ADDRESS_MESSAGES, VALIDATION_MESSAGES } from '@/lib/messages';
 
 const PREFECTURES = [
   '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
@@ -45,7 +48,7 @@ export function AddressForm() {
 
       const postalCodeRegex = /^\d{7}$|^\d{3}-\d{4}$/;
       if (!postalCodeRegex.test(formData.postal_code.replace(/-/g, ''))) {
-        setError('郵便番号は7桁で入力してください');
+        setError(VALIDATION_MESSAGES.INVALID_POSTAL_CODE);
         setIsSubmitting(false);
         return;
       }
@@ -57,14 +60,13 @@ export function AddressForm() {
 
       const result = await createAddressAction(formData);
       if (!result.success) {
-        setError(result.error || '住所の登録に失敗しました');
+        setError(result.error || ADDRESS_MESSAGES.SAVE_FAILED);
         setIsSubmitting(false);
         return;
       }
-      router.push('/checkout');
+      router.push(ROUTES.CHECKOUT.INDEX);
     } catch (err) {
-      console.error('住所登録エラー:', err);
-      setError(err instanceof Error ? err.message : '住所の登録に失敗しました');
+      setError(err instanceof Error ? err.message : ADDRESS_MESSAGES.SAVE_FAILED);
     } finally {
       setIsSubmitting(false);
     }
@@ -79,59 +81,59 @@ export function AddressForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] pt-20">
+    <div className="min-h-screen bg-bg-light pt-20">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="bg-white rounded-2xl p-6 md:p-8">
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-0.5 w-8 bg-[#4a7c59]" />
-              <p className="text-xs tracking-[0.2em] text-[#4a7c59] uppercase font-bold">Address</p>
+              <div className="h-0.5 w-8 bg-primary" />
+              <p className="text-xs tracking-[0.2em] text-primary uppercase font-bold">Address</p>
             </div>
-            <h1 className="text-xl text-[#323232]" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>配送先住所を追加</h1>
+            <h1 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>配送先住所を追加</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="name" className="block text-xs font-bold text-[#323232] mb-2">ラベル（任意）</label>
-              <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} placeholder="例: 自宅、会社など" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm" />
+              <label htmlFor="name" className="block text-xs font-bold text-text-dark mb-2">ラベル（任意）</label>
+              <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} placeholder="例: 自宅、会社など" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
             </div>
 
             <div>
-              <label htmlFor="postal_code" className="block text-xs font-bold text-[#323232] mb-2">郵便番号 <span className="text-red-500">*</span></label>
-              <input type="text" id="postal_code" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder="1234567 または 123-4567" maxLength={8} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm" />
+              <label htmlFor="postal_code" className="block text-xs font-bold text-text-dark mb-2">郵便番号 <span className="text-red-500">*</span></label>
+              <input type="text" id="postal_code" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder="1234567 または 123-4567" maxLength={8} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
             </div>
 
             <div>
-              <label htmlFor="prefecture" className="block text-xs font-bold text-[#323232] mb-2">都道府県 <span className="text-red-500">*</span></label>
-              <select id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm bg-white">
+              <label htmlFor="prefecture" className="block text-xs font-bold text-text-dark mb-2">都道府県 <span className="text-red-500">*</span></label>
+              <select id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white">
                 <option value="">選択してください</option>
                 {PREFECTURES.map((pref) => (<option key={pref} value={pref}>{pref}</option>))}
               </select>
             </div>
 
             <div>
-              <label htmlFor="city" className="block text-xs font-bold text-[#323232] mb-2">市区町村 <span className="text-red-500">*</span></label>
-              <input type="text" id="city" name="city" value={formData.city} onChange={handleChange} placeholder="例: 渋谷区" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm" />
+              <label htmlFor="city" className="block text-xs font-bold text-text-dark mb-2">市区町村 <span className="text-red-500">*</span></label>
+              <input type="text" id="city" name="city" value={formData.city} onChange={handleChange} placeholder="例: 渋谷区" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
             </div>
 
             <div>
-              <label htmlFor="address_line1" className="block text-xs font-bold text-[#323232] mb-2">番地・建物名 <span className="text-red-500">*</span></label>
-              <input type="text" id="address_line1" name="address_line1" value={formData.address_line1} onChange={handleChange} placeholder="例: 1-2-3" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm" />
+              <label htmlFor="address_line1" className="block text-xs font-bold text-text-dark mb-2">番地・建物名 <span className="text-red-500">*</span></label>
+              <input type="text" id="address_line1" name="address_line1" value={formData.address_line1} onChange={handleChange} placeholder="例: 1-2-3" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
             </div>
 
             <div>
-              <label htmlFor="address_line2" className="block text-xs font-bold text-[#323232] mb-2">建物名・部屋番号（任意）</label>
-              <input type="text" id="address_line2" name="address_line2" value={formData.address_line2} onChange={handleChange} placeholder="例: サンプルマンション101" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm" />
+              <label htmlFor="address_line2" className="block text-xs font-bold text-text-dark mb-2">建物名・部屋番号（任意）</label>
+              <input type="text" id="address_line2" name="address_line2" value={formData.address_line2} onChange={handleChange} placeholder="例: サンプルマンション101" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-xs font-bold text-[#323232] mb-2">電話番号（任意）</label>
-              <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="例: 03-1234-5678" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#4a7c59] transition-colors text-sm" />
+              <label htmlFor="phone" className="block text-xs font-bold text-text-dark mb-2">電話番号（任意）</label>
+              <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="例: 03-1234-5678" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
             </div>
 
             <div className="flex items-center gap-3">
-              <input type="checkbox" id="is_default" name="is_default" checked={formData.is_default} onChange={handleChange} className="w-5 h-5 border-2 border-gray-300 rounded focus:ring-2 focus:ring-[#4a7c59] text-[#4a7c59]" />
-              <label htmlFor="is_default" className="text-sm font-bold text-[#323232] cursor-pointer">この住所をデフォルトに設定する</label>
+              <input type="checkbox" id="is_default" name="is_default" checked={formData.is_default} onChange={handleChange} className="w-5 h-5 border-2 border-gray-300 rounded focus:ring-2 focus:ring-primary text-primary" />
+              <label htmlFor="is_default" className="text-sm font-bold text-text-dark cursor-pointer">この住所をデフォルトに設定する</label>
             </div>
 
             {error && (
@@ -139,8 +141,8 @@ export function AddressForm() {
             )}
 
             <div className="flex gap-4 pt-4">
-              <Link href="/checkout" className="flex-1 px-6 py-3 font-bold text-[#323232] border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-center text-sm">キャンセル</Link>
-              <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 font-bold bg-[#4a7c59] text-white rounded-xl hover:bg-[#3d6a4a] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+              <Link href={ROUTES.CHECKOUT.INDEX} className="flex-1 px-6 py-3 font-bold text-text-dark border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-center text-sm">キャンセル</Link>
+              <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 {isSubmitting ? '登録中...' : '住所を登録'}
               </button>
             </div>

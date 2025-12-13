@@ -8,9 +8,9 @@
   "theme_color": "#323232",
   "icons": [
     {
-      "src": "/spirom.png",
-      "sizes": "1413x532",
-      "type": "image/png"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

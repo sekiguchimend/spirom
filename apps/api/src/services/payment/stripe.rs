@@ -7,15 +7,34 @@ use super::provider::*;
 /// Stripe決済プロバイダ
 pub struct StripePaymentProvider {
     api_key: String,
+    /// 互換用（単一secret）
     webhook_secret: String,
+    /// ローテーション用（カンマ区切りで複数指定）
+    webhook_secrets: Vec<String>,
     client: reqwest::Client,
 }
 
 impl StripePaymentProvider {
-    pub fn new(api_key: String, webhook_secret: String) -> Self {
+    /// `webhook_secrets_csv` は `STRIPE_WEBHOOK_SECRETS` の値（カンマ区切り）を想定
+    pub fn new(api_key: String, webhook_secret: String, webhook_secrets_csv: Option<String>) -> Self {
+        let mut secrets: Vec<String> = vec![];
+        if let Some(csv) = webhook_secrets_csv {
+            secrets.extend(
+                csv.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+            );
+        }
+        // 後方互換: STRIPE_WEBHOOK_SECRET も候補に入れる
+        if !webhook_secret.trim().is_empty() {
+            secrets.push(webhook_secret.clone());
+        }
+        secrets.sort();
+        secrets.dedup();
         Self {
             api_key,
             webhook_secret,
+            webhook_secrets: secrets,
             client: reqwest::Client::new(),
         }
     }
@@ -70,6 +89,11 @@ impl PaymentProvider for StripePaymentProvider {
             .client
             .post(&format!("{}/payment_intents", self.api_base_url()))
             .basic_auth(&self.api_key, None::<&str>)
+            // 冪等性キー（同一注文の多重生成防止）
+            .header(
+                "Idempotency-Key",
+                params.idempotency_key.clone().unwrap_or_else(|| format!("pi_order_{}", params.order_id)),
+            )
             .form(&form)
             .send()
             .await
@@ -200,37 +224,77 @@ impl PaymentProvider for StripePaymentProvider {
 
     fn verify_webhook(&self, payload: &[u8], signature: &str) -> Result<WebhookEvent, PaymentError> {
         // Stripe署名検証
-        // 署名形式: t=timestamp,v1=signature
-        let parts: std::collections::HashMap<&str, &str> = signature
-            .split(',')
-            .filter_map(|part| {
-                let mut iter = part.splitn(2, '=');
-                Some((iter.next()?, iter.next()?))
-            })
-            .collect();
+        // 署名形式: t=timestamp,v1=signature[,v1=signature2...]
+        let mut timestamp: Option<i64> = None;
+        let mut sigs_v1: Vec<String> = vec![];
+        for part in signature.split(',') {
+            let mut iter = part.splitn(2, '=');
+            let k = iter.next().unwrap_or("").trim();
+            let v = iter.next().unwrap_or("").trim();
+            if k == "t" {
+                timestamp = v.parse::<i64>().ok();
+            } else if k == "v1" && !v.is_empty() {
+                sigs_v1.push(v.to_string());
+            }
+        }
+        let timestamp = timestamp.ok_or_else(|| {
+            PaymentError::WebhookVerificationFailed("Missing timestamp".to_string())
+        })?;
+        if sigs_v1.is_empty() {
+            return Err(PaymentError::WebhookVerificationFailed("Missing v1 signature".to_string()));
+        }
 
-        let timestamp = parts
-            .get("t")
-            .ok_or_else(|| PaymentError::WebhookVerificationFailed("Missing timestamp".to_string()))?;
+        // リプレイ対策: タイムスタンプ許容範囲
+        let tolerance: i64 = std::env::var("STRIPE_WEBHOOK_TOLERANCE_SECONDS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(300);
+        let now = chrono::Utc::now().timestamp();
+        if (now - timestamp).abs() > tolerance {
+            return Err(PaymentError::WebhookVerificationFailed("Timestamp out of tolerance".to_string()));
+        }
 
-        let sig = parts
-            .get("v1")
-            .ok_or_else(|| PaymentError::WebhookVerificationFailed("Missing signature".to_string()))?;
+        // signed_payload = "{t}.{raw_payload}"
+        let mut signed_payload: Vec<u8> = Vec::with_capacity(32 + payload.len());
+        signed_payload.extend_from_slice(timestamp.to_string().as_bytes());
+        signed_payload.push(b'.');
+        signed_payload.extend_from_slice(payload);
 
-        // 署名計算
-        let signed_payload = format!("{}.{}", timestamp, String::from_utf8_lossy(payload));
+        // いずれかのsecretで一致すればOK（ローテーション対応）
+        fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+            if a.len() != b.len() {
+                return false;
+            }
+            let mut diff: u8 = 0;
+            for (x, y) in a.iter().zip(b.iter()) {
+                diff |= x ^ y;
+            }
+            diff == 0
+        }
 
-        type HmacSha256 = Hmac<Sha256>;
-        let mut mac = HmacSha256::new_from_slice(self.webhook_secret.as_bytes())
-            .map_err(|_| PaymentError::WebhookVerificationFailed("Invalid secret".to_string()))?;
-        mac.update(signed_payload.as_bytes());
+        let mut verified = false;
+        for secret in self.webhook_secrets.iter() {
+            type HmacSha256 = Hmac<Sha256>;
+            let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+                .map_err(|_| PaymentError::WebhookVerificationFailed("Invalid secret".to_string()))?;
+            mac.update(&signed_payload);
+            let expected = mac.finalize().into_bytes();
 
-        let expected_sig = hex::encode(mac.finalize().into_bytes());
+            for sig_hex in sigs_v1.iter() {
+                if let Ok(sig_bytes) = hex::decode(sig_hex) {
+                    if ct_eq(expected.as_slice(), sig_bytes.as_slice()) {
+                        verified = true;
+                        break;
+                    }
+                }
+            }
+            if verified {
+                break;
+            }
+        }
 
-        if expected_sig != *sig {
-            return Err(PaymentError::WebhookVerificationFailed(
-                "Signature mismatch".to_string(),
-            ));
+        if !verified {
+            return Err(PaymentError::WebhookVerificationFailed("Signature mismatch".to_string()));
         }
 
         // イベントをパース
@@ -244,6 +308,14 @@ impl PaymentProvider for StripePaymentProvider {
             _ => WebhookEventType::Unknown,
         };
 
+        let event_id = event["id"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        if event_id.is_empty() {
+            return Err(PaymentError::WebhookVerificationFailed("Missing event id".to_string()));
+        }
+
         let payment_id = event["data"]["object"]["id"]
             .as_str()
             .unwrap_or("")
@@ -254,6 +326,7 @@ impl PaymentProvider for StripePaymentProvider {
             .and_then(|s| s.parse().ok());
 
         Ok(WebhookEvent {
+            event_id,
             event_type,
             payment_id,
             order_id,

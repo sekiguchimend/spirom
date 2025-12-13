@@ -129,8 +129,8 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx
 Stripe MCPを使用して以下を作成済み:
 
 ### 商品
-- スタンダードプラン (`prod_TYSrfQiSqQWnqs`)
-- プレミアムプラン (`prod_TYSr3ILommxe9T`)
+- スタンダードプラン（IDは非公開。リポジトリに実値を記載しない）
+- プレミアムプラン（IDは非公開。リポジトリに実値を記載しない）
 
 ### 価格
 - スタンダード一回払い: ¥500
