@@ -80,6 +80,35 @@ async function fetchAllProducts(): Promise<Product[]> {
   return data || [];
 }
 
+async function fetchProductsByCategory(categorySlug: string): Promise<Product[]> {
+  // まずカテゴリIDを取得
+  const { data: category, error: categoryError } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('slug', categorySlug)
+    .eq('is_active', true)
+    .single();
+
+  if (categoryError || !category) {
+    console.error('Error fetching category:', categoryError);
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+    .eq('category_id', category.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching products by category:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
 async function fetchProductBySlug(slug: string): Promise<Product | null> {
   const { data, error } = await supabase
     .from('products')
@@ -131,6 +160,12 @@ const getCachedAllProducts = unstable_cache(
   { revalidate: 60, tags: ['products'] }
 );
 
+const getCachedProductsByCategory = unstable_cache(
+  async (categorySlug: string) => fetchProductsByCategory(categorySlug),
+  ['products-by-category'],
+  { revalidate: 60, tags: ['products'] }
+);
+
 const getCachedProductBySlug = unstable_cache(
   async (slug: string) => fetchProductBySlug(slug),
   ['product-by-slug'],
@@ -154,6 +189,10 @@ export const getFeaturedProducts = cache(async (limit: number = 4): Promise<Prod
 
 export const getAllProducts = cache(async (): Promise<Product[]> => {
   return getCachedAllProducts();
+});
+
+export const getProductsByCategory = cache(async (categorySlug: string): Promise<Product[]> => {
+  return getCachedProductsByCategory(categorySlug);
 });
 
 export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {

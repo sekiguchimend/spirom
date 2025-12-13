@@ -23,14 +23,32 @@ impl ApiProxy {
         headers.set("Accept", "application/json").map_err(BffError::from)?;
         headers.set("User-Agent", "Spirom-BFF/1.0").map_err(BffError::from)?;
 
-        // Forward Authorization header if present
+        // Forward Authorization header if present (with validation)
         if let Ok(Some(auth)) = req.headers().get("Authorization") {
-            headers.set("Authorization", &auth).map_err(BffError::from)?;
+            // ヘッダーインジェクション対策: 改行文字やCRLFを含むヘッダーを拒否
+            if auth.contains('\r') || auth.contains('\n') || auth.contains('\0') {
+                return Err(BffError::BadRequest("Invalid Authorization header".to_string()));
+            }
+            // Bearer形式の簡易検証
+            if auth.starts_with("Bearer ") && auth.len() > 7 && auth.len() < 4096 {
+                headers.set("Authorization", &auth).map_err(BffError::from)?;
+            }
         }
 
-        // Forward Content-Type for POST/PUT requests
+        // Forward Content-Type for POST/PUT requests (with validation)
         if let Ok(Some(content_type)) = req.headers().get("Content-Type") {
-            headers.set("Content-Type", &content_type).map_err(BffError::from)?;
+            // ヘッダーインジェクション対策
+            if content_type.contains('\r') || content_type.contains('\n') || content_type.contains('\0') {
+                return Err(BffError::BadRequest("Invalid Content-Type header".to_string()));
+            }
+            // 許可されたContent-Typeのみ転送
+            let allowed_types = ["application/json", "application/x-www-form-urlencoded", "multipart/form-data"];
+            let is_allowed = allowed_types.iter().any(|t| content_type.starts_with(t));
+            if is_allowed && content_type.len() < 256 {
+                headers.set("Content-Type", &content_type).map_err(BffError::from)?;
+            } else {
+                headers.set("Content-Type", "application/json").map_err(BffError::from)?;
+            }
         } else if method == Method::Post || method == Method::Put {
             headers.set("Content-Type", "application/json").map_err(BffError::from)?;
         }
@@ -38,8 +56,19 @@ impl ApiProxy {
         init.with_headers(headers);
 
         // Forward body for POST/PUT/PATCH requests
+        // DoS対策: ボディサイズ制限（1MB）
+        const MAX_BODY_SIZE: usize = 1024 * 1024;
+
         if method == Method::Post || method == Method::Put || method == Method::Patch {
             if let Ok(body) = req.text().await {
+                // ボディサイズチェック
+                if body.len() > MAX_BODY_SIZE {
+                    return Err(BffError::BadRequest(format!(
+                        "Request body too large: {} bytes (max: {} bytes)",
+                        body.len(),
+                        MAX_BODY_SIZE
+                    )));
+                }
                 if !body.is_empty() {
                     init.with_body(Some(wasm_bindgen::JsValue::from_str(&body)));
                 }

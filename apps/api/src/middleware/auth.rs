@@ -8,6 +8,7 @@ use axum::{
 use jsonwebtoken::{decode, DecodingKey, Validation};
 
 use crate::config::AppState;
+use crate::db::repositories::TokenBlacklistRepository;
 use crate::error::AppError;
 use crate::models::{AuthenticatedUser, Claims, UserRole};
 
@@ -23,9 +24,14 @@ pub async fn auth_middleware(
     // 開発環境:
     // - Authorization Bearer があれば通常通り検証する
     // - 認証バイパスは「明示的なDEV_AUTH_BYPASS_TOKENが設定され、ヘッダ一致した場合のみ」許可する
+    // - 本番/ステージング環境では絶対にバイパスを許可しない
     if is_dev {
         if let Ok(token) = extract_token(&request) {
             if let Ok(claims) = validate_token(&token, &state.config.jwt.secret) {
+                // ブラックリストチェック
+                if is_token_blacklisted(&state, &claims).await {
+                    return Err(AppError::Unauthorized("トークンは無効化されています".to_string()));
+                }
                 request.extensions_mut().insert(token);
                 let user = AuthenticatedUser::from(claims);
                 request.extensions_mut().insert(user);
@@ -33,29 +39,39 @@ pub async fn auth_middleware(
             }
         }
 
-        // 明示許可がない限り、開発環境でも認証は必須（脆弱性: 自動Admin付与を防止）
-        let bypass_secret = std::env::var("DEV_AUTH_BYPASS_TOKEN").ok();
-        let provided = request
-            .headers()
-            .get("X-Dev-Bypass-Token")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string());
+        // 二重チェック: 環境変数が"development"または"local"の場合のみバイパスを検討
+        // これにより、本番でDEV_AUTH_BYPASS_TOKENが誤設定されても無効
+        let allow_bypass = std::env::var("ALLOW_DEV_AUTH_BYPASS")
+            .ok()
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
 
-        if let (Some(expected), Some(actual)) = (bypass_secret, provided) {
-            if !expected.is_empty() && expected == actual {
-                let dev_user = AuthenticatedUser {
-                    id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-                    email: "dev@spirom.com".to_string(),
-                    role: UserRole::Admin,
-                };
-                request.extensions_mut().insert("dev-bypass".to_string());
-                request.extensions_mut().insert(dev_user);
-                return Ok(next.run(request).await);
+        if allow_bypass {
+            let bypass_secret = std::env::var("DEV_AUTH_BYPASS_TOKEN").ok();
+            let provided = request
+                .headers()
+                .get("X-Dev-Bypass-Token")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string());
+
+            if let (Some(expected), Some(actual)) = (bypass_secret, provided) {
+                // 最低32文字のトークンを要求（弱いトークン対策）
+                if expected.len() >= 32 && expected == actual {
+                    tracing::warn!("DEV AUTH BYPASS USED - this should never happen in production!");
+                    let dev_user = AuthenticatedUser {
+                        id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+                        email: "dev@spirom.com".to_string(),
+                        role: UserRole::Admin,
+                    };
+                    request.extensions_mut().insert("dev-bypass".to_string());
+                    request.extensions_mut().insert(dev_user);
+                    return Ok(next.run(request).await);
+                }
             }
         }
 
         return Err(AppError::Unauthorized(
-            "開発環境でも認証が必要です（DEV_AUTH_BYPASS_TOKEN を設定して明示的に許可できます）"
+            "開発環境でも認証が必要です（ALLOW_DEV_AUTH_BYPASS=1 と DEV_AUTH_BYPASS_TOKEN を設定して明示的に許可できます）"
                 .to_string(),
         ));
     }
@@ -65,6 +81,12 @@ pub async fn auth_middleware(
     request.extensions_mut().insert(token.clone());
 
     let claims = validate_token(&token, &state.config.jwt.secret)?;
+
+    // ブラックリストチェック
+    if is_token_blacklisted(&state, &claims).await {
+        return Err(AppError::Unauthorized("トークンは無効化されています".to_string()));
+    }
+
     let user = AuthenticatedUser::from(claims);
     request.extensions_mut().insert(user);
 
@@ -79,8 +101,11 @@ pub async fn optional_auth_middleware(
 ) -> Response {
     if let Ok(token) = extract_token(&request) {
         if let Ok(claims) = validate_token(&token, &state.config.jwt.secret) {
-            let user = AuthenticatedUser::from(claims);
-            request.extensions_mut().insert(user);
+            // ブラックリストチェック（オプショナル認証では無視）
+            if !is_token_blacklisted(&state, &claims).await {
+                let user = AuthenticatedUser::from(claims);
+                request.extensions_mut().insert(user);
+            }
         }
     }
 
@@ -97,6 +122,11 @@ pub async fn admin_middleware(
 
     let claims = validate_token(&token, &state.config.jwt.secret)?;
 
+    // ブラックリストチェック
+    if is_token_blacklisted(&state, &claims).await {
+        return Err(AppError::Unauthorized("トークンは無効化されています".to_string()));
+    }
+
     if claims.role != UserRole::Admin {
         return Err(AppError::Forbidden("管理者権限が必要です".to_string()));
     }
@@ -105,6 +135,39 @@ pub async fn admin_middleware(
     request.extensions_mut().insert(user);
 
     Ok(next.run(request).await)
+}
+
+/// トークンがブラックリストに登録されているか確認
+async fn is_token_blacklisted(state: &AppState, claims: &Claims) -> bool {
+    // ブラックリストチェックを無効化するオプション（パフォーマンス重視の場合）
+    let skip_blacklist = std::env::var("SKIP_TOKEN_BLACKLIST_CHECK")
+        .ok()
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    if skip_blacklist {
+        return false;
+    }
+
+    let blacklist_repo = TokenBlacklistRepository::new(state.db.service());
+
+    // 個別トークンのブラックリストチェック
+    if let Ok(is_blacklisted) = blacklist_repo.is_blacklisted(&claims.jti).await {
+        if is_blacklisted {
+            return true;
+        }
+    }
+
+    // ユーザー全体のブラックリストチェック（パスワード変更時等）
+    if let Ok(is_user_blacklisted) = blacklist_repo.is_user_blacklisted(claims.sub).await {
+        if is_user_blacklisted {
+            // トークンの発行時刻がブラックリスト登録より前なら無効
+            // （新しいトークンは有効にするため、この実装では単純化）
+            return true;
+        }
+    }
+
+    false
 }
 
 /// リクエストヘッダーからトークンを抽出

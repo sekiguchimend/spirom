@@ -142,6 +142,36 @@ impl OrderRepository {
         Ok(())
     }
 
+    /// ステータス更新（条件付き：現在ステータスが一致する場合のみ更新する）
+    /// - 競合（Webhook/リカバリ/ユーザー操作の同時実行）で二重在庫戻し等を起こさないために使用
+    pub async fn update_status_if_current(&self, id: Uuid, current: OrderStatus, next: OrderStatus) -> Result<bool> {
+        let query = format!("id=eq.{}&status=eq.{}", id, current.to_string());
+        let update = StatusUpdate {
+            status: next.to_string(),
+            updated_at: Utc::now(),
+        };
+
+        let updated: Vec<OrderRow> = self.client.update("orders", &query, &update).await?;
+        Ok(!updated.is_empty())
+    }
+
+    /// リカバリ用：決済待ち（PendingPayment）かつ一定時間経過した注文を取得
+    /// - items は含まれないため、必要なら `find_by_id` で取得する
+    pub async fn find_pending_payment_for_reconcile(
+        &self,
+        created_before: DateTime<Utc>,
+        limit: i32,
+    ) -> Result<Vec<OrderReconcileRow>> {
+        let ts = created_before.to_rfc3339();
+        let query = format!(
+            "status=eq.pending_payment&created_at=lt.{}&select=id,created_at,payment_id&order=created_at.asc&limit={}",
+            urlencoding::encode(&ts),
+            limit
+        );
+        let rows: Vec<OrderReconcileRow> = self.client.select("orders", &query).await?;
+        Ok(rows)
+    }
+
     /// 決済ID更新
     pub async fn update_payment_id(&self, id: Uuid, _user_id: Uuid, payment_id: &str) -> Result<()> {
         let query = format!("id=eq.{}", id);
@@ -349,4 +379,12 @@ struct OrderItemWithOrderId {
     #[allow(dead_code)]
     id: Uuid,
     order_id: Uuid,
+}
+
+/// リカバリ/回収用の最小行
+#[derive(Debug, Deserialize)]
+pub struct OrderReconcileRow {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub payment_id: Option<String>,
 }

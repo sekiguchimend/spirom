@@ -26,6 +26,14 @@ async function getToken(): Promise<string | null> {
   return cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value || null;
 }
 
+function withBffProxyToken(headers: Record<string, string>) {
+  const proxyToken = process.env.BFF_PROXY_TOKEN || process.env.API_PROXY_TOKEN;
+  if (proxyToken) {
+    return { ...headers, 'X-BFF-Proxy-Token': proxyToken };
+  }
+  return headers;
+}
+
 async function clearAuthCookies() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAMES.ACCESS_TOKEN);
@@ -83,8 +91,10 @@ export async function fetchAddresses(): Promise<{ success: boolean; data: Addres
   try {
     const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me/addresses`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
       },
       cache: 'no-store',
     });
@@ -115,8 +125,10 @@ export async function createAddressAction(
     const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me/addresses`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
       },
       body: JSON.stringify(formData),
     });
@@ -149,8 +161,10 @@ export async function createPaymentIntentAction(
     const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/intent`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
       },
       body: JSON.stringify({ order_id: orderId }),
     });
@@ -183,8 +197,10 @@ export async function createOrderAction(
     const response = await fetch(`${BFF_BASE_URL}/api/v1/orders`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
       },
       body: JSON.stringify(request),
     });
@@ -230,7 +246,7 @@ export async function refreshSessionAction(): Promise<{ success: boolean; error?
   try {
     const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: withBffProxyToken({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ refresh_token: refreshToken }),
       cache: 'no-store',
     });
@@ -258,10 +274,10 @@ export async function loginAction(
   try {
     const response = await fetch(targetUrl, {
       method: 'POST',
-      headers: {
+      headers: withBffProxyToken({
         'Content-Type': 'application/json',
         'Connection': 'close',
-      },
+      }),
       body: JSON.stringify(request),
       cache: 'no-store',
     });
@@ -290,10 +306,10 @@ export async function registerAction(
   try {
     const response = await fetch(targetUrl, {
       method: 'POST',
-      headers: {
+      headers: withBffProxyToken({
         'Content-Type': 'application/json',
         'Connection': 'close',
-      },
+      }),
       body: JSON.stringify(request),
       cache: 'no-store',
     });
@@ -322,8 +338,10 @@ export async function logoutAction(): Promise<{ success: boolean; error?: string
       await fetch(`${BFF_BASE_URL}/api/v1/auth/logout`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          ...withBffProxyToken({
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }),
         },
       });
     }
@@ -345,8 +363,10 @@ export async function getMeAction(): Promise<{ success: boolean; data?: User; er
   try {
     const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
       },
       cache: 'no-store',
     });

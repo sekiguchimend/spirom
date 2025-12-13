@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ProductCard, CategoryPill } from '@/components/ui';
+import { getAllProducts, getProductsByCategory, getTopLevelCategories } from '@/lib/supabase';
 
 export const metadata: Metadata = {
   title: "Products",
@@ -13,38 +14,35 @@ export const metadata: Metadata = {
   },
 };
 
-// モックデータ
-const products = [
-  { id: '1', slug: 'organic-cotton-tote', name: 'オーガニックコットントート', price: 3800, image: '/products/tote.jpg', category: 'バッグ', categorySlug: 'bags', tag: 'NEW' as const },
-  { id: '2', slug: 'ceramic-mug-set', name: 'セラミックマグセット', price: 4200, image: '/products/mug.jpg', category: 'キッチン', categorySlug: 'kitchen' },
-  { id: '3', slug: 'linen-cushion', name: 'リネンクッションカバー', price: 2800, image: '/products/cushion.jpg', category: 'インテリア', categorySlug: 'interior', tag: 'NEW' as const },
-  { id: '4', slug: 'wooden-coaster', name: '天然木コースター 4枚組', price: 1800, image: '/products/coaster.jpg', category: 'キッチン', categorySlug: 'kitchen', tag: 'SALE' as const },
-  { id: '5', slug: 'canvas-backpack', name: 'キャンバスバックパック', price: 8900, image: '/products/backpack.jpg', category: 'バッグ', categorySlug: 'bags' },
-  { id: '6', slug: 'bamboo-utensil-set', name: '竹カトラリーセット', price: 2200, image: '/products/utensil.jpg', category: 'キッチン', categorySlug: 'kitchen', tag: 'HOT' as const },
-  { id: '7', slug: 'wool-throw-blanket', name: 'ウールスローブランケット', price: 12800, image: '/products/blanket.jpg', category: 'インテリア', categorySlug: 'interior', tag: 'SALE' as const },
-  { id: '8', slug: 'leather-wallet', name: '本革コンパクトウォレット', price: 9800, image: '/products/wallet.jpg', category: 'ファッション', categorySlug: 'fashion' },
-];
-
-const categories = [
-  { slug: 'all', name: 'All' },
-  { slug: 'kitchen', name: 'Kitchen' },
-  { slug: 'interior', name: 'Interior' },
-  { slug: 'fashion', name: 'Fashion' },
-  { slug: 'bags', name: 'Bags' },
-];
-
 interface ProductsPageProps {
   searchParams: Promise<{ category?: string; sort?: string; page?: string }>;
+}
+
+// タグを判定するヘルパー関数
+function getProductTag(tags: string[]): 'NEW' | 'SALE' | 'HOT' | undefined {
+  if (tags.includes('new')) return 'NEW';
+  if (tags.includes('sale')) return 'SALE';
+  if (tags.includes('hot')) return 'HOT';
+  return undefined;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
   const selectedCategory = params.category || 'all';
 
-  // フィルタリング
-  const filteredProducts = selectedCategory === 'all'
-    ? products
-    : products.filter(p => p.categorySlug === selectedCategory);
+  // データ取得
+  const [products, categories] = await Promise.all([
+    selectedCategory === 'all'
+      ? getAllProducts()
+      : getProductsByCategory(selectedCategory),
+    getTopLevelCategories(12),
+  ]);
+
+  // カテゴリリストに「All」を追加
+  const categoryList = [
+    { slug: 'all', name: 'All' },
+    ...categories.map(c => ({ slug: c.slug, name: c.name })),
+  ];
 
   return (
     <div className="min-h-screen bg-[#FFFFF5]">
@@ -55,14 +53,14 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             PRODUCTS
           </h1>
           <p className="text-sm sm:text-lg text-gray-600 font-bold uppercase tracking-wider">
-            {filteredProducts.length} ITEMS AVAILABLE
+            {products.length} ITEMS AVAILABLE
           </p>
         </header>
 
         {/* カテゴリフィルター */}
         <nav aria-label="カテゴリフィルター" className="mb-12">
-          <ul className="flex flex-wrap justify-center gap-3">
-            {categories.map((category) => (
+          <ul className="flex flex-wrap justify-center [&>li:last-child_a]:after:hidden">
+            {categoryList.map((category) => (
               <li key={category.slug}>
                 <CategoryPill
                   href={category.slug === 'all' ? '/products' : `/products?category=${category.slug}`}
@@ -78,36 +76,26 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         {/* 商品グリッド */}
         <section aria-labelledby="products-heading">
           <h2 id="products-heading" className="sr-only">商品一覧</h2>
-          <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredProducts.map((product) => (
-              <li key={product.id}>
-                <ProductCard
-                  slug={product.slug}
-                  name={product.name}
-                  price={product.price}
-                  image={product.image}
-                  tag={product.tag}
-                />
-              </li>
-            ))}
-          </ul>
+          {products.length > 0 ? (
+            <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {products.map((product) => (
+                <li key={product.id}>
+                  <ProductCard
+                    slug={product.slug}
+                    name={product.name}
+                    price={product.price}
+                    image={product.images[0] || '/placeholder-product.jpg'}
+                    tag={getProductTag(product.tags)}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-20">
+              <p className="text-gray-500 text-lg">商品が見つかりませんでした</p>
+            </div>
+          )}
         </section>
-
-        {/* ページネーション */}
-        <nav aria-label="ページネーション" className="mt-16 flex justify-center gap-3">
-          <button className="px-6 py-3 font-black text-sm uppercase tracking-wider bg-white border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] opacity-50 cursor-not-allowed">
-            PREV
-          </button>
-          <button className="w-12 h-12 font-black bg-black text-white border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-            1
-          </button>
-          <button className="w-12 h-12 font-black bg-white text-black border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200">
-            2
-          </button>
-          <button className="px-6 py-3 font-black text-sm uppercase tracking-wider bg-white border-3 border-black rounded-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200">
-            NEXT
-          </button>
-        </nav>
       </div>
     </div>
   );

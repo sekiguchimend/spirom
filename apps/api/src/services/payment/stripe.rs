@@ -5,6 +5,7 @@ use sha2::Sha256;
 use super::provider::*;
 
 /// Stripe決済プロバイダ
+#[derive(Clone)]
 pub struct StripePaymentProvider {
     api_key: String,
     /// 互換用（単一secret）
@@ -41,6 +42,53 @@ impl StripePaymentProvider {
 
     fn api_base_url(&self) -> &'static str {
         "https://api.stripe.com/v1"
+    }
+
+    /// PaymentIntent取得（Webhook不達時のリカバリ用）
+    pub async fn retrieve_intent(&self, intent_id: &str) -> Result<PaymentResult, PaymentError> {
+        let response = self
+            .client
+            .get(&format!("{}/payment_intents/{}", self.api_base_url(), intent_id))
+            .basic_auth(&self.api_key, None::<&str>)
+            .send()
+            .await
+            .map_err(|e| PaymentError::NetworkError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(PaymentError::ProviderError(format!(
+                "Stripe API error: {}",
+                error_text
+            )));
+        }
+
+        let stripe_response: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| PaymentError::ProviderError(e.to_string()))?;
+
+        let status = match stripe_response["status"].as_str() {
+            Some("succeeded") => PaymentResultStatus::Succeeded,
+            Some("processing") => PaymentResultStatus::Pending,
+            Some("canceled") => PaymentResultStatus::Failed,
+            // requires_* はまだ完了していない扱い
+            Some("requires_payment_method")
+            | Some("requires_confirmation")
+            | Some("requires_action") => PaymentResultStatus::Pending,
+            _ => PaymentResultStatus::Failed,
+        };
+
+        Ok(PaymentResult {
+            id: intent_id.to_string(),
+            status,
+            amount: stripe_response["amount"].as_i64().unwrap_or(0),
+            currency: stripe_response["currency"]
+                .as_str()
+                .unwrap_or("jpy")
+                .to_uppercase(),
+            // retrieveは確定時刻が不明なためpaid_atは入れない（必要ならchargesで取得する）
+            paid_at: None,
+        })
     }
 }
 

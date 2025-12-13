@@ -16,6 +16,7 @@ use crate::models::{
     OrderStatus, OrderSummary, PaginatedResponse, PaymentStatus,
     calculate_shipping_fee, calculate_tax, generate_order_number,
 };
+use crate::services::payment::{PaymentProvider, StripePaymentProvider};
 
 /// 注文作成
 pub async fn create_order(
@@ -208,8 +209,7 @@ pub async fn get_order(
     Path(id): Path<Uuid>,
 ) -> Result<Json<DataResponse<Order>>> {
     let order_repo = OrderRepository::new(state.db.with_auth(&token));
-
-    let order = order_repo
+    let mut order = order_repo
         .find_by_id(id)
         .await?
         .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
@@ -217,6 +217,91 @@ pub async fn get_order(
     // 自分の注文かチェック
     if order.user_id != auth_user.id {
         return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
+    }
+
+    // ---- Webhook不達/遅延のリカバリ ----
+    // Pendingの注文は、PaymentIntentをStripeから取得して最終状態を同期する（URL直叩き/フロント判定依存を避ける）
+    let is_pending = order.status == OrderStatus::PendingPayment
+        && (order.payment_status == PaymentStatus::Pending || order.payment_status == PaymentStatus::Succeeded);
+    if is_pending {
+        if let Some(payment_id) = order.payment_id.clone() {
+            if let Ok(stripe_key) = std::env::var("STRIPE_SECRET_KEY") {
+                let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+                let webhook_secrets = std::env::var("STRIPE_WEBHOOK_SECRETS").ok();
+                let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
+
+                if let Ok(pi) = payment_provider.retrieve_intent(&payment_id).await {
+                    let service_order_repo = OrderRepository::new(state.db.service());
+                    let product_repo = ProductRepository::new(state.db.service());
+
+                    match pi.status {
+                        crate::services::payment::PaymentResultStatus::Succeeded => {
+                            // Stripe側金額/通貨を再検証（乖離は返金&キャンセル）
+                            if pi.amount != order.total || pi.currency != order.currency.to_uppercase() {
+                                tracing::error!(
+                                    "Stripe/DB金額乖離検知(reconcile): order_id={}, payment_id={}, stripe_amount={}, db_total={}, stripe_currency={}, db_currency={}",
+                                    order.id,
+                                    payment_id,
+                                    pi.amount,
+                                    order.total,
+                                    pi.currency,
+                                    order.currency
+                                );
+
+                                // 返金は非同期で（同期を重くしない）
+                                let refund_provider = payment_provider.clone();
+                                let pid = payment_id.clone();
+                                tokio::spawn(async move {
+                                    let _ = refund_provider.refund(&pid, None).await;
+                                });
+
+                                let updated = service_order_repo
+                                    .update_status_if_current(order.id, OrderStatus::PendingPayment, OrderStatus::Cancelled)
+                                    .await
+                                    .unwrap_or(false);
+                                if updated {
+                                    let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Failed).await;
+                                    // 在庫復旧
+                                    let release_items: Vec<(Uuid, i32)> =
+                                        order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+                                    let _ = product_repo.release_stock_bulk(&release_items).await;
+                                }
+                            } else {
+                                // 正常確定
+                                let updated = service_order_repo
+                                    .update_status_if_current(order.id, OrderStatus::PendingPayment, OrderStatus::Paid)
+                                    .await
+                                    .unwrap_or(false);
+                                if updated {
+                                    let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Paid).await;
+                                }
+                            }
+                        }
+                        crate::services::payment::PaymentResultStatus::Failed => {
+                            // 失敗確定 -> キャンセル + 在庫復旧
+                            let updated = service_order_repo
+                                .update_status_if_current(order.id, OrderStatus::PendingPayment, OrderStatus::Cancelled)
+                                .await
+                                .unwrap_or(false);
+                            if updated {
+                                let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Failed).await;
+                                let release_items: Vec<(Uuid, i32)> =
+                                    order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+                                let _ = product_repo.release_stock_bulk(&release_items).await;
+                            }
+                        }
+                        crate::services::payment::PaymentResultStatus::Pending => {
+                            // まだ処理中：何もしない
+                        }
+                    }
+                }
+            }
+        }
+
+        // 更新が入った可能性があるため再取得
+        if let Some(updated) = order_repo.find_by_id(id).await? {
+            order = updated;
+        }
     }
 
     Ok(Json(DataResponse::new(order)))
@@ -250,14 +335,14 @@ pub async fn cancel_order(
     }
 
     // ステータス更新
-    order_repo
-        .update_status(
-            id,
-            auth_user.id,
-            OrderStatus::Cancelled,
-            order.created_at.timestamp_millis(),
-        )
+    // 競合（Webhook/回収タスク等）で二重在庫戻しにならないよう条件付き更新にする
+    let updated = order_repo
+        .update_status_if_current(id, OrderStatus::PendingPayment, OrderStatus::Cancelled)
         .await?;
+    if !updated {
+        let updated_order = order_repo.find_by_id(id).await?.unwrap();
+        return Ok(Json(DataResponse::new(updated_order)));
+    }
 
     // 在庫を戻す（原子操作）
     let release_items: Vec<(Uuid, i32)> = order.items.iter().map(|i| (i.product_id, i.quantity)).collect();

@@ -17,6 +17,25 @@ use crate::services::payment::{
     CreateIntentParams, PaymentProvider, ShippingAddress, StripePaymentProvider, WebhookEventType,
 };
 
+fn stripe_event_summary(event: &crate::services::payment::WebhookEvent) -> serde_json::Value {
+    // PIIや巨大payloadを避け、検証に必要な最小限だけ保存する
+    // - amount/currency/status は PaymentIntent から取得
+    let obj = &event.data["data"]["object"];
+    serde_json::json!({
+        "id": event.event_id,
+        "type": event.data["type"].as_str().unwrap_or(""),
+        "created": event.data["created"].as_i64().unwrap_or(0),
+        "livemode": event.data["livemode"].as_bool().unwrap_or(false),
+        "payment_intent_id": event.payment_id,
+        "order_id": event.order_id.map(|id| id.to_string()),
+        "payment_intent": {
+            "status": obj["status"].as_str().unwrap_or(""),
+            "amount": obj["amount"].as_i64().unwrap_or(0),
+            "currency": obj["currency"].as_str().unwrap_or(""),
+        }
+    })
+}
+
 /// PaymentIntent作成リクエスト
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreatePaymentIntentRequest {
@@ -160,6 +179,7 @@ pub async fn handle_webhook(
 
     // ---- 冪等性: Stripe Event ID を保存して多重実行を防ぐ ----
     // Supabase RPC（record_stripe_event）が未導入の場合でも落とさず処理は続ける（ログで検知可能にする）
+    let payload_summary = stripe_event_summary(&event);
     let recorded: Option<bool> = db
         .rpc(
             "record_stripe_event",
@@ -168,7 +188,7 @@ pub async fn handle_webhook(
                 "p_event_type": format!("{:?}", event.event_type),
                 "p_payment_intent_id": event.payment_id.clone(),
                 "p_order_id": event.order_id,
-                "p_payload": event.data.clone(),
+                "p_payload": payload_summary,
             }),
         )
         .await
@@ -207,7 +227,12 @@ pub async fn handle_webhook(
                 );
 
                 // 自動返金（安全側に倒す）
-                let _ = payment_provider.refund(&event.payment_id, None).await;
+                // Webhookは同期で重くしない：レスポンス返却後に非同期で実行
+                let refund_provider = payment_provider.clone();
+                let payment_id = event.payment_id.clone();
+                tokio::spawn(async move {
+                    let _ = refund_provider.refund(&payment_id, None).await;
+                });
 
                 // 注文キャンセル扱い + 在庫復旧（後続でRPC化する）
                 order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
@@ -336,7 +361,8 @@ pub async fn create_refund(
         return Err(AppError::Forbidden("返金には管理者権限が必要です".to_string()));
     }
 
-    let order_repo = OrderRepository::new(state.db.with_auth(&token));
+    // 管理者はservice roleで全注文にアクセス可能
+    let order_repo = OrderRepository::new(state.db.service());
 
     // 注文取得
     let order = order_repo
@@ -344,12 +370,13 @@ pub async fn create_refund(
         .await?
         .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
 
-    // 自分の注文かチェック
-    if order.user_id != auth_user.id {
-        return Err(AppError::Forbidden(
-            "この注文にアクセスする権限がありません".to_string(),
-        ));
-    }
+    // 管理者は全ての注文を返金可能（user_idチェック不要）
+    tracing::info!(
+        "Admin refund initiated: admin_id={}, order_user_id={}, order_id={}",
+        auth_user.id,
+        order.user_id,
+        order.id
+    );
 
     // 決済済みかチェック
     if order.payment_status != PaymentStatus::Paid {

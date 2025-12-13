@@ -95,17 +95,17 @@ export function AddressForm() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="name" className="block text-xs font-bold text-text-dark mb-2">ラベル（任意）</label>
-              <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} placeholder="例: 自宅、会社など" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
+              <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} placeholder="例: 自宅、会社など" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
             </div>
 
             <div>
               <label htmlFor="postal_code" className="block text-xs font-bold text-text-dark mb-2">郵便番号 <span className="text-red-500">*</span></label>
-              <input type="text" id="postal_code" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder="1234567 または 123-4567" maxLength={8} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
+              <input type="text" id="postal_code" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder="1234567 または 123-4567" maxLength={8} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
             </div>
 
             <div>
               <label htmlFor="prefecture" className="block text-xs font-bold text-text-dark mb-2">都道府県 <span className="text-red-500">*</span></label>
-              <select id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white">
+              <select id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark">
                 <option value="">選択してください</option>
                 {PREFECTURES.map((pref) => (<option key={pref} value={pref}>{pref}</option>))}
               </select>
@@ -113,22 +113,22 @@ export function AddressForm() {
 
             <div>
               <label htmlFor="city" className="block text-xs font-bold text-text-dark mb-2">市区町村 <span className="text-red-500">*</span></label>
-              <input type="text" id="city" name="city" value={formData.city} onChange={handleChange} placeholder="例: 渋谷区" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
+              <input type="text" id="city" name="city" value={formData.city} onChange={handleChange} placeholder="例: 渋谷区" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
             </div>
 
             <div>
               <label htmlFor="address_line1" className="block text-xs font-bold text-text-dark mb-2">番地・建物名 <span className="text-red-500">*</span></label>
-              <input type="text" id="address_line1" name="address_line1" value={formData.address_line1} onChange={handleChange} placeholder="例: 1-2-3" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
+              <input type="text" id="address_line1" name="address_line1" value={formData.address_line1} onChange={handleChange} placeholder="例: 1-2-3" required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
             </div>
 
             <div>
               <label htmlFor="address_line2" className="block text-xs font-bold text-text-dark mb-2">建物名・部屋番号（任意）</label>
-              <input type="text" id="address_line2" name="address_line2" value={formData.address_line2} onChange={handleChange} placeholder="例: サンプルマンション101" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
+              <input type="text" id="address_line2" name="address_line2" value={formData.address_line2} onChange={handleChange} placeholder="例: サンプルマンション101" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
             </div>
 
             <div>
               <label htmlFor="phone" className="block text-xs font-bold text-text-dark mb-2">電話番号（任意）</label>
-              <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="例: 03-1234-5678" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm" />
+              <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="例: 03-1234-5678" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
             </div>
 
             <div className="flex items-center gap-3">

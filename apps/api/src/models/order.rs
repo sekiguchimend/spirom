@@ -164,17 +164,19 @@ impl From<Order> for OrderSummary {
 }
 
 /// 注文アイテムリクエスト
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct OrderItemRequest {
     pub product_id: Uuid,
-    #[validate(range(min = 1))]
+    #[validate(range(min = 1, max = 99))]
     pub quantity: i32,
 }
 
 /// 注文作成リクエスト
 #[derive(Debug, Clone, Deserialize, Validate)]
+#[validate(schema(function = "validate_create_order_request"))]
 pub struct CreateOrderRequest {
     /// 注文アイテム（指定された場合はカートではなくこちらを使用）
+    /// 最大50アイテムまで（DoS対策）
     #[serde(default)]
     pub items: Option<Vec<OrderItemRequest>>,
     pub shipping_address_id: Uuid,
@@ -182,6 +184,28 @@ pub struct CreateOrderRequest {
     pub payment_method: PaymentMethod,
     #[validate(length(max = 500))]
     pub notes: Option<String>,
+}
+
+/// 注文作成リクエストのバリデーション
+fn validate_create_order_request(req: &CreateOrderRequest) -> Result<(), validator::ValidationError> {
+    if let Some(items) = &req.items {
+        // アイテム数上限チェック（DoS対策）
+        if items.len() > 50 {
+            let mut err = validator::ValidationError::new("too_many_items");
+            err.message = Some("注文アイテムは最大50件までです".into());
+            return Err(err);
+        }
+        // 重複商品チェック
+        let mut seen = std::collections::HashSet::new();
+        for item in items {
+            if !seen.insert(item.product_id) {
+                let mut err = validator::ValidationError::new("duplicate_product");
+                err.message = Some("同じ商品が複数回指定されています".into());
+                return Err(err);
+            }
+        }
+    }
+    Ok(())
 }
 
 /// 注文番号生成

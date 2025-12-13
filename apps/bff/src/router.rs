@@ -14,6 +14,9 @@ pub async fn handle_request(req: Request, env: Env, _ctx: Context) -> Result<Res
         .map(|v| v.to_string())
         .unwrap_or_else(|_| "production".to_string());
 
+    // Bot/curl対策：Nextサーバーのみが付与できるプロキシトークン（本番では必須）
+    let proxy_token_secret = env.secret("BFF_PROXY_TOKEN").ok().map(|s| s.to_string());
+
     let cors = if environment == "development" {
         CorsMiddleware::new().with_development()
     } else {
@@ -58,6 +61,27 @@ pub async fn handle_request(req: Request, env: Env, _ctx: Context) -> Result<Res
 
     // 決済系はより厳格に（PaymentIntent無制限生成/ブルートフォース対策）
     if path.starts_with("/api/v1/payments/") || (path == "/api/v1/orders" && method == Method::Post) {
+        // Next経由のみに制限（curl/Postman直叩き対策）
+        if environment != "development" {
+            let expected = match proxy_token_secret.clone() {
+                Some(v) if !v.trim().is_empty() => v,
+                _ => {
+                    // 本番で未設定は危険なので fail-close
+                    return Ok(BffError::InternalError("BFF_PROXY_TOKEN is not set".to_string()).to_response()?);
+                }
+            };
+
+            let provided = req
+                .headers()
+                .get("X-BFF-Proxy-Token")?
+                .or_else(|| req.headers().get("x-bff-proxy-token").ok().flatten())
+                .unwrap_or_default();
+
+            if provided != expected {
+                return Ok(BffError::Unauthorized("Invalid proxy token".to_string()).to_response()?);
+            }
+        }
+
         let strict = RateLimiter::with_limits(rate_limit_kv.clone(), 60, 10);
         let strict_key = format!("{}:payments", client_ip);
         let strict_result = strict.check(&strict_key).await

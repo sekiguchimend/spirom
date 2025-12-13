@@ -319,6 +319,24 @@ ALTER TABLE refresh_tokens ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own tokens" ON refresh_tokens
     FOR ALL USING (auth.uid()::text = user_id::text);
 
+-- ========== トークンブラックリスト（セキュリティ） ==========
+
+CREATE TABLE IF NOT EXISTS token_blacklist (
+    jti TEXT PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE token_blacklist ENABLE ROW LEVEL SECURITY;
+
+-- service_roleのみアクセス可能（通常ユーザーは参照不可）
+CREATE POLICY "Service role only for token blacklist" ON token_blacklist
+    FOR ALL USING (false);
+
+-- 期限切れエントリを自動削除するためのインデックス
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+
 -- ========== RPC: Stripe Event 記録（冪等性） ==========
 CREATE OR REPLACE FUNCTION record_stripe_event(
     p_event_id TEXT,

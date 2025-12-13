@@ -1,6 +1,10 @@
+use axum::middleware as axum_middleware;
 use std::net::SocketAddr;
 use std::net::IpAddr;
+use std::time::Duration;
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -15,7 +19,9 @@ mod services;
 
 use config::{AppState, Config};
 use db::SupabaseClient;
+use middleware::{security_headers_middleware, hsts_middleware, init_rate_limiter, rate_limiter_middleware};
 use routes::create_router;
+use services::payment::spawn_payment_reconciler;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -48,6 +54,8 @@ async fn main() -> anyhow::Result<()> {
 
     // アプリケーション状態
     let state = AppState::new(config.clone(), supabase);
+    // Webhook不達/遅延のリカバリ（バックグラウンド回収）
+    spawn_payment_reconciler(state.clone());
 
     // CORSの設定（許可リスト方式）
     let allowed_origins: Vec<axum::http::HeaderValue> = config
@@ -71,12 +79,45 @@ async fn main() -> anyhow::Result<()> {
             axum::http::header::CONTENT_TYPE,
             axum::http::header::ACCEPT,
             axum::http::HeaderName::from_static("x-session-id"),
+            axum::http::HeaderName::from_static("x-session-signature"),
             axum::http::HeaderName::from_static("x-dev-bypass-token"),
-        ]));
+        ]))
+        .allow_credentials(true);
+
+    // DoS対策設定
+    let request_body_limit = std::env::var("REQUEST_BODY_LIMIT_BYTES")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1024 * 1024); // デフォルト1MB
+
+    let request_timeout_seconds = std::env::var("REQUEST_TIMEOUT_SECONDS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(30); // デフォルト30秒
+
+    // レート制限の初期化（デフォルト: 60秒間に200リクエスト）
+    let rate_limit_window = std::env::var("RATE_LIMIT_WINDOW_SECONDS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(60);
+    let rate_limit_max = std::env::var("RATE_LIMIT_MAX_REQUESTS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(200);
+    init_rate_limiter(rate_limit_window, rate_limit_max);
+    tracing::info!("Rate limiter initialized: {} requests per {} seconds", rate_limit_max, rate_limit_window);
 
     // ルーターの構築
+    // 注意: layerは逆順に適用される（最後に追加したものが最初に実行される）
     let app = create_router(state)
+        .layer(axum_middleware::from_fn(security_headers_middleware))
+        .layer(axum_middleware::from_fn(hsts_middleware))
+        .layer(axum_middleware::from_fn(rate_limiter_middleware))
         .layer(cors)
+        // リクエストボディサイズ制限（メモリ枯渇対策）
+        .layer(RequestBodyLimitLayer::new(request_body_limit))
+        // リクエストタイムアウト（SlowLoris対策）
+        .layer(TimeoutLayer::new(Duration::from_secs(request_timeout_seconds)))
         .layer(TraceLayer::new_for_http());
 
     // サーバーの起動（HOST/PORT を尊重）
@@ -85,7 +126,11 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Starting server on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

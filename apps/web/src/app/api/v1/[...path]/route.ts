@@ -13,6 +13,10 @@ const BFF_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:8787';
 
+// BFF直叩き（curl/Postman）対策：Nextサーバーのみが付与できるプロキシトークン
+// - ブラウザには露出しない（NEXT_PUBLICは使わない）
+const BFF_PROXY_TOKEN = process.env.BFF_PROXY_TOKEN || process.env.API_PROXY_TOKEN || '';
+
 const DEBUG_PROXY =
   process.env.DEBUG_API_PROXY === '1' ||
   process.env.NEXT_PUBLIC_DEBUG_API_PROXY === '1' ||
@@ -153,6 +157,11 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
   headers.set('x-request-id', requestId);
   const clientReqId = req.headers.get('x-client-request-id');
   if (clientReqId) headers.set('x-client-request-id', clientReqId);
+
+  // Bot/curl 対策：Next 経由のみ通す（本番はBFF側で必須化する）
+  if (BFF_PROXY_TOKEN) {
+    headers.set('x-bff-proxy-token', BFF_PROXY_TOKEN);
+  }
 
   if (DEBUG_PROXY) {
     const authHeader = headers.get('authorization') || '';

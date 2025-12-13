@@ -1,11 +1,12 @@
-use axum::{extract::State, Json};
+use axum::{extract::State, Extension, Json};
+use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use validator::Validate;
 
 use crate::config::AppState;
-use crate::db::repositories::UserRepository;
+use crate::db::repositories::{UserRepository, TokenBlacklistRepository};
 use crate::error::{AppError, Result};
-use crate::models::{AuthResponse, LoginRequest, RefreshTokenRequest, RegisterRequest, TokenResponse, Claims};
+use crate::models::{AuthResponse, AuthenticatedUser, LoginRequest, RefreshTokenRequest, RegisterRequest, TokenResponse, Claims};
 use crate::services::AuthService;
 use crate::services::password::hash_password;
 
@@ -53,9 +54,28 @@ pub async fn login(
 }
 
 /// ログアウト
-pub async fn logout() -> Result<Json<serde_json::Value>> {
-    // JWTはステートレスなので、サーバー側での無効化は不要
-    // クライアント側でトークンを破棄する
+pub async fn logout(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
+) -> Result<Json<serde_json::Value>> {
+    // トークンをブラックリストに追加
+    let decoding_key = DecodingKey::from_secret(state.config.jwt.secret.as_bytes());
+    let validation = Validation::default();
+
+    if let Ok(token_data) = decode::<Claims>(&token, &decoding_key, &validation) {
+        let blacklist_repo = TokenBlacklistRepository::new(state.db.service());
+
+        // トークンの有効期限までブラックリストに保持
+        let expires_at = chrono::DateTime::from_timestamp(token_data.claims.exp, 0)
+            .unwrap_or_else(|| Utc::now() + Duration::hours(1));
+
+        if let Err(e) = blacklist_repo.add(&token_data.claims.jti, auth_user.id, expires_at).await {
+            // ブラックリスト追加に失敗してもログアウト自体は成功させる
+            tracing::warn!("Failed to add token to blacklist: {}", e);
+        }
+    }
+
     Ok(Json(serde_json::json!({ "message": "ログアウトしました" })))
 }
 
@@ -158,6 +178,13 @@ pub async fn reset_password(
     let password_hash = hash_password(&req.new_password)?;
     let user_repo = UserRepository::new(state.db.service());
     user_repo.update_password(token_data.claims.sub, &password_hash).await?;
+
+    // パスワード変更時は全ての既存トークンを無効化（セキュリティ対策）
+    let blacklist_repo = TokenBlacklistRepository::new(state.db.service());
+    let expires_at = Utc::now() + Duration::days(30); // 最大リフレッシュトークン有効期間
+    if let Err(e) = blacklist_repo.blacklist_all_user_tokens(token_data.claims.sub, expires_at).await {
+        tracing::warn!("Failed to blacklist all user tokens: {}", e);
+    }
 
     Ok(Json(serde_json::json!({
         "message": "パスワードを変更しました"

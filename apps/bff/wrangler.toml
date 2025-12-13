@@ -36,6 +36,7 @@ bucket_name = "spirom-assets"
 # Secrets (set via wrangler secret put)
 # - API_SECRET_KEY
 # - SANITY_TOKEN
+# - BFF_PROXY_TOKEN (Next.js からのプロキシ経由のみ許可するためのトークン)
 
 [env.staging]
 name = "spirom-bff-staging"

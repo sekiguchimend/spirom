@@ -9,7 +9,6 @@ export default function Footer() {
             <h2 id="footer-shop" className="font-bold text-sm uppercase tracking-widest mb-6 text-gray-400">Shop</h2>
             <ul className="space-y-4">
               <li><Link href="/products" className="text-sm font-bold hover:text-gray-300 transition-colors">Products</Link></li>
-              <li><Link href="/categories" className="text-sm font-bold hover:text-gray-300 transition-colors">Categories</Link></li>
             </ul>
           </nav>
           <nav aria-labelledby="footer-support">
