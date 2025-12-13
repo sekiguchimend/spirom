@@ -201,9 +201,9 @@ export default function ProductCheckout({
       const order = orderResult.data;
       setOrderId(order.id);
       setOrderNumber(order.order_number);
-      setSubtotal(order.subtotal);
-      setShippingFee(order.shipping_fee);
-      setTax(order.tax);
+      setSubtotal(order.subtotal ?? 0);
+      setShippingFee(order.shipping_fee ?? 0);
+      setTax(order.tax ?? 0);
       setTotal(order.total);
 
       // 2) PaymentIntent作成（注文IDに紐付け）

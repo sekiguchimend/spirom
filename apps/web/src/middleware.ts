@@ -33,7 +33,7 @@ async function verifyToken(token: string): Promise<boolean> {
     }
 
     return true;
-  } catch (error) {
+  } catch {
     // トークンが無効（署名不一致、期限切れ、フォーマット不正など）
     return false;
   }
