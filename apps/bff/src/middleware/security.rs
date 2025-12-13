@@ -9,8 +9,8 @@ impl SecurityHeaders {
         headers.set(
             "Content-Security-Policy",
             "default-src 'self'; \
-             script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.sanity.io; \
-             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; \
+             script-src 'self' https://cdn.sanity.io; \
+             style-src 'self' https://fonts.googleapis.com; \
              font-src 'self' https://fonts.gstatic.com; \
              img-src 'self' data: https: blob:; \
              connect-src 'self' https://api.spirom.com https://*.sanity.io; \

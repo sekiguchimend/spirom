@@ -5,15 +5,15 @@ import Image from 'next/image';
 import { getFeaturedProducts } from '@/lib/supabase';
 
 export const metadata: Metadata = {
-  title: 'Spirom - Digital Product Agency & Store',
-  description: 'We build digital products and sell curated lifestyle goods.',
+  title: 'Spirom - 大人もきれるカートゥーン',
+  description: '遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。',
 };
 
 const categories = [
-  { slug: 'kitchen', name: 'Kitchen' },
-  { slug: 'interior', name: 'Interior' },
-  { slug: 'fashion', name: 'Fashion' },
-  { slug: 'outdoor', name: 'Outdoor' },
+  { slug: 'tops', name: 'Tops' },
+  { slug: 'bottoms', name: 'Bottoms' },
+  { slug: 'outerwear', name: 'Outerwear' },
+  { slug: 'accessories', name: 'Accessories' },
 ];
 
 export default async function Home() {
@@ -21,19 +21,22 @@ export default async function Home() {
   const products = await getFeaturedProducts(4);
   return (
     <div className="flex flex-col w-full">
+      {/* SEO用h1（視覚的に非表示） */}
+      <h1 className="sr-only">Spirom - 大人もきれるカートゥーン｜遊び心と洗練を融合したファッションブランド</h1>
+
       {/*
         Hero Section - Juice Agency Clone
         背景色: brand-green (globals.cssで定義)
       */}
-      <section className="relative w-full h-[100svh] overflow-hidden flex flex-col">
+      <section className="relative w-full h-[100svh] overflow-hidden flex flex-col" aria-label="ヒーローセクション">
 
         {/* モバイル用サブテキスト - HTMLで表示（階段形式） */}
         <div className="absolute top-[48%] left-4 right-4 z-10 sm:hidden">
           <div className="font-mono text-lg font-bold text-brand-black uppercase leading-loose flex flex-col">
-            <span>We craft bold</span>
-            <span>digital experiences and</span>
-            <span>curate exceptional products for</span>
-            <span>those who dare to stand out.</span>
+            <span>Playful yet refined,</span>
+            <span>cartoon-inspired fashion</span>
+            <span>designed for grown-ups who</span>
+            <span>dare to stand out.</span>
           </div>
         </div>
 
@@ -130,9 +133,9 @@ export default async function Home() {
           <div className="flex justify-end">
             <div className="text-right max-w-sm">
               <p className="font-mono text-xs md:text-sm font-bold text-brand-black uppercase leading-relaxed">
-                We craft bold digital experiences <br/>
-                and curate exceptional products <br/>
-                for those who dare to stand out.
+                Playful yet refined, <br/>
+                cartoon-inspired fashion <br/>
+                for grown-ups who dare to stand out.
               </p>
             </div>
           </div>
@@ -140,11 +143,11 @@ export default async function Home() {
       </section>
 
       {/* EC Section - ここから下は白背景のECサイト */}
-      <section id="products" className="w-full py-12 sm:py-20 px-3 sm:px-4 bg-[#FFFFF5] text-black relative z-30 rounded-t-[2rem] sm:rounded-t-[3rem] mt-4 sm:mt-8 shadow-2xl">
+      <section id="products" className="w-full py-12 sm:py-20 px-3 sm:px-4 bg-[#FFFFF5] text-black relative z-30 rounded-t-[2rem] sm:rounded-t-[3rem] mt-4 sm:mt-8 shadow-2xl" aria-labelledby="selected-items-heading">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 sm:mb-12 pb-6 sm:pb-8 border-b border-gray-200">
             <div>
-              <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-wide mb-1 sm:mb-2" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>SELECTED ITEMS</h2>
+              <h2 id="selected-items-heading" className="text-3xl sm:text-5xl md:text-6xl font-black tracking-wide mb-1 sm:mb-2" style={{ fontFamily: 'var(--font-anton), sans-serif' }}>SELECTED ITEMS</h2>
               <p className="text-gray-500 font-bold uppercase tracking-wider text-xs sm:text-sm">Curated products for your lifestyle.</p>
             </div>
 

@@ -23,7 +23,7 @@ export function ProductCard({ slug, name, price, image, tag }: ProductCardProps)
           <figure className="relative aspect-square bg-gray-50 border-b-4 border-black overflow-hidden">
             <Image
               src={image}
-              alt=""
+              alt={name}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 768px) 40vw, 20vw"

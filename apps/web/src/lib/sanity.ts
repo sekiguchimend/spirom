@@ -3,12 +3,13 @@ import imageUrlBuilder from "@sanity/image-url";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
+import { SANITY_API_VERSION, READING_SPEED_CHARS_PER_MIN } from "./config";
 
 // Sanity client（projectIdが設定されていない場合はダミー値を使用）
 export const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "dummy-project-id",
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
-  apiVersion: "2024-01-01",
+  apiVersion: SANITY_API_VERSION,
   useCdn: true,
   token: process.env.SANITY_API_TOKEN, // プレビュー用（オプション）
 });
@@ -244,9 +245,8 @@ export function calculateReadingTime(body?: PortableTextBlock[]): number {
     })
     .join(" ");
 
-  // 日本語と英語の混在を考慮（平均400文字/分）
-  const wordsPerMinute = 400;
-  const minutes = Math.ceil(text.length / wordsPerMinute);
+  // 日本語と英語の混在を考慮
+  const minutes = Math.ceil(text.length / READING_SPEED_CHARS_PER_MIN);
   return Math.max(1, minutes);
 }
 

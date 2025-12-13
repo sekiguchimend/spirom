@@ -117,7 +117,7 @@ export default function ProductCheckout({
   quantity,
   onClose,
 }: ProductCheckoutProps) {
-  const { user, token, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'no-auth' | 'no-address'>('loading');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -133,16 +133,16 @@ export default function ProductCheckout({
   // 認証チェック
   useEffect(() => {
     if (!authLoading) {
-      if (!user || !token) {
+      if (!user) {
         setStep('no-auth');
         return;
       }
     }
-  }, [user, token, authLoading]);
+  }, [user, authLoading]);
 
   // 住所を取得
   useEffect(() => {
-    if (!token || !user) return;
+    if (!user) return;
 
     const loadAddresses = async () => {
       const result = await fetchAddresses();
@@ -165,7 +165,7 @@ export default function ProductCheckout({
     };
 
     loadAddresses();
-  }, [token, user]);
+  }, [user]);
 
   const initializeCheckout = async () => {
     if (!shippingAddress) {

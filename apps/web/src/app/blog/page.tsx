@@ -4,10 +4,13 @@ import { getPosts, getCategories, urlFor, formatDate } from "@/lib/sanity";
 
 export const metadata: Metadata = {
   title: "ブログ",
-  description: "暮らしのヒントや商品の使い方、スタッフおすすめの情報をお届けするSpiromのブログです。",
+  description: "Spiromのブログ。カートゥーンファッションの最新トレンド、コーディネート術、新商品情報をお届けします。",
+  alternates: {
+    canonical: "/blog",
+  },
   openGraph: {
     title: "ブログ | Spirom",
-    description: "暮らしのヒントや商品の使い方をお届けします。",
+    description: "カートゥーンファッションの最新情報をお届けします。",
   },
 };
 

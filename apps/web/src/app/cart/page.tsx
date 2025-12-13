@@ -52,9 +52,13 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-10">
+      {/* SEO用h1（視覚的に非表示） */}
+      <h1 className="sr-only">ショッピングカート - Spirom</h1>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
         {/* 左: カート内容 */}
-        <div className="px-6 py-12 lg:px-16 lg:py-20 pt-32 lg:pt-32 pb-20 lg:pb-32">
+        <section className="px-6 py-12 lg:px-16 lg:py-20 pt-32 lg:pt-32 pb-20 lg:pb-32" aria-labelledby="cart-items-heading">
+          <h2 id="cart-items-heading" className="sr-only">カート内の商品</h2>
           <div className="max-w-lg mx-auto lg:mx-0">
 
             {cart.length === 0 ? (
@@ -85,9 +89,9 @@ export default function CartPage() {
             ) : (
               <>
                 {/* 商品リスト */}
-                <div className="space-y-6 mb-8">
+                <ul className="space-y-6 mb-8">
                   {cart.map((item) => (
-                    <div
+                    <li
                       key={item.id}
                       className="flex gap-4 p-4 bg-white rounded-2xl shadow-sm"
                     >
@@ -152,9 +156,9 @@ export default function CartPage() {
                           {formatPrice(item.price * item.quantity)}
                         </p>
                       </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
 
                 {/* カートクリア */}
                 <button
@@ -167,13 +171,13 @@ export default function CartPage() {
               </>
             )}
           </div>
-        </div>
+        </section>
 
         {/* 右: 見積書サマリー */}
-        <div className="px-6 py-12 lg:px-16 lg:py-20 flex flex-col justify-center bg-[#4a7c59] lg:rounded-bl-[80px]">
+        <section className="px-6 py-12 lg:px-16 lg:py-20 flex flex-col justify-center bg-[#4a7c59] lg:rounded-bl-[80px]" aria-labelledby="order-summary-heading">
           <div className="max-w-md mx-auto lg:mx-0 w-full">
             <p className="text-sm tracking-[0.2em] text-white/70 uppercase mb-4 font-bold">Order Summary</p>
-            <h2 className="text-3xl md:text-4xl font-black leading-tight mb-8 tracking-tight text-white">
+            <h2 id="order-summary-heading" className="text-3xl md:text-4xl font-black leading-tight mb-8 tracking-tight text-white">
               見積書
             </h2>
 
@@ -259,7 +263,7 @@ export default function CartPage() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

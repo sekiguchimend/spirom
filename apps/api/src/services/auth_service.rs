@@ -110,6 +110,7 @@ impl AuthService {
             &user.email,
             &user.role,
             self.config.jwt.access_token_expiry,
+            "access",
         )?;
 
         let refresh_token = self.create_token(
@@ -117,6 +118,7 @@ impl AuthService {
             &user.email,
             &user.role,
             self.config.jwt.refresh_token_expiry,
+            "refresh",
         )?;
 
         Ok(TokenResponse::new(
@@ -127,8 +129,15 @@ impl AuthService {
     }
 
     /// 単一トークン作成
-    fn create_token(&self, user_id: Uuid, email: &str, role: &UserRole, expires_in: i64) -> Result<String> {
-        let claims = Claims::new(user_id, email.to_string(), role.clone(), expires_in);
+    fn create_token(
+        &self,
+        user_id: Uuid,
+        email: &str,
+        role: &UserRole,
+        expires_in: i64,
+        token_use: &'static str,
+    ) -> Result<String> {
+        let claims = Claims::new(user_id, email.to_string(), role.clone(), expires_in, token_use);
 
         let encoding_key = EncodingKey::from_secret(self.config.jwt.secret.as_bytes());
 

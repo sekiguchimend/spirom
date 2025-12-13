@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import { client, postSlugsQuery } from "@/lib/sanity";
+import { supabase } from "@/lib/supabase";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com";
@@ -13,16 +14,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${baseUrl}/blog`,
+      url: `${baseUrl}/products`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/products`,
+      url: `${baseUrl}/categories`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog`,
       lastModified: new Date(),
       changeFrequency: "daily",
-      priority: 0.9,
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/about`,
@@ -30,7 +37,52 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${baseUrl}/contact`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/faq`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
+
+  // 商品ページ（Supabase接続時のみ）
+  let productPages: MetadataRoute.Sitemap = [];
+
+  try {
+    const { data: products } = await supabase
+      .from("products")
+      .select("slug, updated_at")
+      .eq("is_active", true);
+
+    if (products) {
+      productPages = products.map((product) => ({
+        url: `${baseUrl}/products/${product.slug}`,
+        lastModified: new Date(product.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      }));
+    }
+  } catch {
+    // Supabase未設定時はスキップ
+  }
 
   // ブログ記事ページ（Sanity接続時のみ）
   let blogPages: MetadataRoute.Sitemap = [];
@@ -49,5 +101,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Sanity未設定時はスキップ
   }
 
-  return [...staticPages, ...blogPages];
+  return [...staticPages, ...productPages, ...blogPages];
 }

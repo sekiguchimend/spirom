@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { addToCart } from '@/lib/cart';
+import { CART_ANIMATION_DELAY_MS, SUCCESS_MESSAGE_DURATION_MS } from '@/lib/config';
 import dynamic from 'next/dynamic';
 
 const ProductCheckout = dynamic(() => import('./ProductCheckout'), {
@@ -56,8 +57,8 @@ export function AddToCartButton({
     setTimeout(() => {
       setIsAdding(false);
       setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 2000);
-    }, 300);
+      setTimeout(() => setIsAdded(false), SUCCESS_MESSAGE_DURATION_MS);
+    }, CART_ANIMATION_DELAY_MS);
   };
 
   const handleBuyNow = () => {

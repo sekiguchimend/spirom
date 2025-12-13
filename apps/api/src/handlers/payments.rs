@@ -8,9 +8,12 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::config::AppState;
-use crate::db::repositories::{OrderRepository, UserRepository};
+use crate::db::repositories::{OrderRepository, ProductRepository, UserRepository};
 use crate::error::{AppError, Result};
-use crate::models::{AuthenticatedUser, DataResponse, OrderStatus, PaymentStatus};
+use crate::models::{
+    AuthenticatedUser, DataResponse, Order, OrderAddress, OrderItem, OrderStatus, PaymentMethod,
+    PaymentStatus, generate_order_number,
+};
 use crate::services::payment::{
     CreateIntentParams, PaymentProvider, ShippingAddress, StripePaymentProvider, WebhookEventType,
 };
@@ -202,12 +205,150 @@ pub async fn handle_webhook(
 
     // WebhookはStripeからのリクエストなので、service_roleを使用
     let order_repo = OrderRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.service());
+    let user_repo = UserRepository::new(state.db.service());
 
     // イベント処理
     match event.event_type {
         WebhookEventType::PaymentSucceeded => {
-            // dataから注文情報を取得して注文を作成
-            tracing::info!("決済成功 - 注文作成（TODO）: payment_id={}", event.payment_id);
+            let order_id = event
+                .order_id
+                .ok_or_else(|| AppError::BadRequest("注文IDが見つかりません".to_string()))?;
+
+            // idempotency: 既に注文が作成済みならOK（Stripeは同一イベントを再送する）
+            if let Some(existing) = order_repo.find_by_id(order_id).await? {
+                tracing::info!(
+                    "決済成功Webhook: 既存注文を検出。order_id={}, payment_id={}",
+                    existing.id,
+                    event.payment_id
+                );
+                order_repo.update_payment_id(order_id, existing.user_id, &event.payment_id).await?;
+                order_repo.update_payment_status(order_id, PaymentStatus::Paid).await?;
+                order_repo
+                    .update_status(order_id, existing.user_id, OrderStatus::Paid, existing.created_at.timestamp_millis())
+                    .await?;
+                return Ok(StatusCode::OK);
+            }
+
+            let metadata = &event.data["data"]["object"]["metadata"];
+            let user_id = metadata["user_id"]
+                .as_str()
+                .and_then(|s| s.parse::<Uuid>().ok())
+                .ok_or_else(|| AppError::BadRequest("user_id が不正です".to_string()))?;
+            let shipping_address_id = metadata["shipping_address_id"]
+                .as_str()
+                .and_then(|s| s.parse::<Uuid>().ok())
+                .ok_or_else(|| AppError::BadRequest("shipping_address_id が不正です".to_string()))?;
+
+            let items_json = metadata["items"]
+                .as_str()
+                .ok_or_else(|| AppError::BadRequest("items が不正です".to_string()))?;
+            let items: Vec<PaymentIntentItem> = serde_json::from_str(items_json)
+                .map_err(|_| AppError::BadRequest("items が不正です".to_string()))?;
+
+            let shipping_fee = metadata["shipping_fee"]
+                .as_str()
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(0);
+            let tax = metadata["tax"]
+                .as_str()
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(0);
+            let notes = metadata["notes"].as_str().map(|s| s.to_string());
+
+            // ユーザー/住所を取得（埋め込み用）
+            let user = user_repo
+                .find_by_id(user_id)
+                .await?
+                .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+            let shipping_address = user_repo
+                .find_address(user_id, shipping_address_id)
+                .await?
+                .ok_or_else(|| AppError::NotFound("配送先住所が見つかりません".to_string()))?;
+
+            // 商品情報を取得して注文アイテム/金額を確定（改ざん検知）
+            let product_ids: Vec<_> = items.iter().map(|i| i.product_id).collect();
+            let products = product_repo.find_by_ids(&product_ids).await?;
+
+            let mut order_items = Vec::new();
+            let mut subtotal = 0i64;
+
+            for item in &items {
+                let product = products
+                    .get(&item.product_id)
+                    .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
+
+                if !product.is_active {
+                    return Err(AppError::BadRequest(format!("「{}」は現在販売されていません", product.name)));
+                }
+                if product.price != item.price {
+                    return Err(AppError::BadRequest(format!("商品「{}」の価格が一致しません", product.name)));
+                }
+                if product.stock < item.quantity {
+                    return Err(AppError::BadRequest(format!("「{}」の在庫が不足しています", product.name)));
+                }
+
+                let item_subtotal = item.price * item.quantity as i64;
+                subtotal += item_subtotal;
+
+                order_items.push(OrderItem {
+                    product_id: product.id,
+                    product_name: product.name.clone(),
+                    product_sku: product.sku.clone(),
+                    price: item.price,
+                    quantity: item.quantity,
+                    subtotal: item_subtotal,
+                    image_url: product.images.first().cloned(),
+                });
+            }
+
+            let total = subtotal + shipping_fee + tax;
+            let now = chrono::Utc::now();
+
+            let order = Order {
+                id: order_id,
+                user_id,
+                order_number: generate_order_number(),
+                status: OrderStatus::Paid,
+                items: order_items,
+                subtotal,
+                shipping_fee,
+                tax,
+                total,
+                currency: "JPY".to_string(),
+                shipping_address: OrderAddress::from_address(&shipping_address, user.name.clone()),
+                billing_address: None,
+                payment_method: PaymentMethod::CreditCard,
+                payment_status: PaymentStatus::Paid,
+                payment_id: Some(event.payment_id.clone()),
+                notes,
+                created_at: now,
+                updated_at: now,
+                shipped_at: None,
+                delivered_at: None,
+            };
+
+            // 注文作成（同一order_idで競合した場合は、作成済み扱いで継続）
+            if let Err(e) = order_repo.create(&order).await {
+                tracing::warn!("注文作成に失敗。再取得して継続します。order_id={}, err={}", order_id, e);
+                if order_repo.find_by_id(order_id).await?.is_none() {
+                    return Err(e);
+                }
+            }
+
+            // 在庫を減らす（N+1回避: 取得済み products を利用）
+            for item in &order.items {
+                let current_stock = products.get(&item.product_id).map(|p| p.stock).unwrap_or(0);
+                product_repo
+                    .update_stock(item.product_id, current_stock - item.quantity)
+                    .await?;
+            }
+
+            tracing::info!(
+                "決済成功Webhook: 注文作成完了。order_id={}, payment_id={}",
+                order_id,
+                event.payment_id
+            );
         }
         WebhookEventType::PaymentFailed => {
             tracing::warn!("決済失敗: payment_id={}", event.payment_id);

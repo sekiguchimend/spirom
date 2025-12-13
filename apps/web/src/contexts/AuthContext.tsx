@@ -7,13 +7,13 @@ import {
   registerAction,
   logoutAction,
   getMeAction,
+  refreshSessionAction,
   type User,
-  type AuthResponse,
 } from '@/lib/actions';
+import { SESSION_REFRESH_INTERVAL_MS } from '@/lib/config';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>;
@@ -23,40 +23,50 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'spirom_auth_token';
-const USER_KEY = 'spirom_user';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  // useRefで依存関係を安定化（再レンダリングを防ぐ）
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
 
   // 初期化済みフラグ（strictModeでの二重実行防止）
   const initializedRef = useRef(false);
 
-  // ローカルストレージからユーザー情報を読み込む
+  // 初期化（cookie-onlyで現在のログイン状態を判定）
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const storedUser = localStorage.getItem(USER_KEY);
+    // localStorage は改ざん可能なため「認証済みユーザー」としては一切信用しない
+    // （UIの一時表示に使う場合でも権限判断に利用しないこと）
 
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
+    const bootstrap = async () => {
+      setIsLoading(true);
+      const me = await getMeAction();
+      if (me.success && me.data) {
+        setUser(me.data);
+        setIsLoading(false);
+        return;
       }
-    }
-    setIsLoading(false);
+
+      // Accessが切れている/無い場合は refresh を試す（最大1日）
+      if (me.error === 'Token expired' || me.error === 'Not authenticated') {
+        const refreshed = await refreshSessionAction();
+        if (refreshed.success) {
+          const me2 = await getMeAction();
+          if (me2.success && me2.data) {
+            setUser(me2.data);
+          } else {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    bootstrap();
   }, []);
 
   // ログイン
@@ -65,10 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Login failed');
     }
-    const accessToken = result.data.tokens.access_token;
-    localStorage.setItem(TOKEN_KEY, accessToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(result.data.user));
-    setToken(accessToken);
     setUser(result.data.user);
   }, []);
 
@@ -78,37 +84,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Registration failed');
     }
-    const accessToken = result.data.tokens.access_token;
-    localStorage.setItem(TOKEN_KEY, accessToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(result.data.user));
-    setToken(accessToken);
     setUser(result.data.user);
   }, []);
 
   // ログアウト
   const handleLogout = useCallback(async () => {
     await logoutAction();
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem('spirom_token_verified');
-    setToken(null);
     setUser(null);
     router.push('/login');
   }, [router]);
 
   // ユーザー情報を更新（依存関係を安定化）
   const refreshUser = useCallback(async () => {
-    if (!tokenRef.current) return;
-
     const result = await getMeAction();
     if (!result.success) {
       if (result.error === 'Token expired' || result.error === 'Not authenticated') {
-        // ログアウト処理を直接実行（handleLogoutへの依存を避ける）
+        // refresh を試してから判定
+        const refreshed = await refreshSessionAction();
+        if (refreshed.success) {
+          const me2 = await getMeAction();
+          if (me2.success && me2.data) {
+            setUser(me2.data);
+            return;
+          }
+        }
+
+        // セッション終了
         await logoutAction();
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
-        sessionStorage.removeItem('spirom_token_verified');
-        setToken(null);
         setUser(null);
         router.push('/login');
       }
@@ -117,33 +119,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (result.data) {
       setUser(result.data);
-      localStorage.setItem(USER_KEY, JSON.stringify(result.data));
     }
   }, [router]);
 
-  // 起動時にトークンの有効性を検証（セッション中1回のみ）
+  // ログイン状態を維持（Access短命 + Refreshで最大1日）
   useEffect(() => {
     if (isLoading) return;
-    if (!token) return;
+    if (!user) return;
 
-    const VERIFIED_KEY = 'spirom_token_verified';
-    if (sessionStorage.getItem(VERIFIED_KEY)) return;
+    const interval = window.setInterval(() => {
+      refreshSessionAction().catch(() => {
+        // 失敗時は次のrefreshUserで落ちるのでここでは何もしない
+      });
+    }, SESSION_REFRESH_INTERVAL_MS);
 
-    refreshUser().then(() => {
-      sessionStorage.setItem(VERIFIED_KEY, 'true');
-    });
-  }, [isLoading, token, refreshUser]);
+    return () => window.clearInterval(interval);
+  }, [user, isLoading]);
 
   // コンテキスト値をメモ化（不要な再レンダリングを防ぐ）
   const contextValue = useMemo<AuthContextType>(() => ({
     user,
-    token,
     isLoading,
     login: handleLogin,
     register: handleRegister,
     logout: handleLogout,
     refreshUser,
-  }), [user, token, isLoading, handleLogin, handleRegister, handleLogout, refreshUser]);
+  }), [user, isLoading, handleLogin, handleRegister, handleLogout, refreshUser]);
 
   return (
     <AuthContext.Provider value={contextValue}>

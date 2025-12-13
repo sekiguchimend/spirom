@@ -13,21 +13,60 @@ use crate::models::{AuthenticatedUser, Claims, UserRole};
 
 /// JWT認証ミドルウェア
 pub async fn auth_middleware(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    // トークンを抽出して Extension に追加
-    let token = extract_token(&request).unwrap_or_else(|_| "dev-token".to_string());
-    request.extensions_mut().insert(token);
+    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+    let is_dev = env == "development" || env == "local";
 
-    // 開発環境: 認証をバイパス
-    let dev_user = AuthenticatedUser {
-        id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-        email: "dev@spirom.com".to_string(),
-        role: UserRole::Admin,
-    };
-    request.extensions_mut().insert(dev_user);
+    // 開発環境:
+    // - Authorization Bearer があれば通常通り検証する
+    // - 認証バイパスは「明示的なDEV_AUTH_BYPASS_TOKENが設定され、ヘッダ一致した場合のみ」許可する
+    if is_dev {
+        if let Ok(token) = extract_token(&request) {
+            if let Ok(claims) = validate_token(&token, &state.config.jwt.secret) {
+                request.extensions_mut().insert(token);
+                let user = AuthenticatedUser::from(claims);
+                request.extensions_mut().insert(user);
+                return Ok(next.run(request).await);
+            }
+        }
+
+        // 明示許可がない限り、開発環境でも認証は必須（脆弱性: 自動Admin付与を防止）
+        let bypass_secret = std::env::var("DEV_AUTH_BYPASS_TOKEN").ok();
+        let provided = request
+            .headers()
+            .get("X-Dev-Bypass-Token")
+            .and_then(|h| h.to_str().ok())
+            .map(|s| s.to_string());
+
+        if let (Some(expected), Some(actual)) = (bypass_secret, provided) {
+            if !expected.is_empty() && expected == actual {
+                let dev_user = AuthenticatedUser {
+                    id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+                    email: "dev@spirom.com".to_string(),
+                    role: UserRole::Admin,
+                };
+                request.extensions_mut().insert("dev-bypass".to_string());
+                request.extensions_mut().insert(dev_user);
+                return Ok(next.run(request).await);
+            }
+        }
+
+        return Err(AppError::Unauthorized(
+            "開発環境でも認証が必要です（DEV_AUTH_BYPASS_TOKEN を設定して明示的に許可できます）"
+                .to_string(),
+        ));
+    }
+
+    // 本番/ステージング: Authorization Bearer を必須にして検証
+    let token = extract_token(&request)?;
+    request.extensions_mut().insert(token.clone());
+
+    let claims = validate_token(&token, &state.config.jwt.secret)?;
+    let user = AuthenticatedUser::from(claims);
+    request.extensions_mut().insert(user);
 
     Ok(next.run(request).await)
 }

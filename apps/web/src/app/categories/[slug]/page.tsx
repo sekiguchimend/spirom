@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getCategoryPage, formatPrice } from '@/lib/bff';
 import { Breadcrumb } from '@/components/ui';
 import type { Metadata } from 'next';
+import { safeJsonLdFromString } from '@/lib/safeJsonLd';
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
@@ -47,13 +48,16 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   const { category, products, pagination, breadcrumbs, subcategories, json_ld } = data;
+  const safe = typeof json_ld === 'string' ? safeJsonLdFromString(json_ld) : null;
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: json_ld }}
-      />
+      {safe && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safe }}
+        />
+      )}
 
       <div className="min-h-screen bg-[#FFFFF5]">
         <div className="max-w-7xl mx-auto px-4 pt-24 sm:pt-16 pb-16">

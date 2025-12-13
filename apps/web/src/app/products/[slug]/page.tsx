@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { getProductBySlug, getFeaturedProducts } from '@/lib/supabase';
 import { AddToCartButton } from '@/components/product';
 import { formatPrice } from '@/lib/utils';
+import { safeJsonLd } from '@/lib/safeJsonLd';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -87,7 +88,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
       <div className="min-h-screen bg-[#FAFAFA]">

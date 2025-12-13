@@ -3,10 +3,13 @@ import { ProductCard, CategoryPill } from '@/components/ui';
 
 export const metadata: Metadata = {
   title: "Products",
-  description: "Spiromの商品一覧ページです。こだわりのライフスタイル商品を多数取り揃えています。",
+  description: "Spiromの商品一覧。大人もきれるカートゥーンをコンセプトにした、遊び心と洗練を融合したファッションアイテム。",
+  alternates: {
+    canonical: "/products",
+  },
   openGraph: {
     title: "Products | Spirom",
-    description: "こだわりのライフスタイル商品を多数取り揃えています。",
+    description: "大人もきれるカートゥーンファッションアイテムを多数取り揃えています。",
   },
 };
 

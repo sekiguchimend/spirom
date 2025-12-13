@@ -17,6 +17,7 @@ pub fn create_router(state: AppState) -> Router {
         // 認証
         .route("/api/v1/auth/register", post(handlers::auth::register))
         .route("/api/v1/auth/login", post(handlers::auth::login))
+        .route("/api/v1/auth/refresh", post(handlers::auth::refresh_token))
         .route("/api/v1/auth/forgot-password", post(handlers::auth::forgot_password))
         .route("/api/v1/auth/reset-password", post(handlers::auth::reset_password))
         // 商品（公開）
@@ -43,7 +44,6 @@ pub fn create_router(state: AppState) -> Router {
     let auth_routes = Router::new()
         // 認証
         .route("/api/v1/auth/logout", post(handlers::auth::logout))
-        .route("/api/v1/auth/refresh", post(handlers::auth::refresh_token))
         // ユーザー
         .route("/api/v1/users/me", get(handlers::users::get_me))
         .route("/api/v1/users/me", put(handlers::users::update_me))

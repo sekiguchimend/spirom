@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Package, CreditCard, RotateCcw, ChevronDown, ArrowRight } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { safeJsonLd } from '@/lib/safeJsonLd';
 
 interface FAQCategory {
   category: string;
@@ -100,7 +101,7 @@ export default function FAQPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
 
       <div className="min-h-screen bg-[#FFFFF5]">
         {/* ヒーローセクション */}

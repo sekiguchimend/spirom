@@ -37,6 +37,11 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+*.env*
+!*.env*.example
+
+# Cloudflare Workers / wrangler (local dev artifacts)
+**/.wrangler/**
 
 # vercel
 .vercel

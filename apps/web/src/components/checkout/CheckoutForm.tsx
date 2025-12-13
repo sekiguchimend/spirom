@@ -6,7 +6,8 @@ import { getStripe } from '@/lib/stripe';
 import { createOrderAction, createPaymentIntentAction, type CreateOrderItemRequest } from '@/lib/actions';
 import { PaymentForm } from './PaymentForm';
 
-interface CartItem {
+/** チェックアウト用のカートアイテム型（表示用の最小限のフィールド） */
+interface CheckoutCartItem {
   id: string;
   productId: string;
   name: string;
@@ -16,7 +17,7 @@ interface CartItem {
 }
 
 interface CheckoutFormProps {
-  cartItems: CartItem[];
+  cartItems: CheckoutCartItem[];
   shippingAddressId: string;
 }
 

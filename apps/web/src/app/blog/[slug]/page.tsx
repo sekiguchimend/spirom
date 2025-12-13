@@ -14,6 +14,7 @@ import {
   formatDate
 } from "@/lib/sanity";
 import { ContentCard, Breadcrumb } from "@/components/ui";
+import { safeJsonLd } from "@/lib/safeJsonLd";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -39,13 +40,9 @@ export async function generateStaticParams() {
 
 async function getPost(slug: string): Promise<Post | null> {
   try {
-    console.log("Fetching post with slug:", slug);
-    console.log("Query:", postBySlugQuery);
     const post = await client.fetch(postBySlugQuery, { slug });
-    console.log("Fetched post:", post);
     return post;
-  } catch (error) {
-    console.error(`Failed to fetch post with slug "${slug}":`, error);
+  } catch {
     return null;
   }
 }
@@ -372,7 +369,7 @@ export default async function PostPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "BlogPosting",
             headline: post.title,

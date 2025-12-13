@@ -60,32 +60,36 @@ export default function CategoriesPage() {
         </header>
 
         {/* カテゴリーグリッド */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {mockCategories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/categories/${category.slug}`}
-              className="group bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(125,255,58,1)] sm:hover:shadow-[8px_8px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all"
-            >
-              <div className="aspect-square bg-gray-100 relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-4xl sm:text-6xl font-black text-gray-200 group-hover:text-[#7dff3a] transition-colors">
-                    {category.name.charAt(0)}
-                  </span>
-                </div>
-              </div>
-              <div className="p-4 sm:p-5">
-                <h2 className="font-black text-lg sm:text-xl mb-1 text-black">{category.name}</h2>
-                <p className="text-gray-600 text-xs sm:text-sm mb-2 line-clamp-2">
-                  {category.description}
-                </p>
-                <p className="text-xs sm:text-sm font-bold text-gray-400">
-                  {category.productCount} items
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <section aria-labelledby="categories-list-heading">
+          <h2 id="categories-list-heading" className="sr-only">カテゴリー一覧</h2>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {mockCategories.map((category) => (
+              <li key={category.id}>
+                <Link
+                  href={`/categories/${category.slug}`}
+                  className="group block bg-white border-3 sm:border-4 border-black rounded-xl sm:rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(125,255,58,1)] sm:hover:shadow-[8px_8px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all"
+                >
+                  <div className="aspect-square bg-gray-100 relative">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-4xl sm:text-6xl font-black text-gray-200 group-hover:text-[#7dff3a] transition-colors" aria-hidden="true">
+                        {category.name.charAt(0)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4 sm:p-5">
+                    <h3 className="font-black text-lg sm:text-xl mb-1 text-black">{category.name}</h3>
+                    <p className="text-gray-600 text-xs sm:text-sm mb-2 line-clamp-2">
+                      {category.description}
+                    </p>
+                    <p className="text-xs sm:text-sm font-bold text-gray-400">
+                      {category.productCount} items
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   );

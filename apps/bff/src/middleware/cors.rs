@@ -80,19 +80,17 @@ impl CorsMiddleware {
     }
 
     pub fn apply_without_req(&self, mut response: Response, environment: &str) -> Result<Response> {
-        // In development, allow localhost origins (both localhost and 127.0.0.1)
-        let allowed_origin = if environment == "development" {
-            "http://localhost:3000"
-        } else {
-            "https://spirom.com"
-        };
-
+        // req が無い状況では Origin を判断できないため、固定の Allow-Origin を付与しない。
+        // （誤って localhost を本番で許可する事故や、オリジン固定による意図しない緩和を防ぐ）
+        // 必要な場合は `apply(req, response)` で Origin を見て付与する。
         let mut headers = response.headers().clone();
-        headers.set("Access-Control-Allow-Origin", allowed_origin)?;
-        headers.set("Access-Control-Allow-Credentials", "true")?;
+        // credentials を返す可能性があるため vary は付けておく
         headers.set("Vary", "Origin")?;
+        if environment == "development" {
+            // dev でのデバッグ用に明示（ただし固定の Allow-Origin は付けない）
+            headers.set("X-Cors-Mode", "development")?;
+        }
         response = response.with_headers(headers);
-
         Ok(response)
     }
 

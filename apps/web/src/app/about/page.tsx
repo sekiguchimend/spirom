@@ -1,33 +1,34 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { safeJsonLd } from '@/lib/safeJsonLd';
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: "Spiromは「心地よい暮らし」をテーマに、こだわりのライフスタイルアイテムをお届けするオンラインショップです。",
+  description: "Spiromは「大人もきれるカートゥーン」をコンセプトに、遊び心と洗練されたデザインを融合したファッションブランドです。",
   openGraph: {
     title: "About Us | Spirom",
-    description: "心地よい暮らしをテーマに、こだわりのアイテムをお届けします。",
+    description: "大人もきれるカートゥーン。遊び心あふれる洗練されたファッションをお届けします。",
   },
 };
 
 const valuesData = [
   {
     iconType: 'settings' as const,
-    title: 'QUALITY',
-    description: '厳選された素材と職人の技。長く愛用いただける品質をお約束します。',
+    title: 'PLAYFUL',
+    description: 'カートゥーンの遊び心を大人のスタイルに。毎日のファッションをもっと楽しく。',
     color: '#7dff3a',
   },
   {
     iconType: 'leaf' as const,
-    title: 'SUSTAINABLE',
-    description: '環境に配慮した素材選びと製造プロセス。持続可能な暮らしを応援します。',
+    title: 'SOPHISTICATED',
+    description: 'ポップでありながら洗練されたデザイン。大人が自信を持って着られるクオリティ。',
     color: '#00d4ff',
   },
   {
     iconType: 'heart' as const,
-    title: 'CONNECTION',
-    description: '一人ひとりのお客様との出会いを大切に。心のこもったサービスをお届けします。',
+    title: 'ORIGINAL',
+    description: '他にはない独自のアートワーク。あなたの個性を引き立てるユニークなアイテム。',
     color: '#ff2d78',
   },
 ];
@@ -69,32 +70,32 @@ function ArrowRightIcon() {
 
 const team = [
   {
-    name: '山田 太郎',
-    role: 'CEO & FOUNDER',
+    name: '関口 峻矢',
+    role: 'ENGINEER',
     image: '/spirom.png',
-    bio: '「良いものを長く使う」をモットーに、Spiromを創業。',
+    bio: 'テクノロジーでブランドの可能性を広げる。サイト開発・システム構築を担当。',
   },
   {
-    name: '田中 花子',
-    role: 'CREATIVE DIRECTOR',
+    name: '関口 時正',
+    role: 'DESIGNER',
     image: '/spirom.png',
-    bio: '商品セレクションからブランディングまでを担当。',
+    bio: 'カートゥーンの世界観を大人のファッションに落とし込むデザインを手がける。',
   },
   {
-    name: '鈴木 一郎',
-    role: 'HEAD BUYER',
+    name: 'ジャンマルコ',
+    role: 'PR & MODEL',
     image: '/spirom.png',
-    bio: '国内外のこだわりアイテムを発掘。',
+    bio: 'ブランドの顔として広報活動とモデルを兼任。Spiromの魅力を世界に発信。',
   },
 ];
 
 const milestones = [
   { year: '2018', event: 'SPIROM FOUNDED' },
-  { year: '2019', event: 'FIRST STORE OPENED IN TOKYO' },
+  { year: '2019', event: 'FIRST POPUP STORE IN TOKYO' },
   { year: '2020', event: 'ONLINE SHOP LAUNCHED' },
-  { year: '2021', event: 'ORIGINAL PRODUCT LINE' },
-  { year: '2022', event: 'SUSTAINABLE CERTIFICATION' },
-  { year: '2023', event: '10,000+ MEMBERS' },
+  { year: '2021', event: 'FIRST ORIGINAL COLLECTION' },
+  { year: '2022', event: 'ARTIST COLLABORATION START' },
+  { year: '2023', event: '10,000+ FANS WORLDWIDE' },
 ];
 
 export default function AboutPage() {
@@ -104,7 +105,7 @@ export default function AboutPage() {
     mainEntity: {
       '@type': 'Organization',
       name: 'Spirom',
-      description: 'こだわりの暮らしを届けるオンラインショップ',
+      description: '大人もきれるカートゥーンをコンセプトにしたファッションブランド',
       foundingDate: '2018',
       url: 'https://spirom.com',
       logo: 'https://spirom.com/logo.png',
@@ -115,7 +116,7 @@ export default function AboutPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
       <div className="min-h-screen bg-[#FFFFF5]">
@@ -133,7 +134,7 @@ export default function AboutPage() {
               ABOUT US
             </h1>
             <p className="text-xl md:text-2xl font-bold uppercase tracking-wider max-w-2xl mx-auto bg-black text-white px-6 py-3 inline-block border-3 border-black">
-              WE CREATE PRODUCTS FOR COMFORTABLE LIVING
+              CARTOON FASHION FOR GROWN-UPS
             </p>
           </header>
         </section>
@@ -150,12 +151,12 @@ export default function AboutPage() {
                 OUR MISSION
               </h2>
               <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                Spiromは2018年に「良いものを長く使う」という想いから始まりました。
-                大量生産・大量消費の時代に、本当に価値のあるものを選ぶ喜びをお届けしたい。
+                Spiromは2018年に「大人だってカートゥーンを楽しみたい」という想いから始まりました。
+                カートゥーンやアニメのポップなエッセンスを、大人が着ても様になるファッションに。
               </p>
               <p className="text-lg text-gray-700 leading-relaxed">
-                私たちが選ぶのは、作り手の想いが込められた、長く使い続けられる商品ばかり。
-                一つひとつの商品を通じて、心地よい暮らしのお手伝いができれば幸いです。
+                私たちがデザインするのは、遊び心と洗練を両立させたアイテムばかり。
+                一着一着を通じて、あなたの日常にワクワクを届けられたら幸いです。
               </p>
             </div>
           </div>
@@ -266,7 +267,7 @@ export default function AboutPage() {
               JOIN OUR JOURNEY
             </h2>
             <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Spiromのこだわりアイテムで、あなたの日常に彩りを添えてみませんか？
+              Spiromのアイテムで、あなたのファッションにワクワクをプラスしませんか？
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link

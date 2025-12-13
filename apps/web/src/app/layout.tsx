@@ -3,6 +3,7 @@ import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { Header, Footer } from "@/components/layout";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { safeJsonLd } from "@/lib/safeJsonLd";
 
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -36,11 +37,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://spirom.com"),
   title: {
-    default: "Spirom - こだわりの暮らしを届けるオンラインショップ",
+    default: "Spirom - 大人もきれるカートゥーン",
     template: "%s | Spirom",
   },
-  description: "心地よい暮らしのための、こだわりのアイテムをお届けします。厳選された商品で、あなたの日常に彩りを。",
-  keywords: ["オンラインショップ", "EC", "ライフスタイル", "こだわり", "暮らし", "雑貨"],
+  description: "遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。ポップでありながら上品な、他にはないスタイルを。",
+  keywords: ["ファッション", "カートゥーン", "アパレル", "大人", "ポップ", "デザイナーズ"],
   authors: [{ name: "Spirom Inc." }],
   creator: "Spirom Inc.",
   publisher: "Spirom Inc.",
@@ -53,14 +54,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ja_JP",
     siteName: "Spirom",
-    title: "Spirom - こだわりの暮らしを届けるオンラインショップ",
-    description: "心地よい暮らしのための、こだわりのアイテムをお届けします。",
+    title: "Spirom - 大人もきれるカートゥーン",
+    description: "遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Spirom - ライフスタイル雑貨のオンラインショップ",
+        alt: "Spirom - 大人もきれるカートゥーンファッション",
       },
     ],
   },
@@ -135,10 +136,10 @@ const onlineStoreJsonLd = {
   "@id": "https://spirom.com/#store",
   name: "Spirom",
   url: "https://spirom.com",
-  description: "こだわりの暮らしを届けるオンラインショップ",
+  description: "大人もきれるカートゥーンファッションブランド",
   currenciesAccepted: "JPY",
   paymentAccepted: "Credit Card, PayPay, Convenience Store Payment",
-  priceRange: "¥1,000 - ¥50,000",
+  priceRange: "¥3,000 - ¥50,000",
   areaServed: {
     "@type": "Country",
     name: "Japan",
@@ -156,22 +157,22 @@ export default function RootLayout({
   return (
     <html lang="ja" dir="ltr">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="32x32" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
 
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(webSiteJsonLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(onlineStoreJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(onlineStoreJsonLd) }}
         />
       </head>
       <body className={`${nunitoSans.variable} ${anton.variable} font-sans antialiased min-h-screen flex flex-col`}>

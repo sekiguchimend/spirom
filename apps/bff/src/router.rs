@@ -27,9 +27,34 @@ pub async fn handle_request(req: Request, env: Env, _ctx: Context) -> Result<Res
     let rate_limit_kv = env.kv("RATE_LIMIT")?;
     let rate_limiter = RateLimiter::new(rate_limit_kv);
 
-    let client_ip = req.headers()
-        .get("CF-Connecting-IP")?
-        .unwrap_or_else(|| "unknown".to_string());
+    // Rate limit のキーに使うIPは「信頼できる境界」からのみ取得する。
+    // - 本番: Cloudflare が付与する `CF-Ray` がある場合のみ `CF-Connecting-IP` を信頼
+    // - 開発: ローカル実行で `CF-Ray` が無いことがあるためフォールバックを許可
+    fn sanitize_ip(s: String) -> String {
+        s.chars()
+            .filter(|c| c.is_ascii_hexdigit() || *c == '.' || *c == ':' )
+            .collect::<String>()
+    }
+
+    let has_cf_ray = req.headers().get("CF-Ray")?.is_some();
+    let client_ip = if has_cf_ray {
+        req.headers()
+            .get("CF-Connecting-IP")?
+            .map(sanitize_ip)
+            .unwrap_or_else(|| "unknown".to_string())
+    } else if environment == "development" {
+        // dev では X-Forwarded-For の先頭も許可（ローカルでの利便性のため）
+        let xff = req.headers().get("X-Forwarded-For")?.unwrap_or_default();
+        let first = xff.split(',').next().unwrap_or("unknown").trim().to_string();
+        let candidate = if first.is_empty() {
+            req.headers().get("CF-Connecting-IP")?.unwrap_or_else(|| "unknown".to_string())
+        } else {
+            first
+        };
+        sanitize_ip(candidate)
+    } else {
+        "unknown".to_string()
+    };
 
     let rate_result = rate_limiter.check(&client_ip).await
         .map_err(|e| worker::Error::from(e.to_response().unwrap_err().to_string()))?;

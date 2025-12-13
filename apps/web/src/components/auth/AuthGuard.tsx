@@ -11,12 +11,12 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, redirectTo = '/login', requireAddress = false }: AuthGuardProps) {
-  const { user, token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
-      if (!user || !token) {
+      if (!user) {
         router.push(redirectTo);
         return;
       }
@@ -26,7 +26,7 @@ export function AuthGuard({ children, redirectTo = '/login', requireAddress = fa
         // ここでは認証のみチェック
       }
     }
-  }, [user, token, isLoading, router, redirectTo, requireAddress]);
+  }, [user, isLoading, router, redirectTo, requireAddress]);
 
   if (isLoading) {
     return (
@@ -36,7 +36,7 @@ export function AuthGuard({ children, redirectTo = '/login', requireAddress = fa
     );
   }
 
-  if (!user || !token) {
+  if (!user) {
     return null;
   }
 

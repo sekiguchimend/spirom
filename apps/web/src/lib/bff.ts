@@ -1,5 +1,4 @@
-// サーバーサイド: BFF_URL, クライアントサイド: NEXT_PUBLIC_BFF_URL
-const BFF_BASE_URL = process.env.BFF_URL || process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8787';
+import { BFF_BASE_URL } from './config';
 
 interface RequestOptions {
   revalidate?: number | false;
@@ -275,19 +274,16 @@ export async function searchProducts(params: {
   });
 }
 
-// Format helpers
-export function formatPrice(price: number, currency: string = 'JPY'): string {
+// Format helpers - re-exported from utils.ts for backwards compatibility
+export { formatPrice, formatDate } from './utils';
+
+/**
+ * BFF用の価格フォーマット（100で割る - Stripeセント単位用）
+ */
+export function formatPriceFromCents(price: number, currency: string = 'JPY'): string {
   return new Intl.NumberFormat('ja-JP', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
   }).format(price / 100);
-}
-
-export function formatDate(dateString: string): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(new Date(dateString));
 }

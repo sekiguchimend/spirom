@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { isAuthenticated, getServerOrders, type Order } from '@/lib/server-api';
+import { isAuthenticated, getServerOrders } from '@/lib/server-api';
 import { formatPrice } from '@/lib/utils';
 import { OrderProgress } from '@/components/orders/OrderProgress';
 

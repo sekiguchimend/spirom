@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
+import { createHash, timingSafeEqual } from "crypto";
 
 // Sanity Webhook用のISR再検証エンドポイント
 export async function POST(request: NextRequest) {
@@ -7,7 +8,16 @@ export async function POST(request: NextRequest) {
     const secret = request.headers.get("x-sanity-webhook-secret");
 
     // Webhook シークレットの検証
-    if (secret !== process.env.SANITY_WEBHOOK_SECRET) {
+    const expected = process.env.SANITY_WEBHOOK_SECRET;
+    if (!secret || !expected) {
+      return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
+    }
+
+    // NOTE: 文字列の単純比較はタイミング攻撃の足がかりになるため、
+    // 長さ差を含めて漏れないようハッシュ同士を定数時間比較する。
+    const a = createHash("sha256").update(secret, "utf8").digest();
+    const b = createHash("sha256").update(expected, "utf8").digest();
+    if (!timingSafeEqual(a, b)) {
       return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
     }
 

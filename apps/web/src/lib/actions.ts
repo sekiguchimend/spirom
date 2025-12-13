@@ -1,29 +1,93 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import {
+  BFF_BASE_URL,
+  COOKIE_NAMES,
+  REFRESH_COOKIE_MAX_AGE_SECONDS,
+  MAX_SESSION_SECONDS,
+} from './config';
+import type {
+  User,
+  Address,
+  Order,
+  OrderItem,
+  CreateOrderItemRequest,
+  CreateOrderRequest,
+  TokenResponse,
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+} from '@/types';
 
-const BFF_URL = process.env.BFF_URL || 'http://localhost:8787';
+// Re-export types for backwards compatibility
+export type {
+  User,
+  Address,
+  Order,
+  OrderItem,
+  CreateOrderItemRequest,
+  CreateOrderRequest,
+  TokenResponse,
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+};
 
 async function getToken(): Promise<string | null> {
   const cookieStore = await cookies();
-  return cookieStore.get('spirom_auth_token')?.value || null;
+  return cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value || null;
+}
+
+async function clearAuthCookies() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAMES.ACCESS_TOKEN);
+  cookieStore.delete(COOKIE_NAMES.REFRESH_TOKEN);
+  cookieStore.delete(COOKIE_NAMES.SESSION_STARTED_AT);
+}
+
+async function setAuthCookies(tokens: TokenResponse) {
+  const cookieStore = await cookies();
+  const secure = process.env.NODE_ENV === 'production';
+
+  // access
+  cookieStore.set(COOKIE_NAMES.ACCESS_TOKEN, tokens.access_token, {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    maxAge: tokens.expires_in,
+    path: '/',
+  });
+
+  // refresh（ローテーション前提で常に更新）
+  cookieStore.set(COOKIE_NAMES.REFRESH_TOKEN, tokens.refresh_token, {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    maxAge: REFRESH_COOKIE_MAX_AGE_SECONDS,
+    path: '/',
+  });
+}
+
+async function ensureSessionStartCookie() {
+  const cookieStore = await cookies();
+  const secure = process.env.NODE_ENV === 'production';
+
+  const existing = cookieStore.get(COOKIE_NAMES.SESSION_STARTED_AT)?.value;
+  if (existing) return;
+
+  cookieStore.set(COOKIE_NAMES.SESSION_STARTED_AT, String(Math.floor(Date.now() / 1000)), {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    maxAge: MAX_SESSION_SECONDS,
+    path: '/',
+  });
 }
 
 // ============================================
 // 住所関連
 // ============================================
-
-export interface Address {
-  id: string;
-  name?: string;
-  postal_code: string;
-  prefecture: string;
-  city: string;
-  address_line1: string;
-  address_line2?: string;
-  phone?: string;
-  is_default: boolean;
-}
 
 export async function fetchAddresses(): Promise<{ success: boolean; data: Address[]; error?: string }> {
   const token = await getToken();
@@ -32,7 +96,7 @@ export async function fetchAddresses(): Promise<{ success: boolean; data: Addres
   }
 
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/users/me/addresses`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me/addresses`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -64,7 +128,7 @@ export async function createAddressAction(
   }
 
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/users/me/addresses`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me/addresses`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -90,12 +154,6 @@ export async function createAddressAction(
 // 決済関連
 // ============================================
 
-export interface CreateOrderItemRequest {
-  product_id: string;
-  quantity: number;
-  price: number;
-}
-
 export async function createPaymentIntentAction(
   items: CreateOrderItemRequest[],
   shippingAddressId: string,
@@ -107,7 +165,7 @@ export async function createPaymentIntentAction(
   }
 
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/payments/intent`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/intent`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -133,37 +191,6 @@ export async function createPaymentIntentAction(
 // 注文関連
 // ============================================
 
-export interface OrderItem {
-  product_id: string;
-  product_name: string;
-  product_sku: string;
-  price: number;
-  quantity: number;
-  subtotal: number;
-  image_url?: string;
-}
-
-export interface Order {
-  id: string;
-  order_number: string;
-  status: string;
-  payment_status: string;
-  total: number;
-  currency: string;
-  created_at: string;
-  shipped_at?: string;
-  delivered_at?: string;
-  items?: OrderItem[];
-  item_count?: number;
-}
-
-export interface CreateOrderRequest {
-  items: CreateOrderItemRequest[];
-  shipping_address_id: string;
-  billing_address_id?: string;
-  payment_method: 'credit_card' | 'paypay' | 'rakuten_pay' | 'konbini' | 'bank_transfer';
-}
-
 export async function createOrderAction(
   request: CreateOrderRequest
 ): Promise<{ success: boolean; data?: Order; error?: string }> {
@@ -173,7 +200,7 @@ export async function createOrderAction(
   }
 
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/orders`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -199,44 +226,57 @@ export async function createOrderAction(
 // 認証関連
 // ============================================
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  phone?: string;
-  is_verified: boolean;
-  created_at: string;
-}
+export async function refreshSessionAction(): Promise<{ success: boolean; error?: string }> {
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get(COOKIE_NAMES.REFRESH_TOKEN)?.value;
+  const startedAtStr = cookieStore.get(COOKIE_NAMES.SESSION_STARTED_AT)?.value;
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+  if (!refreshToken || !startedAtStr) {
+    await clearAuthCookies();
+    return { success: false, error: 'Session expired' };
+  }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
-  phone?: string;
-}
+  // 念のため（Cookie maxAgeでも切れるが、防御的に上限を保証）
+  const startedAt = Number(startedAtStr);
+  if (!Number.isFinite(startedAt)) {
+    await clearAuthCookies();
+    return { success: false, error: 'Session expired' };
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (now - startedAt > MAX_SESSION_SECONDS) {
+    await clearAuthCookies();
+    return { success: false, error: 'Session expired' };
+  }
 
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-}
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: 'no-store',
+    });
 
-export interface AuthResponse {
-  user: User;
-  tokens: TokenResponse;
+    if (!response.ok) {
+      await clearAuthCookies();
+      return { success: false, error: 'Session expired' };
+    }
+
+    const tokens: TokenResponse = await response.json();
+    await setAuthCookies(tokens);
+    // started_at は最初のログイン時刻を維持（更新しない）
+    return { success: true };
+  } catch (error) {
+    console.error('Refresh session failed:', error);
+    await clearAuthCookies();
+    return { success: false, error: 'Session expired' };
+  }
 }
 
 export async function loginAction(
   request: LoginRequest
 ): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/auth/login`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -251,15 +291,8 @@ export async function loginAction(
 
     const result: AuthResponse = await response.json();
 
-    // Set auth cookie
-    const cookieStore = await cookies();
-    cookieStore.set('spirom_auth_token', result.tokens.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: result.tokens.expires_in,
-      path: '/',
-    });
+    await setAuthCookies(result.tokens);
+    await ensureSessionStartCookie();
 
     return { success: true, data: result };
   } catch (error) {
@@ -272,7 +305,7 @@ export async function registerAction(
   request: RegisterRequest
 ): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/auth/register`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -287,15 +320,8 @@ export async function registerAction(
 
     const result: AuthResponse = await response.json();
 
-    // Set auth cookie
-    const cookieStore = await cookies();
-    cookieStore.set('spirom_auth_token', result.tokens.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: result.tokens.expires_in,
-      path: '/',
-    });
+    await setAuthCookies(result.tokens);
+    await ensureSessionStartCookie();
 
     return { success: true, data: result };
   } catch (error) {
@@ -309,7 +335,7 @@ export async function logoutAction(): Promise<{ success: boolean; error?: string
 
   try {
     if (token) {
-      await fetch(`${BFF_URL}/api/v1/auth/logout`, {
+      await fetch(`${BFF_BASE_URL}/api/v1/auth/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -322,9 +348,7 @@ export async function logoutAction(): Promise<{ success: boolean; error?: string
     // Continue to clear cookie even if API fails
   }
 
-  // Clear auth cookie
-  const cookieStore = await cookies();
-  cookieStore.delete('spirom_auth_token');
+  await clearAuthCookies();
 
   return { success: true };
 }
@@ -336,7 +360,7 @@ export async function getMeAction(): Promise<{ success: boolean; data?: User; er
   }
 
   try {
-    const response = await fetch(`${BFF_URL}/api/v1/users/me`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -347,8 +371,7 @@ export async function getMeAction(): Promise<{ success: boolean; data?: User; er
     if (!response.ok) {
       if (response.status === 401) {
         // Token is invalid, clear cookie
-        const cookieStore = await cookies();
-        cookieStore.delete('spirom_auth_token');
+        await clearAuthCookies();
         return { success: false, error: 'Token expired' };
       }
       throw new Error(`API error: ${response.status}`);

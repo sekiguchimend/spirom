@@ -54,9 +54,73 @@ function buildUpstreamUrl(req: NextRequest, pathParts: string[]) {
   return upstream;
 }
 
+function parseAllowedOrigins(req: NextRequest): Set<string> {
+  const set = new Set<string>();
+  // 実行中のオリジン（Vercel等でもここが最も確実）
+  set.add(req.nextUrl.origin);
+  // 明示設定がある場合（本番URLなど）
+  const candidates = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.SITE_URL,
+    process.env.CSRF_ALLOWED_ORIGINS,
+  ].filter(Boolean) as string[];
+
+  for (const v of candidates) {
+    for (const part of v.split(',').map((s) => s.trim()).filter(Boolean)) {
+      try {
+        set.add(new URL(part).origin);
+      } catch {
+        // ignore invalid url
+      }
+    }
+  }
+  return set;
+}
+
+function originFromHeaders(req: NextRequest): string | null {
+  const origin = req.headers.get('origin');
+  if (origin) {
+    try {
+      return new URL(origin).origin;
+    } catch {
+      return null;
+    }
+  }
+  const referer = req.headers.get('referer');
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function enforceCsrf(req: NextRequest, method: string): NextResponse | null {
+  // ブラウザからの「状態変更」リクエストは同一オリジンのみ許可
+  const unsafe = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+  if (!unsafe) return null;
+
+  const allowed = parseAllowedOrigins(req);
+  const origin = originFromHeaders(req);
+
+  if (!origin || !allowed.has(origin)) {
+    return NextResponse.json(
+      { message: 'CSRF protection: invalid origin' },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
+
 async function proxy(req: NextRequest, method: string, pathParts: string[]) {
   const requestId = globalThis.crypto?.randomUUID?.() ?? `req_${Math.random().toString(16).slice(2)}`;
   const startedAt = nowMs();
+
+  const csrf = enforceCsrf(req, method);
+  if (csrf) return csrf;
 
   const upstreamUrl = buildUpstreamUrl(req, pathParts);
 

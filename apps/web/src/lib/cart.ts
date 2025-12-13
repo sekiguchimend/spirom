@@ -1,16 +1,10 @@
 'use client';
 
-export interface CartItem {
-  id: string;
-  productId: string;
-  slug: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
+import { CART_STORAGE_KEY } from './config';
+import type { CartItem } from '@/types';
 
-const CART_STORAGE_KEY = 'spirom-cart';
+// Re-export for backwards compatibility
+export type { CartItem };
 
 // カートを取得
 export function getCart(): CartItem[] {

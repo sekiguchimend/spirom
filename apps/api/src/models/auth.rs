@@ -82,18 +82,21 @@ pub struct Claims {
     pub sub: Uuid,        // ユーザーID
     pub email: String,
     pub role: UserRole,
+    #[serde(default)]
+    pub token_use: Option<String>, // "access" | "refresh"
     pub exp: i64,         // 有効期限
     pub iat: i64,         // 発行時刻
     pub jti: String,      // トークンID
 }
 
 impl Claims {
-    pub fn new(user_id: Uuid, email: String, role: UserRole, expires_in: i64) -> Self {
+    pub fn new(user_id: Uuid, email: String, role: UserRole, expires_in: i64, token_use: impl Into<String>) -> Self {
         let now = chrono::Utc::now().timestamp();
         Self {
             sub: user_id,
             email,
             role,
+            token_use: Some(token_use.into()),
             exp: now + expires_in,
             iat: now,
             jti: Uuid::new_v4().to_string(),
