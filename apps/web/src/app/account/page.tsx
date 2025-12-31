@@ -87,7 +87,7 @@ export default async function AccountPage() {
             <h2 className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider">メニュー</h2>
             <div className="space-y-3">
               <Link
-                href={ROUTES.ACCOUNT.NEW_ADDRESS}
+                href={ROUTES.ACCOUNT.ADDRESSES}
                 className="flex items-center gap-4 p-4 bg-bg-light rounded-xl hover:bg-primary/5 transition-colors group"
               >
                 <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">

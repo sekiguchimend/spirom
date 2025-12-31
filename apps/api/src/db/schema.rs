@@ -48,8 +48,23 @@ CREATE TABLE IF NOT EXISTS addresses (
 
 ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own addresses" ON addresses
-    FOR ALL USING (auth.uid()::text = user_id::text);
+-- 住所テーブルのRLSポリシー（厳密化）
+-- SELECT: 自分の住所のみ参照可能
+CREATE POLICY "Users can view own addresses" ON addresses
+    FOR SELECT USING (auth.uid()::text = user_id::text);
+
+-- INSERT: 自分のuser_idでしか作成できない（WITH CHECKで厳密に制御）
+CREATE POLICY "Users can create own addresses" ON addresses
+    FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
+-- UPDATE: 自分の住所のみ更新可能、かつuser_idは変更不可
+CREATE POLICY "Users can update own addresses" ON addresses
+    FOR UPDATE USING (auth.uid()::text = user_id::text)
+    WITH CHECK (auth.uid()::text = user_id::text);
+
+-- DELETE: 自分の住所のみ削除可能
+CREATE POLICY "Users can delete own addresses" ON addresses
+    FOR DELETE USING (auth.uid()::text = user_id::text);
 
 -- ========== カテゴリ関連 ==========
 

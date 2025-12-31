@@ -144,3 +144,149 @@ export function validatePasswordConfirm(
   }
   return undefined;
 }
+
+// ============================================
+// サニタイゼーション関数（XSS対策）
+// ============================================
+
+/**
+ * HTMLエスケープ（XSS対策）
+ */
+export function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
+ * 危険な文字列を検出（SQLインジェクション、XSS対策）
+ */
+export function containsDangerousChars(text: string): boolean {
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+\s*=/i, // onclick=, onerror= など
+    /eval\s*\(/i,
+    /expression\s*\(/i,
+    /vbscript:/i,
+    /data:text\/html/i,
+    /&#x?[0-9a-f]+;/i, // HTMLエンティティの悪用
+  ];
+  return dangerousPatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * 住所入力用のサニタイゼーション
+ * - 先頭・末尾の空白を削除
+ * - 連続する空白を1つに
+ * - 危険な文字列を検出
+ */
+export function sanitizeAddressInput(value: string): string {
+  if (!value) return '';
+  
+  // 先頭・末尾の空白を削除
+  let sanitized = value.trim();
+  
+  // 連続する空白を1つに
+  sanitized = sanitized.replace(/\s+/g, ' ');
+  
+  // 危険な文字列が含まれている場合は空文字を返す（エラーとして扱う）
+  if (containsDangerousChars(sanitized)) {
+    return '';
+  }
+  
+  return sanitized;
+}
+
+// ============================================
+// 住所専用バリデーション関数
+// ============================================
+
+/**
+ * 都道府県のバリデーション（ホワイトリスト）
+ */
+export function validatePrefecture(value: string, allowedPrefectures: readonly string[]): string | undefined {
+  if (!value.trim()) return '必須';
+  if (!allowedPrefectures.includes(value)) {
+    return '正しい都道府県を選択してください';
+  }
+  return undefined;
+}
+
+/**
+ * 市区町村のバリデーション
+ */
+export function validateCity(value: string): string | undefined {
+  if (!value.trim()) return '必須';
+  if (value.length > 100) {
+    return '市区町村は100文字以内で入力してください';
+  }
+  // 危険な文字列チェック
+  if (containsDangerousChars(value)) {
+    return '無効な文字が含まれています';
+  }
+  return undefined;
+}
+
+/**
+ * 番地・建物名のバリデーション
+ */
+export function validateAddressLine1(value: string): string | undefined {
+  if (!value.trim()) return '必須';
+  if (value.length > 200) {
+    return '番地・建物名は200文字以内で入力してください';
+  }
+  // 危険な文字列チェック
+  if (containsDangerousChars(value)) {
+    return '無効な文字が含まれています';
+  }
+  return undefined;
+}
+
+/**
+ * 建物名・部屋番号のバリデーション（任意）
+ */
+export function validateAddressLine2(value: string): string | undefined {
+  if (!value.trim()) return undefined; // 任意
+  if (value.length > 200) {
+    return '建物名・部屋番号は200文字以内で入力してください';
+  }
+  // 危険な文字列チェック
+  if (containsDangerousChars(value)) {
+    return '無効な文字が含まれています';
+  }
+  return undefined;
+}
+
+/**
+ * ラベルのバリデーション（任意）
+ */
+export function validateLabel(value: string): string | undefined {
+  if (!value.trim()) return undefined; // 任意
+  if (value.length > 50) {
+    return 'ラベルは50文字以内で入力してください';
+  }
+  // 危険な文字列チェック
+  if (containsDangerousChars(value)) {
+    return '無効な文字が含まれています';
+  }
+  return undefined;
+}
+
+/**
+ * 電話番号のバリデーション（強化版）
+ */
+export function validatePhoneStrict(value: string): string | undefined {
+  if (!value.trim()) return undefined; // 任意
+  // ハイフンと数字のみ許可
+  const normalized = value.replace(/[-\s]/g, '');
+  if (!/^\d{10,11}$/.test(normalized)) {
+    return '電話番号は10桁または11桁の数字で入力してください';
+  }
+  return undefined;
+}

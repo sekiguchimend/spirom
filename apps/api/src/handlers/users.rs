@@ -74,9 +74,14 @@ pub async fn list_addresses(
 pub async fn create_address(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
-    Json(req): Json<CreateAddressRequest>,
+    Json(mut req): Json<CreateAddressRequest>,
 ) -> Result<Json<DataResponse<Address>>> {
+    // バリデーション
     req.validate()?;
+    
+    // サニタイゼーションと追加バリデーション
+    req.sanitize_and_validate()
+        .map_err(|e| AppError::BadRequest(e))?;
 
     let user_repo = UserRepository::new(state.db.anonymous());
 
@@ -104,9 +109,14 @@ pub async fn update_address(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
     Path(id): Path<Uuid>,
-    Json(req): Json<UpdateAddressRequest>,
+    Json(mut req): Json<UpdateAddressRequest>,
 ) -> Result<Json<DataResponse<Address>>> {
+    // バリデーション
     req.validate()?;
+    
+    // サニタイゼーションと追加バリデーション
+    req.sanitize_and_validate()
+        .map_err(|e| AppError::BadRequest(e))?;
 
     let user_repo = UserRepository::new(state.db.anonymous());
 

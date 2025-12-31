@@ -45,20 +45,27 @@ export function AddToCartButton({
     if (!inStock) return;
 
     setIsAdding(true);
-    addToCart({
-      productId,
-      slug,
-      name,
-      price,
-      quantity,
-      image,
-    });
+    void (async () => {
+      try {
+        await addToCart({
+          productId,
+          slug,
+          name,
+          price,
+          quantity,
+          image,
+        });
 
-    setTimeout(() => {
-      setIsAdding(false);
-      setIsAdded(true);
-      setTimeout(() => setIsAdded(false), SUCCESS_MESSAGE_DURATION_MS);
-    }, CART_ANIMATION_DELAY_MS);
+        setTimeout(() => {
+          setIsAdding(false);
+          setIsAdded(true);
+          setTimeout(() => setIsAdded(false), SUCCESS_MESSAGE_DURATION_MS);
+        }, CART_ANIMATION_DELAY_MS);
+      } catch {
+        // 失敗してもUIは壊さない（詳細はカート画面で再取得できる）
+        setIsAdding(false);
+      }
+    })();
   };
 
   const handleBuyNow = () => {

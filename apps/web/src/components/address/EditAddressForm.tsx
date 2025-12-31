@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createAddressAction } from '@/lib/actions';
 import type { Address } from '@/types';
+import { PREFECTURES } from './prefectures';
 import { ROUTES } from '@/lib/routes';
 import { ADDRESS_MESSAGES, VALIDATION_MESSAGES } from '@/lib/messages';
-import { PREFECTURES } from './prefectures';
+import { updateAddressAction } from '@/lib/actions';
 import {
   validatePostalCode,
   validatePrefecture,
@@ -19,24 +19,26 @@ import {
   sanitizeAddressInput,
 } from '@/lib/validation';
 
-export function AddressForm() {
+export function EditAddressForm({ address }: { address: Address }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // どこから来たかで戻り先を変える（デフォルトは住所一覧）
-  const redirectTo = searchParams.get('redirect') || ROUTES.ACCOUNT.ADDRESSES;
+  const redirectTo = useMemo(
+    () => searchParams.get('redirect') || ROUTES.ACCOUNT.ADDRESSES,
+    [searchParams]
+  );
 
   const [formData, setFormData] = useState<Omit<Address, 'id'>>({
-    name: '',
-    postal_code: '',
-    prefecture: '',
-    city: '',
-    address_line1: '',
-    address_line2: '',
-    phone: '',
-    is_default: false,
+    name: address.name || '',
+    postal_code: address.postal_code || '',
+    prefecture: address.prefecture || '',
+    city: address.city || '',
+    address_line1: address.address_line1 || '',
+    address_line2: address.address_line2 || '',
+    phone: address.phone || '',
+    is_default: Boolean(address.is_default),
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,7 +121,7 @@ export function AddressForm() {
         ? `${normalizedPostalCode.slice(0, 3)}-${normalizedPostalCode.slice(3)}`
         : sanitizedData.postal_code;
 
-      const finalData = {
+      const payload = {
         ...sanitizedData,
         postal_code: finalPostalCode,
         name: sanitizedData.name || undefined,
@@ -127,13 +129,15 @@ export function AddressForm() {
         phone: sanitizedData.phone || undefined,
       };
 
-      const result = await createAddressAction(finalData);
+      const result = await updateAddressAction(address.id, payload);
       if (!result.success) {
         setError(result.error || ADDRESS_MESSAGES.SAVE_FAILED);
         setIsSubmitting(false);
         return;
       }
+
       router.push(redirectTo);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : ADDRESS_MESSAGES.SAVE_FAILED);
     } finally {
@@ -163,7 +167,9 @@ export function AddressForm() {
               <div className="h-0.5 w-8 bg-primary" />
               <p className="text-xs tracking-[0.2em] text-primary uppercase font-bold">Address</p>
             </div>
-            <h1 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>配送先住所を追加</h1>
+            <h1 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>
+              配送先住所を編集
+            </h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -217,7 +223,7 @@ export function AddressForm() {
             <div className="flex gap-4 pt-4">
               <Link href={redirectTo} className="flex-1 px-6 py-3 font-bold text-text-dark border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-center text-sm">キャンセル</Link>
               <button type="submit" disabled={isSubmitting} className="flex-1 px-6 py-3 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-                {isSubmitting ? '登録中...' : '住所を登録'}
+                {isSubmitting ? '保存中...' : '変更を保存'}
               </button>
             </div>
           </form>
@@ -226,3 +232,5 @@ export function AddressForm() {
     </div>
   );
 }
+
+

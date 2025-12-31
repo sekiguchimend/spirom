@@ -27,7 +27,7 @@ export function ContentCard({ href, title, description, image, date, category, t
             <figure className="relative aspect-[16/9] bg-gray-100 border-b-3 border-black overflow-hidden">
               <Image
                 src={image}
-                alt=""
+                alt={title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
                 sizes="(max-width: 768px) 100vw, 33vw"

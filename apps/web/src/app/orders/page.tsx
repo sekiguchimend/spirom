@@ -2,36 +2,11 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, getServerOrders } from '@/lib/server-api';
 import { formatPrice, formatDate } from '@/lib/utils';
+import { getOrderStatusBadgeClass, getOrderStatusLabel } from '@/lib/orderStatus';
 import { OrderProgress } from '@/components/orders/OrderProgress';
 import { ROUTES } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
-
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    pending_payment: '支払い待ち',
-    paid: '支払い済み',
-    processing: '処理中',
-    shipped: '発送済み',
-    delivered: '配達済み',
-    cancelled: 'キャンセル済み',
-    refunded: '返金済み',
-  };
-  return statusMap[status] || status;
-}
-
-function getStatusColor(status: string): string {
-  const colorMap: Record<string, string> = {
-    pending_payment: 'bg-yellow-100 text-yellow-800',
-    paid: 'bg-blue-100 text-blue-800',
-    processing: 'bg-purple-100 text-purple-800',
-    shipped: 'bg-indigo-100 text-indigo-800',
-    delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-    refunded: 'bg-gray-100 text-gray-800',
-  };
-  return colorMap[status] || 'bg-gray-100 text-gray-800';
-}
 
 export default async function OrdersPage() {
   // Server Componentで認証チェック
@@ -85,9 +60,9 @@ export default async function OrdersPage() {
                     </div>
                     <div className="flex flex-col sm:items-end gap-2">
                       <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getOrderStatusBadgeClass(order.status)}`}
                       >
-                        {getStatusLabel(order.status)}
+                        {getOrderStatusLabel(order.status)}
                       </span>
                       <p className="text-xl font-bold text-text-dark">
                         {formatPrice(order.total)}

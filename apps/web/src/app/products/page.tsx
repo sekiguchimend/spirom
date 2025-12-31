@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { ProductCard, CategoryPill } from '@/components/ui';
 import { getAllProducts, getProductsByCategory, getTopLevelCategories } from '@/lib/supabase';
+import { safeJsonLd } from '@/lib/safeJsonLd';
+import { SITE_URL, SITE_NAME } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: "Products",
@@ -44,8 +46,46 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     ...categories.map(c => ({ slug: c.slug, name: c.name })),
   ];
 
+  // ItemList 構造化データを生成
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Spirom Products',
+    description: 'Spiromの商品一覧',
+    numberOfItems: products.length,
+    itemListElement: products.map((product, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: product.name,
+        url: `${SITE_URL}/products/${product.slug}`,
+        image: product.images[0]?.startsWith('http')
+          ? product.images[0]
+          : `${SITE_URL}${product.images[0] || '/placeholder-product.jpg'}`,
+        offers: {
+          '@type': 'Offer',
+          price: product.price,
+          priceCurrency: product.currency || 'JPY',
+          availability: product.stock > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+          seller: {
+            '@type': 'Organization',
+            name: SITE_NAME,
+          },
+        },
+      },
+    })),
+  };
+
   return (
-    <div className="min-h-screen bg-[#FFFFF5]">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
+      />
+      <div className="min-h-screen bg-[#FFFFF5]">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-32 pb-8 sm:pt-28 sm:pb-20">
         {/* ページヘッダー */}
         <header className="text-center mb-8 sm:mb-16" aria-labelledby="page-title">
@@ -98,5 +138,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </section>
       </div>
     </div>
+    </>
   );
 }

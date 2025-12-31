@@ -73,7 +73,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         <div className="bg-primary/5 rounded-2xl p-6 md:p-8">
           <div className="mb-6">
-            <SectionHeader label="Login" title="ログイン" />
+            <SectionHeader label="Login" title="ログイン" titleStyle={{ fontWeight: 900, WebkitTextStroke: '1px currentColor', fontSize: '1.5rem' }} />
             <p className="mt-2 text-center text-sm text-gray-600">
               または{' '}
               <Link href={ROUTES.AUTH.REGISTER} className="font-medium text-primary hover:text-primary-dark">

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use reqwest::{Client, header};
 use serde::{de::DeserializeOwned, Serialize};
 use crate::error::{AppError, Result};
@@ -15,7 +17,22 @@ pub struct SupabaseClient {
 impl SupabaseClient {
     pub fn new(url: &str, anon_key: &str) -> Result<Self> {
         let service_role_key = std::env::var("SUPABASE_SERVICE_ROLE_KEY").ok();
+        let connect_timeout = std::env::var("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(10)
+            .max(1);
+        let request_timeout = std::env::var("SUPABASE_HTTP_TIMEOUT_SECONDS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(15)
+            .max(1);
+
         let client = Client::builder()
+            // Supabase REST が応答しない場合でもアプリ全体の 30s タイムアウトに達する前に失敗させる
+            .connect_timeout(Duration::from_secs(connect_timeout as u64))
+            .timeout(Duration::from_secs(request_timeout as u64))
+            .pool_idle_timeout(Some(Duration::from_secs(30)))
             .build()
             .map_err(|e| AppError::Database(format!("Failed to create HTTP client: {}", e)))?;
 

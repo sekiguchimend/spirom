@@ -18,12 +18,51 @@ import type {
   LoginRequest,
   RegisterRequest,
 } from '@/types';
+import { createHmac, randomUUID } from 'crypto';
 
 // Note: Types should be imported from @/types directly
 
 async function getToken(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value || null;
+}
+
+const SESSION_COOKIE_NAME = 'spirom_session_id';
+
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('SESSION_SECRET/JWT_SECRET is not set');
+  }
+  return secret;
+}
+
+async function getOrCreateSessionId(): Promise<string> {
+  const cookieStore = await cookies();
+  const existing = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (existing) return existing;
+
+  // API側のフォーマットに合わせる: sess_ + 32hex
+  const sid = `sess_${randomUUID().replace(/-/g, '')}`;
+  const secure = process.env.NODE_ENV === 'production';
+  cookieStore.set(SESSION_COOKIE_NAME, sid, {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 30, // 30日
+    path: '/',
+  });
+  return sid;
+}
+
+async function withSignedSessionHeaders(headers: Record<string, string>) {
+  const sessionId = await getOrCreateSessionId();
+  const sig = createHmac('sha256', getSessionSecret()).update(sessionId).digest('hex');
+  return {
+    ...headers,
+    'X-Session-ID': sessionId,
+    'X-Session-Signature': sig,
+  };
 }
 
 function withBffProxyToken(headers: Record<string, string>) {
@@ -145,6 +184,69 @@ export async function createAddressAction(
   }
 }
 
+export async function updateAddressAction(
+  id: string,
+  formData: Omit<Address, 'id'>
+): Promise<{ success: boolean; data?: Address; error?: string }> {
+  const token = await getToken();
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me/addresses/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update address' };
+  }
+}
+
+export async function deleteAddressAction(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const token = await getToken();
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/users/me/addresses/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete address' };
+  }
+}
+
 // ============================================
 // 決済関連
 // ============================================
@@ -194,13 +296,16 @@ export async function createOrderAction(
   }
 
   try {
+    const baseHeaders = withBffProxyToken({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    });
+    const signed = await withSignedSessionHeaders(baseHeaders);
+
     const response = await fetch(`${BFF_BASE_URL}/api/v1/orders`, {
       method: 'POST',
       headers: {
-        ...withBffProxyToken({
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }),
+        ...signed,
       },
       body: JSON.stringify(request),
     });

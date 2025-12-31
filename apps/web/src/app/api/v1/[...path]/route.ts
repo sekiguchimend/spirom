@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
+import { createHash, createHmac, randomUUID } from 'crypto';
 
 /**
  * `/api/v1/*` を BFF にプロキシする Route Handler。
@@ -21,6 +21,35 @@ const DEBUG_PROXY =
   process.env.DEBUG_API_PROXY === '1' ||
   process.env.NEXT_PUBLIC_DEBUG_API_PROXY === '1' ||
   process.env.NODE_ENV !== 'production';
+
+const SESSION_COOKIE_NAME = 'spirom_session_id';
+
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('SESSION_SECRET/JWT_SECRET is not set');
+  }
+  return secret;
+}
+
+function signSessionId(sessionId: string): string {
+  return createHmac('sha256', getSessionSecret()).update(sessionId).digest('hex');
+}
+
+function parseCookieValue(cookie: string, name: string): string | null {
+  const match = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+function newSessionId(): string {
+  // API側が検証する形式: sess_ + 32hex
+  return `sess_${randomUUID().replace(/-/g, '')}`;
+}
 
 function bffBaseUrlSource() {
   if (process.env.BFF_URL) return 'BFF_URL';
@@ -151,6 +180,21 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
         headers.set('authorization', `Bearer ${match[1]}`);
       }
     }
+  }
+
+  // カート/注文で使うセッション（署名付き）を上流へ付与
+  // - ブラウザは署名できないため、Nextサーバー側で署名して付与する
+  // - クライアントが任意の session_id を偽装しても署名が無ければ無効化される
+  const cookie = req.headers.get('cookie') || '';
+  let sessionId = parseCookieValue(cookie, SESSION_COOKIE_NAME);
+  let setSessionCookie = false;
+  if (!sessionId) {
+    sessionId = newSessionId();
+    setSessionCookie = true;
+  }
+  if (sessionId) {
+    headers.set('x-session-id', sessionId);
+    headers.set('x-session-signature', signSessionId(sessionId));
   }
 
   // 相関IDを上流へ（BFFログと突合できるように）
@@ -312,11 +356,24 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
     }
   }
 
-  return new NextResponse(upstreamRes.body, {
+  const response = new NextResponse(upstreamRes.body, {
     status: upstreamRes.status,
     statusText: upstreamRes.statusText,
     headers: resHeaders,
   });
+
+  if (setSessionCookie && sessionId) {
+    const secure = process.env.NODE_ENV === 'production';
+    response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
+    });
+  }
+
+  return response;
 }
 
 export async function GET(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {

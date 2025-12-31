@@ -6,6 +6,9 @@ import { safeJsonLd } from '@/lib/safeJsonLd';
 export const metadata: Metadata = {
   title: "About Us",
   description: "Spiromは「大人もきれるカートゥーン」をコンセプトに、遊び心と洗練されたデザインを融合したファッションブランドです。",
+  alternates: {
+    canonical: "/about",
+  },
   openGraph: {
     title: "About Us | Spirom",
     description: "大人もきれるカートゥーン。遊び心あふれる洗練されたファッションをお届けします。",

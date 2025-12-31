@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getCartCount } from '@/lib/cart';
+import { getCartCount, refreshCart } from '@/lib/cart';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
@@ -12,8 +12,10 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    // 初期読み込み
-    setCartCount(getCartCount());
+    // 初期読み込み（APIを正として同期）
+    void refreshCart()
+      .catch(() => {})
+      .finally(() => setCartCount(getCartCount()));
 
     // カート更新イベントをリッスン
     const handleCartUpdate = () => {
@@ -186,7 +188,7 @@ export default function Header() {
                 <li><Link href="/products" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Shop</Link></li>
                 <li><Link href="/blog" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Blog</Link></li>
                 <li><Link href="/about" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>About</Link></li>
-                <li><Link href="/account/addresses/new" className="block text-2xl md:text-2xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Address</Link></li>
+                <li><Link href="/account/addresses" className="block text-2xl md:text-2xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Address</Link></li>
               </ul>
             </nav>
           </div>

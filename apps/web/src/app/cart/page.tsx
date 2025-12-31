@@ -3,16 +3,19 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getCart, removeFromCart, updateCartQuantity, clearCart, type CartItem } from '@/lib/cart';
+import { getCart, refreshCart, removeFromCart, updateCartQuantity, clearCart, type CartItem } from '@/lib/cart';
 import { formatPrice } from '@/lib/utils';
+import { ROUTES } from '@/lib/routes';
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setCart(getCart());
-    setIsLoaded(true);
+    void refreshCart()
+      .then(() => setCart(getCart()))
+      .catch(() => setCart(getCart()))
+      .finally(() => setIsLoaded(true));
 
     const handleCartUpdate = () => {
       setCart(getCart());
@@ -24,18 +27,18 @@ export default function CartPage() {
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity < 1) {
-      removeFromCart(productId);
+      void removeFromCart(productId);
     } else {
-      updateCartQuantity(productId, newQuantity);
+      void updateCartQuantity(productId, newQuantity);
     }
   };
 
   const handleRemove = (productId: string) => {
-    removeFromCart(productId);
+    void removeFromCart(productId);
   };
 
   const handleClearCart = () => {
-    clearCart();
+    void clearCart();
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -226,7 +229,7 @@ export default function CartPage() {
                   CHECKOUT
                 </Link>
                 <Link
-                  href="/account/addresses/new"
+                  href={`${ROUTES.ACCOUNT.NEW_ADDRESS}?redirect=${encodeURIComponent(ROUTES.CHECKOUT.INDEX)}`}
                   className="block w-full py-3 mt-3 text-white/80 font-bold text-xs tracking-wider text-center hover:text-white transition-colors"
                 >
                   配送先住所を登録

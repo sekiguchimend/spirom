@@ -71,7 +71,7 @@ export interface CreateOrderItemRequest {
 export type PaymentMethod = 'credit_card' | 'paypay' | 'rakuten_pay' | 'konbini' | 'bank_transfer';
 
 export interface CreateOrderRequest {
-  items: CreateOrderItemRequest[];
+  items?: CreateOrderItemRequest[];
   shipping_address_id: string;
   billing_address_id?: string;
   payment_method: PaymentMethod;

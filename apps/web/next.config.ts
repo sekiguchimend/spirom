@@ -57,6 +57,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "assets.spirom.com",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,

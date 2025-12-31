@@ -20,12 +20,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${SITE_URL}/categories`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
       url: `${SITE_URL}/blog`,
       lastModified: new Date(),
       changeFrequency: "daily",
@@ -84,11 +78,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Supabase未設定時はスキップ
   }
 
+  // カテゴリページ
+  let categoryPages: MetadataRoute.Sitemap = [];
+
+  try {
+    const { data: categories } = await supabase
+      .from("categories")
+      .select("slug, updated_at")
+      .eq("is_active", true);
+
+    if (categories) {
+      categoryPages = categories.map((category) => ({
+        url: `${SITE_URL}/products?category=${category.slug}`,
+        lastModified: new Date(category.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }));
+    }
+  } catch {
+    // Supabase未設定時はスキップ
+  }
+
   // ブログ記事ページ（Sanity接続時のみ）
   let blogPages: MetadataRoute.Sitemap = [];
 
   try {
-    if (process.env.NEXT_PUBLIC_SANITY_PROJECT_ID) {
+    const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
+    if (projectId && projectId !== "dummy-project-id") {
       const posts = await client.fetch<{ slug: string }[]>(postSlugsQuery);
       blogPages = posts.map((post) => ({
         url: `${SITE_URL}/blog/${post.slug}`,
@@ -101,5 +117,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Sanity未設定時はスキップ
   }
 
-  return [...staticPages, ...productPages, ...blogPages];
+  return [...staticPages, ...productPages, ...categoryPages, ...blogPages];
 }

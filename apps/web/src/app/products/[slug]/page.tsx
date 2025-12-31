@@ -129,7 +129,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       type="button"
                       className={`w-14 h-14 relative bg-white rounded-lg overflow-hidden transition-all ${index === 0 ? 'ring-2 ring-primary scale-110' : 'opacity-60 hover:opacity-100'}`}
                     >
-                      <Image src={image} alt="" fill className="object-contain p-1" sizes="56px" />
+                      <Image src={image} alt={`${product.name} - 画像 ${index + 1}`} fill className="object-contain p-1" sizes="56px" />
                     </button>
                   ))}
                 </div>
