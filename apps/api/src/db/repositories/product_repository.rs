@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::db::AuthenticatedClient;
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use crate::models::{CategorySummary, Product, ProductSummary};
 
 pub struct ProductRepository {
@@ -140,8 +140,20 @@ impl ProductRepository {
             p_items: serde_json::to_value(payload).unwrap_or_else(|_| serde_json::json!([])),
         };
 
-        let ok: bool = self.client.rpc("reserve_stock_bulk", &params).await?;
-        Ok(ok)
+        match self.client.rpc::<_, bool>("reserve_stock_bulk", &params).await {
+            Ok(ok) => Ok(ok),
+            Err(AppError::Database(msg))
+                if msg.contains("\"code\":\"PGRST202\"") && msg.contains("reserve_stock_bulk") =>
+            {
+                Err(AppError::Internal(
+                    "在庫確保RPC（reserve_stock_bulk）がDBに存在しません。\
+                    Supabase側へ `apps/api/src/db/schema.rs` のSQL（reserve_stock_bulk / release_stock_bulk）を適用してください。\
+                    適用後、PostgRESTのスキーマキャッシュ反映に少し時間がかかる場合があります。"
+                        .to_string(),
+                ))
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// 在庫解放（原子操作）
@@ -168,8 +180,20 @@ impl ProductRepository {
             p_items: serde_json::to_value(payload).unwrap_or_else(|_| serde_json::json!([])),
         };
 
-        let ok: bool = self.client.rpc("release_stock_bulk", &params).await?;
-        Ok(ok)
+        match self.client.rpc::<_, bool>("release_stock_bulk", &params).await {
+            Ok(ok) => Ok(ok),
+            Err(AppError::Database(msg))
+                if msg.contains("\"code\":\"PGRST202\"") && msg.contains("release_stock_bulk") =>
+            {
+                Err(AppError::Internal(
+                    "在庫解放RPC（release_stock_bulk）がDBに存在しません。\
+                    Supabase側へ `apps/api/src/db/schema.rs` のSQL（reserve_stock_bulk / release_stock_bulk）を適用してください。\
+                    適用後、PostgRESTのスキーマキャッシュ反映に少し時間がかかる場合があります。"
+                        .to_string(),
+                ))
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// 商品削除

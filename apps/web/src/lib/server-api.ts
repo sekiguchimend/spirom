@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers';
-import { BFF_BASE_URL, COOKIE_NAMES } from './config';
+import { BFF_BASE_URL } from './config';
 import type { User, Address, Order, OrderItem } from '@/types';
+import { getServerAccessToken, isServerAuthenticated } from './server-auth';
 
 // Re-export types for backwards compatibility
 export type { User, Address, Order, OrderItem };
@@ -19,13 +19,10 @@ async function serverFetch<T>(path: string, options: FetchOptions = {}): Promise
     'Accept': 'application/json',
   };
 
-  // Server Componentからcookieを読み取ってトークンを取得
+  // サーバー側の認証状態は Supabase SSR セッションに一本化
   if (options.requireAuth !== false) {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value;
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    const token = await getServerAccessToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
   }
 
   const fetchOptions: RequestInit = {
@@ -102,12 +99,9 @@ export async function getServerOrder(orderId: string): Promise<Order | null> {
 // ============================================
 
 export async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value;
-  return !!token;
+  return isServerAuthenticated();
 }
 
 export async function getAuthToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value || null;
+  return getServerAccessToken();
 }

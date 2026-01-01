@@ -20,6 +20,15 @@ use crate::models::{
 
 type HmacSha256 = Hmac<Sha256>;
 
+// Authorization: Bearer ... を取り出す
+fn extract_bearer(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .map(|s| s.to_string())
+}
+
 /// セッションIDの署名を生成
 fn sign_session_id(session_id: &str, secret: &str) -> String {
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
@@ -109,8 +118,15 @@ pub async fn get_cart(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<DataResponse<CartResponse>>> {
+    // auth.uid を使うため、認証トークンがあれば with_auth を、なければ anon を使う
+    let token = extract_bearer(&headers);
+    let client = match token {
+        Some(t) => state.db.with_auth(&t),
+        None => state.db.anonymous(),
+    };
+
     let session_id = get_verified_session_id(&headers)?;
-    let cart_repo = CartRepository::new(state.db.anonymous());
+    let cart_repo = CartRepository::new(client);
 
     let cart = cart_repo.find_by_session(&session_id).await?;
 
@@ -125,9 +141,15 @@ pub async fn add_to_cart(
 ) -> Result<Json<DataResponse<CartResponse>>> {
     req.validate()?;
 
+    let token = extract_bearer(&headers);
+    let client = match token {
+        Some(t) => state.db.with_auth(&t),
+        None => state.db.anonymous(),
+    };
+
     let session_id = get_verified_session_id(&headers)?;
-    let cart_repo = CartRepository::new(state.db.anonymous());
-    let product_repo = ProductRepository::new(state.db.anonymous());
+    let cart_repo = CartRepository::new(client.clone());
+    let product_repo = ProductRepository::new(client.clone());
 
     // 商品取得
     let product = product_repo
@@ -197,9 +219,15 @@ pub async fn update_cart_item(
 ) -> Result<Json<DataResponse<CartResponse>>> {
     req.validate()?;
 
+    let token = extract_bearer(&headers);
+    let client = match token {
+        Some(t) => state.db.with_auth(&t),
+        None => state.db.anonymous(),
+    };
+
     let session_id = get_verified_session_id(&headers)?;
-    let cart_repo = CartRepository::new(state.db.anonymous());
-    let product_repo = ProductRepository::new(state.db.anonymous());
+    let cart_repo = CartRepository::new(client.clone());
+    let product_repo = ProductRepository::new(client.clone());
 
     // 在庫確認
     let product = product_repo
@@ -226,8 +254,14 @@ pub async fn remove_from_cart(
     headers: HeaderMap,
     Path(product_id): Path<Uuid>,
 ) -> Result<Json<DataResponse<CartResponse>>> {
+    let token = extract_bearer(&headers);
+    let client = match token {
+        Some(t) => state.db.with_auth(&t),
+        None => state.db.anonymous(),
+    };
+
     let session_id = get_verified_session_id(&headers)?;
-    let cart_repo = CartRepository::new(state.db.anonymous());
+    let cart_repo = CartRepository::new(client);
 
     cart_repo.remove_item(&session_id, product_id).await?;
 
@@ -241,8 +275,14 @@ pub async fn clear_cart(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>> {
+    let token = extract_bearer(&headers);
+    let client = match token {
+        Some(t) => state.db.with_auth(&t),
+        None => state.db.anonymous(),
+    };
+
     let session_id = get_verified_session_id(&headers)?;
-    let cart_repo = CartRepository::new(state.db.anonymous());
+    let cart_repo = CartRepository::new(client);
 
     cart_repo.clear(&session_id).await?;
 
@@ -257,7 +297,7 @@ pub async fn merge_cart(
     Json(req): Json<MergeCartRequest>,
 ) -> Result<Json<DataResponse<CartResponse>>> {
     let user_session_id = get_verified_session_id(&headers)?;
-    let cart_repo = CartRepository::new(state.db.anonymous());
+    let cart_repo = CartRepository::new(state.db.service());
 
     // ゲストセッションIDも検証が必要
     // ただしマージ元は既存セッションなので、フォーマットのみ検証

@@ -1,192 +1,267 @@
 use axum::{extract::State, Extension, Json};
-use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use chrono::{DateTime, Utc};
+use reqwest::Client;
+use serde::Deserialize;
+use serde_json::Value;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::config::AppState;
-use crate::db::repositories::{UserRepository, TokenBlacklistRepository};
+use crate::db::repositories::UserRepository;
 use crate::error::{AppError, Result};
-use crate::models::{AuthResponse, AuthenticatedUser, LoginRequest, RefreshTokenRequest, RegisterRequest, TokenResponse, Claims};
-use crate::services::AuthService;
-use crate::services::password::hash_password;
+use crate::models::{AuthenticatedUser, CreateProfileRequest, DataResponse, User, UserPublic, UserRole};
 
-/// ユーザー登録
-pub async fn register(
-    State(state): State<AppState>,
-    Json(req): Json<RegisterRequest>,
-) -> Result<Json<AuthResponse>> {
-    req.validate()?;
-
-    let user_repo = UserRepository::new(state.db.anonymous());
-    let auth_service = AuthService::new(user_repo, state.config.clone());
-
-    let response = auth_service.register(req).await?;
-
-    Ok(Json(response))
-}
-
-/// ログイン
-pub async fn login(
-    State(state): State<AppState>,
-    Json(req): Json<LoginRequest>,
-) -> Result<Json<AuthResponse>> {
-    req.validate()?;
-
-    let user_repo = UserRepository::new(state.db.anonymous());
-    let auth_service = AuthService::new(user_repo, state.config.clone());
-
-    let response = auth_service.login(req).await?;
-
-    // 最終ログイン時刻更新（失敗してもログイン自体は成功させる）
-    // RLSにより anon では更新できないため、可能なら service role で更新する
-    {
-        let user_repo_service = UserRepository::new(state.db.service());
-        if let Err(e) = user_repo_service.update_last_login(response.user.id).await {
-            tracing::warn!(
-                "Failed to update last_login_at (non-fatal). user_id={}, err={}",
-                response.user.id,
-                e
-            );
-        }
-    }
-
-    Ok(Json(response))
-}
-
-/// ログアウト
-pub async fn logout(
+/// プロファイル作成（Supabase Auth登録後にusersテーブルに追加）
+pub async fn create_profile(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
     Extension(token): Extension<String>,
-) -> Result<Json<serde_json::Value>> {
-    // トークンをブラックリストに追加
-    let decoding_key = DecodingKey::from_secret(state.config.jwt.secret.as_bytes());
-    let validation = Validation::default();
+    Json(req): Json<CreateProfileRequest>,
+) -> Result<Json<DataResponse<UserPublic>>> {
+    req.validate()?;
 
-    if let Ok(token_data) = decode::<Claims>(&token, &decoding_key, &validation) {
-        let blacklist_repo = TokenBlacklistRepository::new(state.db.service());
+    // RLS: auth.uid を通すためユーザーのJWTを利用
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
-        // トークンの有効期限までブラックリストに保持
-        let expires_at = chrono::DateTime::from_timestamp(token_data.claims.exp, 0)
-            .unwrap_or_else(|| Utc::now() + Duration::hours(1));
-
-        if let Err(e) = blacklist_repo.add(&token_data.claims.jti, auth_user.id, expires_at).await {
-            // ブラックリスト追加に失敗してもログアウト自体は成功させる
-            tracing::warn!("Failed to add token to blacklist: {}", e);
-        }
+    // 既存ユーザーチェック
+    if let Some(existing) = user_repo.find_by_id(auth_user.id).await? {
+        // 既にプロファイルが存在する場合は更新
+        let mut user = existing;
+        user.name = req.name;
+        user.phone = req.phone;
+        user.updated_at = Utc::now();
+        user_repo.update(&user).await?;
+        return Ok(Json(DataResponse::new(UserPublic::from(user))));
     }
 
-    Ok(Json(serde_json::json!({ "message": "ログアウトしました" })))
+    // 新規プロファイル作成
+    let now = Utc::now();
+    let user = User {
+        id: auth_user.id,
+        email: auth_user.email.clone(),
+        password_hash: String::new(), // Supabase Authが管理するため空
+        name: req.name,
+        phone: req.phone,
+        is_active: true,
+        is_verified: true, // Supabase Authで確認済み
+        role: UserRole::User,
+        created_at: now,
+        updated_at: now,
+        last_login_at: Some(now),
+    };
+
+    user_repo.create(&user).await?;
+
+    Ok(Json(DataResponse::new(UserPublic::from(user))))
 }
 
-/// トークン更新
+// =========================
+// Supabase Auth ラッパー
+// =========================
+
+#[derive(Debug, Deserialize)]
+struct SupabaseUser {
+    id: String,
+    email: String,
+    created_at: String,
+    #[serde(default)]
+    user_metadata: Value,
+    #[serde(default)]
+    email_confirmed_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SupabaseAuthResponse {
+    access_token: String,
+    refresh_token: String,
+    expires_in: i64,
+    token_type: String,
+    user: SupabaseUser,
+}
+
+async fn supabase_auth_request(
+    client: &Client,
+    base_url: &str,
+    auth_token: &str,
+    path: &str,
+    body: Value,
+) -> std::result::Result<SupabaseAuthResponse, AppError> {
+    let url = format!("{}/auth/v1/{}", base_url.trim_end_matches('/'), path);
+    let res = client
+        .post(url)
+        .header("apikey", auth_token)
+        .header("Authorization", format!("Bearer {}", auth_token))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Auth request failed: {}", e)))?;
+
+    if !res.status().is_success() {
+        let txt = res.text().await.unwrap_or_default();
+        return Err(AppError::Unauthorized(format!("Auth failed: {}", txt)));
+    }
+
+    res.json::<SupabaseAuthResponse>()
+        .await
+        .map_err(|e| AppError::Internal(format!("Auth parse failed: {}", e)))
+}
+
+fn user_public_from_supabase(repo_user: Option<User>, supa: &SupabaseUser) -> UserPublic {
+    if let Some(u) = repo_user {
+        return UserPublic::from(u);
+    }
+
+    let name = supa
+        .user_metadata
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let phone = supa
+        .user_metadata
+        .get("phone")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    UserPublic {
+        id: Uuid::parse_str(&supa.id).unwrap_or_else(|_| Uuid::nil()),
+        email: supa.email.clone(),
+        name,
+        phone,
+        is_verified: supa.email_confirmed_at.is_some(),
+        created_at: supa.created_at.parse().unwrap_or_else(|_| Utc::now()),
+    }
+}
+
+/// Supabase Auth: 新規登録（email/password）
+pub async fn register(
+    State(state): State<AppState>,
+    Json(req): Json<crate::models::RegisterRequest>,
+) -> Result<Json<Value>> {
+    req.validate()?;
+
+    let client = Client::new();
+    let body = serde_json::json!({
+        "email": req.email,
+        "password": req.password,
+        "data": {
+            "name": req.name,
+            "phone": req.phone
+        }
+    });
+
+    let auth_res = supabase_auth_request(
+        &client,
+        &state.config.database.url,
+        &state.config.database.anon_key,
+        "signup",
+        body,
+    )
+    .await?;
+
+    // public.users を service role で取得（トリガー同期後）
+    let repo = UserRepository::new(state.db.service());
+    let repo_user = repo
+        .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+        .await
+        .ok()
+        .flatten();
+    let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+
+    let response = serde_json::json!({
+        "user": user_public,
+        "tokens": {
+            "access_token": auth_res.access_token,
+            "refresh_token": auth_res.refresh_token,
+            "token_type": auth_res.token_type,
+            "expires_in": auth_res.expires_in
+        }
+    });
+
+    Ok(Json(response))
+}
+
+/// Supabase Auth: ログイン
+pub async fn login(
+    State(state): State<AppState>,
+    Json(req): Json<crate::models::LoginRequest>,
+) -> Result<Json<Value>> {
+    req.validate()?;
+
+    let client = Client::new();
+    let body = serde_json::json!({
+        "email": req.email,
+        "password": req.password
+    });
+
+    let auth_res = supabase_auth_request(
+        &client,
+        &state.config.database.url,
+        &state.config.database.anon_key,
+        "token?grant_type=password",
+        body,
+    )
+    .await?;
+
+    let repo = UserRepository::new(state.db.service());
+    let repo_user = repo
+        .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+        .await
+        .ok()
+        .flatten();
+    let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+
+    let response = serde_json::json!({
+        "user": user_public,
+        "tokens": {
+            "access_token": auth_res.access_token,
+            "refresh_token": auth_res.refresh_token,
+            "token_type": auth_res.token_type,
+            "expires_in": auth_res.expires_in
+        }
+    });
+
+    Ok(Json(response))
+}
+
+/// Supabase Auth: リフレッシュ
 pub async fn refresh_token(
     State(state): State<AppState>,
-    Json(req): Json<RefreshTokenRequest>,
-) -> Result<Json<TokenResponse>> {
-    req.validate()?;
+    Json(body): Json<serde_json::Value>,
+) -> Result<Json<Value>> {
+    let refresh_token = body
+        .get("refresh_token")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| AppError::BadRequest("refresh_token is required".to_string()))?;
 
-    // refresh_token を検証して user_id を取り出す（Accessトークンは不要）
-    let decoding_key = DecodingKey::from_secret(state.config.jwt.secret.as_bytes());
-    let validation = Validation::default();
-    let token_data = decode::<Claims>(&req.refresh_token, &decoding_key, &validation)
-        .map_err(|_| AppError::Unauthorized("リフレッシュトークンが無効です".to_string()))?;
+    let client = Client::new();
+    let auth_res = supabase_auth_request(
+        &client,
+        &state.config.database.url,
+        &state.config.database.anon_key,
+        "token?grant_type=refresh_token",
+        serde_json::json!({ "refresh_token": refresh_token }),
+    )
+    .await?;
 
-    if token_data.claims.token_use.as_deref() != Some("refresh") {
-        return Err(AppError::Unauthorized(
-            "リフレッシュトークンが無効です".to_string(),
-        ));
-    }
-
-    let user_repo = UserRepository::new(state.db.anonymous());
-    let auth_service = AuthService::new(user_repo, state.config.clone());
-
-    let tokens = auth_service.refresh_token(token_data.claims.sub).await?;
-
-    Ok(Json(tokens))
-}
-
-/// パスワードリセット要求
-pub async fn forgot_password(
-    State(state): State<AppState>,
-    Json(req): Json<crate::models::ForgotPasswordRequest>,
-) -> Result<Json<serde_json::Value>> {
-    req.validate()?;
-
-    // ユーザー存在の有無は外部に漏らさない（ユーザー列挙対策）
-    let user_repo = UserRepository::new(state.db.anonymous());
-    let user = user_repo.find_by_email(&req.email.to_lowercase()).await?;
-
-    // dev/local のみ、動作確認用にトークンをレスポンスへ含められる（本番は絶対に返さない）
-    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
-    let is_dev = env == "development" || env == "local";
-    let return_token = std::env::var("PASSWORD_RESET_RETURN_TOKEN")
+    let repo = UserRepository::new(state.db.service());
+    let repo_user = repo
+        .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+        .await
         .ok()
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
+        .flatten();
+    let user_public = user_public_from_supabase(repo_user, &auth_res.user);
 
-    if let Some(u) = user {
-        let claims = Claims::new(
-            u.id,
-            u.email.clone(),
-            u.role.clone(),
-            15 * 60, // 15分
-            "password_reset",
-        );
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(state.config.jwt.secret.as_bytes()),
-        )
-        .map_err(|e| AppError::Internal(format!("Failed to create reset token: {}", e)))?;
-
-        if is_dev && return_token {
-            return Ok(Json(serde_json::json!({
-                "message": "パスワードリセット用のメールを送信しました",
-                "reset_token": token
-            })));
+    let response = serde_json::json!({
+        "user": user_public,
+        "tokens": {
+            "access_token": auth_res.access_token,
+            "refresh_token": auth_res.refresh_token,
+            "token_type": auth_res.token_type,
+            "expires_in": auth_res.expires_in
         }
+    });
 
-        // 本番はここでメール送信を行う想定（SMTP/外部メールサービス等）
-        // 現状は「トークン発行」までを実装し、リセット自体は reset_password で完結させる。
-        tracing::info!("Password reset requested (token generated). user_id={}", u.id);
-    }
-
-    Ok(Json(serde_json::json!({
-        "message": "パスワードリセット用のメールを送信しました"
-    })))
-}
-
-/// パスワードリセット実行
-pub async fn reset_password(
-    State(state): State<AppState>,
-    Json(req): Json<crate::models::ResetPasswordRequest>,
-) -> Result<Json<serde_json::Value>> {
-    req.validate()?;
-
-    // token を検証して user_id を取り出す
-    let decoding_key = DecodingKey::from_secret(state.config.jwt.secret.as_bytes());
-    let validation = Validation::default();
-    let token_data = decode::<Claims>(&req.token, &decoding_key, &validation)
-        .map_err(|_| AppError::Unauthorized("トークンが無効です".to_string()))?;
-
-    if token_data.claims.token_use.as_deref() != Some("password_reset") {
-        return Err(AppError::Unauthorized("トークンが無効です".to_string()));
-    }
-
-    // 新パスワードをハッシュ化して更新（RLS対策: service role）
-    let password_hash = hash_password(&req.new_password)?;
-    let user_repo = UserRepository::new(state.db.service());
-    user_repo.update_password(token_data.claims.sub, &password_hash).await?;
-
-    // パスワード変更時は全ての既存トークンを無効化（セキュリティ対策）
-    let blacklist_repo = TokenBlacklistRepository::new(state.db.service());
-    let expires_at = Utc::now() + Duration::days(30); // 最大リフレッシュトークン有効期間
-    if let Err(e) = blacklist_repo.blacklist_all_user_tokens(token_data.claims.sub, expires_at).await {
-        tracing::warn!("Failed to blacklist all user tokens: {}", e);
-    }
-
-    Ok(Json(serde_json::json!({
-        "message": "パスワードを変更しました"
-    })))
+    Ok(Json(response))
 }

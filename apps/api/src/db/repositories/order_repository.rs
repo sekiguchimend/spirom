@@ -45,6 +45,7 @@ impl OrderRepository {
             let item_input = OrderItemInput {
                 id: Uuid::new_v4(),
                 order_id: order.id,
+                order_created_at: order.created_at,
                 product_id: Some(item.product_id),
                 product_name: item.product_name.clone(),
                 product_sku: Some(item.product_sku.clone()),
@@ -249,6 +250,7 @@ struct OrderInput {
 struct OrderItemInput {
     id: Uuid,
     order_id: Uuid,
+    order_created_at: DateTime<Utc>,
     product_id: Option<Uuid>,
     product_name: String,
     product_sku: Option<String>,

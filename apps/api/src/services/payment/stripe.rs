@@ -56,10 +56,11 @@ impl StripePaymentProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(PaymentError::ProviderError(format!(
-                "Stripe API error: {}",
-                error_text
-            )));
+            // セキュリティ: エラー詳細はログのみ、ユーザーには汎用メッセージ
+            tracing::warn!("Stripe API error (retrieve_intent): {}", error_text);
+            return Err(PaymentError::ProviderError(
+                "Payment retrieval failed. Please try again.".to_string()
+            ));
         }
 
         let stripe_response: serde_json::Value = response
@@ -149,10 +150,11 @@ impl PaymentProvider for StripePaymentProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(PaymentError::ProviderError(format!(
-                "Stripe API error: {}",
-                error_text
-            )));
+            // セキュリティ: エラー詳細はログのみ、ユーザーには汎用メッセージ
+            tracing::warn!("Stripe API error (create_intent): {}", error_text);
+            return Err(PaymentError::ProviderError(
+                "Payment initialization failed. Please try again.".to_string()
+            ));
         }
 
         let stripe_response: serde_json::Value = response
@@ -190,10 +192,11 @@ impl PaymentProvider for StripePaymentProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(PaymentError::ProviderError(format!(
-                "Stripe API error: {}",
-                error_text
-            )));
+            // セキュリティ: エラー詳細はログのみ、ユーザーには汎用メッセージ
+            tracing::warn!("Stripe API error (confirm): {}", error_text);
+            return Err(PaymentError::ProviderError(
+                "Payment confirmation failed. Please try again.".to_string()
+            ));
         }
 
         let stripe_response: serde_json::Value = response
@@ -241,10 +244,11 @@ impl PaymentProvider for StripePaymentProvider {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(PaymentError::ProviderError(format!(
-                "Stripe API error: {}",
-                error_text
-            )));
+            // セキュリティ: エラー詳細はログのみ、ユーザーには汎用メッセージ
+            tracing::warn!("Stripe API error (refund): {}", error_text);
+            return Err(PaymentError::ProviderError(
+                "Refund processing failed. Please try again.".to_string()
+            ));
         }
 
         let stripe_response: serde_json::Value = response
@@ -293,13 +297,30 @@ impl PaymentProvider for StripePaymentProvider {
         }
 
         // リプレイ対策: タイムスタンプ許容範囲
-        let tolerance: i64 = std::env::var("STRIPE_WEBHOOK_TOLERANCE_SECONDS")
+        // 本番環境では120秒以下を強制（リプレイ攻撃対策）
+        let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+        let is_prod = env == "production";
+        let default_tolerance: i64 = if is_prod { 120 } else { 300 };
+
+        let mut tolerance: i64 = std::env::var("STRIPE_WEBHOOK_TOLERANCE_SECONDS")
             .ok()
             .and_then(|s| s.parse().ok())
-            .unwrap_or(300);
+            .unwrap_or(default_tolerance);
+
+        // 本番環境では120秒を超える設定を許可しない
+        if is_prod && tolerance > 120 {
+            tracing::warn!(
+                "STRIPE_WEBHOOK_TOLERANCE_SECONDS={} exceeds 120s limit for production, capping to 120s",
+                tolerance
+            );
+            tolerance = 120;
+        }
+
         let now = chrono::Utc::now().timestamp();
         if (now - timestamp).abs() > tolerance {
-            return Err(PaymentError::WebhookVerificationFailed("Timestamp out of tolerance".to_string()));
+            return Err(PaymentError::WebhookVerificationFailed(
+                format!("Timestamp out of tolerance ({}s)", tolerance)
+            ));
         }
 
         // signed_payload = "{t}.{raw_payload}"

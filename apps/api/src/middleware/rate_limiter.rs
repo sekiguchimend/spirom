@@ -87,17 +87,34 @@ pub struct RateLimitResult {
 /// グローバルレート制限ストア（API起動時に初期化）
 static RATE_LIMITER: std::sync::OnceLock<RateLimiterStore> = std::sync::OnceLock::new();
 
+/// 決済エンドポイント専用レート制限ストア（より厳しい制限）
+/// カードテスティング攻撃対策: 1IPあたり1分間に5回まで
+static PAYMENT_RATE_LIMITER: std::sync::OnceLock<RateLimiterStore> = std::sync::OnceLock::new();
+
 /// レート制限ストアを初期化
 pub fn init_rate_limiter(window_seconds: u64, max_requests: u32) {
     let _ = RATE_LIMITER.set(RateLimiterStore::new(window_seconds, max_requests));
 
+    // 決済エンドポイント専用: 60秒間に5リクエストまで（カードテスティング対策）
+    let payment_window = std::env::var("PAYMENT_RATE_LIMIT_WINDOW_SECONDS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(60);
+    let payment_max = std::env::var("PAYMENT_RATE_LIMIT_MAX_REQUESTS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5);
+    let _ = PAYMENT_RATE_LIMITER.set(RateLimiterStore::new(payment_window, payment_max));
+
     // 定期的なクリーンアップタスクを起動
     let store = RATE_LIMITER.get().unwrap().clone();
+    let payment_store = PAYMENT_RATE_LIMITER.get().unwrap().clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
             store.cleanup().await;
+            payment_store.cleanup().await;
         }
     });
 }
@@ -129,6 +146,71 @@ pub async fn rate_limiter_middleware(
             "error": {
                 "code": "RATE_LIMITED",
                 "message": "リクエストが多すぎます。しばらくしてから再試行してください。"
+            }
+        });
+
+        return Response::builder()
+            .status(StatusCode::TOO_MANY_REQUESTS)
+            .header("Content-Type", "application/json")
+            .header("X-RateLimit-Limit", result.limit.to_string())
+            .header("X-RateLimit-Remaining", "0")
+            .header("Retry-After", "60")
+            .body(Body::from(serde_json::to_string(&body).unwrap()))
+            .unwrap();
+    }
+
+    let mut response = next.run(request).await;
+
+    // レート制限ヘッダーを追加
+    let headers = response.headers_mut();
+    headers.insert(
+        "X-RateLimit-Limit",
+        result.limit.to_string().parse().unwrap(),
+    );
+    headers.insert(
+        "X-RateLimit-Remaining",
+        result.remaining.to_string().parse().unwrap(),
+    );
+
+    response
+}
+
+/// 決済エンドポイント専用レート制限ミドルウェア
+/// カードテスティング攻撃対策として、より厳しい制限を適用
+pub async fn payment_rate_limiter_middleware(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    request: Request<Body>,
+    next: Next,
+) -> Response<Body> {
+    let Some(store) = PAYMENT_RATE_LIMITER.get() else {
+        // レート制限が初期化されていない場合はスキップ
+        return next.run(request).await;
+    };
+
+    // クライアントIP取得（プロキシ経由の場合はX-Forwarded-Forを優先）
+    let client_ip = request
+        .headers()
+        .get("X-Forwarded-For")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| addr.ip().to_string());
+
+    // 決済エンドポイント専用のキー（通常のレート制限と分離）
+    let key = format!("payment:{}", client_ip);
+    let result = store.check(&key).await;
+
+    if !result.allowed {
+        tracing::warn!(
+            "Payment rate limit exceeded: ip={}, limit={}, window=60s",
+            client_ip,
+            result.limit
+        );
+
+        let body = serde_json::json!({
+            "error": {
+                "code": "PAYMENT_RATE_LIMITED",
+                "message": "決済リクエストが多すぎます。しばらくしてから再試行してください。"
             }
         });
 

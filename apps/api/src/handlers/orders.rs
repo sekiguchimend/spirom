@@ -17,15 +17,28 @@ use crate::models::{
     calculate_shipping_fee, calculate_tax, generate_order_number,
 };
 use crate::services::payment::{PaymentProvider, StripePaymentProvider};
+use crate::handlers::users::ensure_user_profile;
 
 /// 注文作成
 pub async fn create_order(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     headers: HeaderMap,
     Json(req): Json<CreateOrderRequest>,
 ) -> Result<Json<DataResponse<Order>>> {
     req.validate()?;
+    // デバッグ（トークン自体は出さない）
+    if std::env::var("API_DEBUG_AUTH")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+    {
+        tracing::info!(
+            "[orders] create_order: auth_user_id={}, token_len={}",
+            auth_user.id,
+            token.len()
+        );
+    }
 
     let session_id = headers
         .get("X-Session-ID")
@@ -33,12 +46,13 @@ pub async fn create_order(
         .map(|s| s.to_string())
         .unwrap_or_else(generate_session_id);
 
-    // Service roleを使用（RLSをバイパス）
-    let db = state.db.service();
-    let cart_repo = CartRepository::new(db.clone());
-    let order_repo = OrderRepository::new(db.clone());
-    let user_repo = UserRepository::new(db.clone());
-    let product_repo = ProductRepository::new(db);
+    // 注文作成は「本人トークン」でINSERTし、RLSポリシー（auth.uid = user_id）を正しく通す。
+    // 在庫確保/商品更新など管理系操作のみ service_role を使う。
+    let db_service = state.db.service();
+    let cart_repo = CartRepository::new(db_service.clone());
+    let product_repo = ProductRepository::new(db_service);
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     // リクエストボディのitemsを優先的に使用、なければカートから取得
     let source_items = if let Some(ref items) = req.items {
@@ -66,13 +80,10 @@ pub async fn create_order(
             .collect()
     };
 
-    // ユーザー情報取得
-    let user = user_repo
-        .find_by_id(auth_user.id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+    // ユーザー情報取得（無ければSupabase Authから同期して作成）
+    let user = ensure_user_profile(&state, &auth_user, &token).await?;
 
-    // 配送先住所取得
+    // 配送先住所取得（本人トークンでRLSを通す）
     let shipping_address = user_repo
         .find_address(auth_user.id, req.shipping_address_id)
         .await?

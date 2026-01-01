@@ -1,68 +1,19 @@
 'use server';
 
-import { cookies } from 'next/headers';
-import {
-  BFF_BASE_URL,
-  COOKIE_NAMES,
-  REFRESH_COOKIE_MAX_AGE_SECONDS,
-  MAX_SESSION_SECONDS,
-} from './config';
+import { BFF_BASE_URL } from './config';
+import { getServerAccessToken } from './server-auth';
 import type {
-  User,
   Address,
   Order,
-  CreateOrderItemRequest,
   CreateOrderRequest,
-  TokenResponse,
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
 } from '@/types';
-import { createHmac, randomUUID } from 'crypto';
 
-// Note: Types should be imported from @/types directly
+// ============================================
+// ヘルパー関数
+// ============================================
 
-async function getToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value || null;
-}
-
-const SESSION_COOKIE_NAME = 'spirom_session_id';
-
-function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('SESSION_SECRET/JWT_SECRET is not set');
-  }
-  return secret;
-}
-
-async function getOrCreateSessionId(): Promise<string> {
-  const cookieStore = await cookies();
-  const existing = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (existing) return existing;
-
-  // API側のフォーマットに合わせる: sess_ + 32hex
-  const sid = `sess_${randomUUID().replace(/-/g, '')}`;
-  const secure = process.env.NODE_ENV === 'production';
-  cookieStore.set(SESSION_COOKIE_NAME, sid, {
-    httpOnly: true,
-    secure,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30日
-    path: '/',
-  });
-  return sid;
-}
-
-async function withSignedSessionHeaders(headers: Record<string, string>) {
-  const sessionId = await getOrCreateSessionId();
-  const sig = createHmac('sha256', getSessionSecret()).update(sessionId).digest('hex');
-  return {
-    ...headers,
-    'X-Session-ID': sessionId,
-    'X-Session-Signature': sig,
-  };
+async function getAccessToken(): Promise<string | null> {
+  return getServerAccessToken();
 }
 
 function withBffProxyToken(headers: Record<string, string>) {
@@ -73,56 +24,12 @@ function withBffProxyToken(headers: Record<string, string>) {
   return headers;
 }
 
-async function clearAuthCookies() {
-  const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAMES.ACCESS_TOKEN);
-  cookieStore.delete(COOKIE_NAMES.REFRESH_TOKEN);
-  cookieStore.delete(COOKIE_NAMES.SESSION_STARTED_AT);
-}
-
-async function setAuthCookies(tokens: TokenResponse) {
-  const cookieStore = await cookies();
-  const secure = process.env.NODE_ENV === 'production';
-
-  cookieStore.set(COOKIE_NAMES.ACCESS_TOKEN, tokens.access_token, {
-    httpOnly: true,
-    secure,
-    sameSite: 'lax',
-    maxAge: tokens.expires_in,
-    path: '/',
-  });
-
-  cookieStore.set(COOKIE_NAMES.REFRESH_TOKEN, tokens.refresh_token, {
-    httpOnly: true,
-    secure,
-    sameSite: 'lax',
-    maxAge: REFRESH_COOKIE_MAX_AGE_SECONDS,
-    path: '/',
-  });
-}
-
-async function ensureSessionStartCookie() {
-  const cookieStore = await cookies();
-  const secure = process.env.NODE_ENV === 'production';
-
-  const existing = cookieStore.get(COOKIE_NAMES.SESSION_STARTED_AT)?.value;
-  if (existing) return;
-
-  cookieStore.set(COOKIE_NAMES.SESSION_STARTED_AT, String(Math.floor(Date.now() / 1000)), {
-    httpOnly: true,
-    secure,
-    sameSite: 'lax',
-    maxAge: MAX_SESSION_SECONDS,
-    path: '/',
-  });
-}
-
 // ============================================
 // 住所関連
 // ============================================
 
 export async function fetchAddresses(): Promise<{ success: boolean; data: Address[]; error?: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, data: [], error: 'Not authenticated' };
   }
@@ -155,7 +62,7 @@ export async function fetchAddresses(): Promise<{ success: boolean; data: Addres
 export async function createAddressAction(
   formData: Omit<Address, 'id'>
 ): Promise<{ success: boolean; data?: Address; error?: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -188,7 +95,7 @@ export async function updateAddressAction(
   id: string,
   formData: Omit<Address, 'id'>
 ): Promise<{ success: boolean; data?: Address; error?: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -220,7 +127,7 @@ export async function updateAddressAction(
 export async function deleteAddressAction(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -254,7 +161,7 @@ export async function deleteAddressAction(
 export async function createPaymentIntentAction(
   orderId: string
 ): Promise<{ success: boolean; data?: { client_secret: string; payment_intent_id: string }; error?: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -290,22 +197,19 @@ export async function createPaymentIntentAction(
 export async function createOrderAction(
   request: CreateOrderRequest
 ): Promise<{ success: boolean; data?: Order; error?: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Not authenticated' };
   }
 
   try {
-    const baseHeaders = withBffProxyToken({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    });
-    const signed = await withSignedSessionHeaders(baseHeaders);
-
     const response = await fetch(`${BFF_BASE_URL}/api/v1/orders`, {
       method: 'POST',
       headers: {
-        ...signed,
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
       },
       body: JSON.stringify(request),
     });
@@ -323,144 +227,11 @@ export async function createOrderAction(
 }
 
 // ============================================
-// 認証関連
+// ユーザー関連
 // ============================================
 
-export async function refreshSessionAction(): Promise<{ success: boolean; error?: string }> {
-  const cookieStore = await cookies();
-  const refreshToken = cookieStore.get(COOKIE_NAMES.REFRESH_TOKEN)?.value;
-  const startedAtStr = cookieStore.get(COOKIE_NAMES.SESSION_STARTED_AT)?.value;
-
-  if (!refreshToken || !startedAtStr) {
-    await clearAuthCookies();
-    return { success: false, error: 'Session expired' };
-  }
-
-  // 念のため（Cookie maxAgeでも切れるが、防御的に上限を保証）
-  const startedAt = Number(startedAtStr);
-  if (!Number.isFinite(startedAt)) {
-    await clearAuthCookies();
-    return { success: false, error: 'Session expired' };
-  }
-  const now = Math.floor(Date.now() / 1000);
-  if (now - startedAt > MAX_SESSION_SECONDS) {
-    await clearAuthCookies();
-    return { success: false, error: 'Session expired' };
-  }
-
-  try {
-    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: withBffProxyToken({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ refresh_token: refreshToken }),
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      await clearAuthCookies();
-      return { success: false, error: 'Session expired' };
-    }
-
-    const tokens: TokenResponse = await response.json();
-    await setAuthCookies(tokens);
-    // started_at は最初のログイン時刻を維持（更新しない）
-    return { success: true };
-  } catch {
-    await clearAuthCookies();
-    return { success: false, error: 'Session expired' };
-  }
-}
-
-export async function loginAction(
-  request: LoginRequest
-): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
-  const targetUrl = `${BFF_BASE_URL}/api/v1/auth/login`;
-
-  try {
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: withBffProxyToken({
-        'Content-Type': 'application/json',
-        'Connection': 'close',
-      }),
-      body: JSON.stringify(request),
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || errorData.message || `Login failed: ${response.status}`);
-    }
-
-    const result: AuthResponse = await response.json();
-
-    await setAuthCookies(result.tokens);
-    await ensureSessionStartCookie();
-
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Login failed' };
-  }
-}
-
-export async function registerAction(
-  request: RegisterRequest
-): Promise<{ success: boolean; data?: AuthResponse; error?: string }> {
-  const targetUrl = `${BFF_BASE_URL}/api/v1/auth/register`;
-
-  try {
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: withBffProxyToken({
-        'Content-Type': 'application/json',
-        'Connection': 'close',
-      }),
-      body: JSON.stringify(request),
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || errorData.message || `Registration failed: ${response.status}`);
-    }
-
-    const result: AuthResponse = await response.json();
-
-    await setAuthCookies(result.tokens);
-    await ensureSessionStartCookie();
-
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Registration failed' };
-  }
-}
-
-export async function logoutAction(): Promise<{ success: boolean; error?: string }> {
-  const token = await getToken();
-
-  try {
-    if (token) {
-      await fetch(`${BFF_BASE_URL}/api/v1/auth/logout`, {
-        method: 'POST',
-        headers: {
-          ...withBffProxyToken({
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          }),
-        },
-      });
-    }
-  } catch {
-    // Continue to clear cookies even if API fails
-  }
-
-  await clearAuthCookies();
-
-  return { success: true };
-}
-
-export async function getMeAction(): Promise<{ success: boolean; data?: User; error?: string }> {
-  const token = await getToken();
+export async function getMeAction(): Promise<{ success: boolean; data?: { id: string; email: string; name: string; phone?: string }; error?: string }> {
+  const token = await getAccessToken();
   if (!token) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -478,8 +249,6 @@ export async function getMeAction(): Promise<{ success: boolean; data?: User; er
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Token is invalid, clear cookie
-        await clearAuthCookies();
         return { success: false, error: 'Token expired' };
       }
       throw new Error(`API error: ${response.status}`);
@@ -489,5 +258,41 @@ export async function getMeAction(): Promise<{ success: boolean; data?: User; er
     return { success: true, data: result.data };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to get user' };
+  }
+}
+
+// ============================================
+// プロファイル作成（新規登録時にusersテーブルへ追加）
+// ============================================
+
+export async function createProfileAction(
+  name: string,
+  phone?: string
+): Promise<{ success: boolean; error?: string }> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/auth/profile`, {
+      method: 'POST',
+      headers: {
+        ...withBffProxyToken({
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
+      },
+      body: JSON.stringify({ name, phone }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create profile' };
   }
 }

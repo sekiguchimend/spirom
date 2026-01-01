@@ -1,20 +1,15 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  loginAction,
-  registerAction,
-  logoutAction,
-  getMeAction,
-  refreshSessionAction,
-} from '@/lib/actions';
+import { supabaseAuth } from '@/lib/supabase-auth';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { User } from '@/types';
-import { SESSION_REFRESH_INTERVAL_MS } from '@/lib/config';
 import { ROUTES } from '@/lib/routes';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>;
@@ -24,128 +19,185 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Supabase UserをアプリのUser型に変換
+function mapSupabaseUser(supabaseUser: SupabaseUser, profile?: { name?: string; phone?: string }): User {
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email || '',
+    name: profile?.name || supabaseUser.user_metadata?.name || '',
+    phone: profile?.phone || supabaseUser.user_metadata?.phone || null,
+    role: 'user',
+    is_active: true,
+    is_verified: supabaseUser.email_confirmed_at !== null,
+    created_at: supabaseUser.created_at,
+    updated_at: supabaseUser.updated_at || supabaseUser.created_at,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // 初期化済みフラグ（strictModeでの二重実行防止）
-  const initializedRef = useRef(false);
-
-  // 初期化（cookie-onlyで現在のログイン状態を判定）
-  useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    // localStorage は改ざん可能なため「認証済みユーザー」としては一切信用しない
-    // （UIの一時表示に使う場合でも権限判断に利用しないこと）
-
-    const bootstrap = async () => {
-      setIsLoading(true);
-      const me = await getMeAction();
-      if (me.success && me.data) {
-        setUser(me.data);
-        setIsLoading(false);
-        return;
+  // プロファイル情報を取得（APIプロキシ経由）
+  const fetchProfile = useCallback(async (userId: string, accessToken: string) => {
+    try {
+      const response = await fetch('/api/v1/users/me', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        return result.data;
       }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+    }
+    return null;
+  }, []);
 
-      // Accessが切れている/無い場合は refresh を試す（最大1日）
-      if (me.error === 'Token expired' || me.error === 'Not authenticated') {
-        const refreshed = await refreshSessionAction();
-        if (refreshed.success) {
-          const me2 = await getMeAction();
-          if (me2.success && me2.data) {
-            setUser(me2.data);
-          } else {
-            setUser(null);
-          }
-        } else {
-          setUser(null);
+  // 初期化
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabaseAuth.auth.getSession();
+
+        if (currentSession?.user) {
+          setSession(currentSession);
+          const profile = await fetchProfile(currentSession.user.id, currentSession.access_token);
+          setUser(mapSupabaseUser(currentSession.user, profile));
         }
+      } catch (error) {
+        console.error('Auth init error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // セッション変更を監視
+    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(async (event, newSession) => {
+      setSession(newSession);
+
+      if (newSession?.user) {
+        const profile = await fetchProfile(newSession.user.id, newSession.access_token);
+        setUser(mapSupabaseUser(newSession.user, profile));
+      } else {
+        setUser(null);
       }
 
       setIsLoading(false);
-    };
+    });
 
-    bootstrap();
-  }, []);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   // ログイン
   const handleLogin = useCallback(async (email: string, password: string) => {
-    const result = await loginAction({ email, password });
-    if (!result.success || !result.data) {
-      throw new Error(result.error || 'Login failed');
-    }
-    setUser(result.data.user);
-  }, []);
+    console.log('[Auth] ログイン試行:', { email });
+    console.log('[Auth] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 
-  // 登録
-  const handleRegister = useCallback(async (email: string, password: string, name: string, phone?: string) => {
-    const result = await registerAction({ email, password, name, phone });
-    if (!result.success || !result.data) {
-      throw new Error(result.error || 'Registration failed');
+    const { data, error } = await supabaseAuth.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    console.log('[Auth] ログイン結果:', { data, error });
+
+    if (error) {
+      console.error('[Auth] ログインエラー:', error);
+      throw new Error(error.message);
     }
-    setUser(result.data.user);
+
+    if (data.session && data.user) {
+      setSession(data.session);
+      const profile = await fetchProfile(data.user.id, data.session.access_token);
+      setUser(mapSupabaseUser(data.user, profile));
+    }
+  }, [fetchProfile]);
+
+  // 登録: Supabase Auth SDKで直接登録
+  const handleRegister = useCallback(async (email: string, password: string, name: string, phone?: string) => {
+    // 1) Supabase Authでユーザー作成
+    const { data, error } = await supabaseAuth.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          phone,
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data.user) {
+      throw new Error('ユーザー作成に失敗しました');
+    }
+
+    // 2) セッションがあれば（メール確認不要の場合）プロファイル作成
+    if (data.session) {
+      try {
+        await fetch('/api/v1/auth/profile', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${data.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, phone }),
+        });
+      } catch (profileError) {
+        console.error('Failed to create profile:', profileError);
+      }
+
+      setSession(data.session);
+      setUser(mapSupabaseUser(data.user, { name, phone }));
+    } else {
+      // メール確認が必要な場合
+      throw new Error('確認メールを送信しました。メールを確認してください。');
+    }
   }, []);
 
   // ログアウト
   const handleLogout = useCallback(async () => {
-    await logoutAction();
+    await supabaseAuth.auth.signOut();
     setUser(null);
+    setSession(null);
     router.push(ROUTES.AUTH.LOGIN);
   }, [router]);
 
-  // ユーザー情報を更新（依存関係を安定化）
+  // ユーザー情報を更新
   const refreshUser = useCallback(async () => {
-    const result = await getMeAction();
-    if (!result.success) {
-      if (result.error === 'Token expired' || result.error === 'Not authenticated') {
-        // refresh を試してから判定
-        const refreshed = await refreshSessionAction();
-        if (refreshed.success) {
-          const me2 = await getMeAction();
-          if (me2.success && me2.data) {
-            setUser(me2.data);
-            return;
-          }
-        }
+    const { data: { session: currentSession } } = await supabaseAuth.auth.getSession();
 
-        // セッション終了
-        await logoutAction();
-        setUser(null);
-        router.push(ROUTES.AUTH.LOGIN);
-      }
-      return;
+    if (currentSession?.user) {
+      setSession(currentSession);
+      const profile = await fetchProfile(currentSession.user.id, currentSession.access_token);
+      setUser(mapSupabaseUser(currentSession.user, profile));
+    } else {
+      setUser(null);
+      setSession(null);
     }
+  }, [fetchProfile]);
 
-    if (result.data) {
-      setUser(result.data);
-    }
-  }, [router]);
-
-  // ログイン状態を維持（Access短命 + Refreshで最大1日）
-  useEffect(() => {
-    if (isLoading) return;
-    if (!user) return;
-
-    const interval = window.setInterval(() => {
-      refreshSessionAction().catch(() => {
-        // 失敗時は次のrefreshUserで落ちるのでここでは何もしない
-      });
-    }, SESSION_REFRESH_INTERVAL_MS);
-
-    return () => window.clearInterval(interval);
-  }, [user, isLoading]);
-
-  // コンテキスト値をメモ化（不要な再レンダリングを防ぐ）
   const contextValue = useMemo<AuthContextType>(() => ({
     user,
+    session,
     isLoading,
     login: handleLogin,
     register: handleRegister,
     logout: handleLogout,
     refreshUser,
-  }), [user, isLoading, handleLogin, handleRegister, handleLogout, refreshUser]);
+  }), [user, session, isLoading, handleLogin, handleRegister, handleLogout, refreshUser]);
 
   return (
     <AuthContext.Provider value={contextValue}>

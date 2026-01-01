@@ -123,6 +123,17 @@ impl AuthenticatedClient {
         // - jwt がある場合: そのJWTを使う
         // - jwt がない場合(anon/service): APIキー自体を Bearer として送る
         let bearer = self.jwt.as_deref().unwrap_or(&self.anon_key);
+        // デバッグ用（トークン自体は絶対にログに出さない）
+        let debug_auth = std::env::var("SUPABASE_DEBUG_AUTH")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        if debug_auth {
+            tracing::info!(
+                "[supabase] auth mode: {}, bearer_len={}",
+                if self.jwt.is_some() { "user_jwt" } else { "api_key_bearer" },
+                bearer.len()
+            );
+        }
         headers.insert(
             "Authorization",
             format!("Bearer {}", bearer)

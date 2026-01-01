@@ -132,8 +132,9 @@ pub async fn create_payment_intent(
     };
 
     let payment_intent = payment_provider.create_intent(params).await.map_err(|e| {
+        // セキュリティ: エラー詳細はログのみ、ユーザーには汎用メッセージ
         tracing::error!("PaymentIntent作成エラー: {}", e);
-        AppError::Internal(format!("PaymentIntent作成に失敗しました: {}", e))
+        AppError::Internal("決済の初期化に失敗しました。しばらくしてから再試行してください。".to_string())
     })?;
 
     // 注文にPaymentIntent IDを紐付け（同一注文の二重生成を防ぐ）
@@ -178,9 +179,8 @@ pub async fn handle_webhook(
     let product_repo = ProductRepository::new(db.clone());
 
     // ---- 冪等性: Stripe Event ID を保存して多重実行を防ぐ ----
-    // Supabase RPC（record_stripe_event）が未導入の場合でも落とさず処理は続ける（ログで検知可能にする）
     let payload_summary = stripe_event_summary(&event);
-    let recorded: Option<bool> = db
+    let recorded_result = db
         .rpc(
             "record_stripe_event",
             &serde_json::json!({
@@ -191,10 +191,29 @@ pub async fn handle_webhook(
                 "p_payload": payload_summary,
             }),
         )
-        .await
-        .ok();
-    if let Some(false) = recorded {
-        return Ok(StatusCode::OK);
+        .await;
+
+    match recorded_result {
+        Ok(false) => {
+            // 既に処理済みのイベント
+            tracing::info!("Webhook event already processed: {}", event.event_id);
+            return Ok(StatusCode::OK);
+        }
+        Ok(true) => {
+            // 新規イベント、処理を続行
+            tracing::debug!("Processing new webhook event: {}", event.event_id);
+        }
+        Err(e) => {
+            // RPC失敗時は処理を停止（二重処理を防ぐため安全側に倒す）
+            tracing::error!(
+                "Failed to record stripe event (stopping to prevent duplicate processing): event_id={}, error={}",
+                event.event_id,
+                e
+            );
+            return Err(AppError::Internal(
+                "Webhook冪等性チェックに失敗しました。再試行してください。".to_string()
+            ));
+        }
     }
 
     // イベント処理
@@ -351,7 +370,7 @@ pub struct CreateRefundRequest {
 pub async fn create_refund(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
-    Extension(token): Extension<String>,
+    Extension(_token): Extension<String>,
     Json(req): Json<CreateRefundRequest>,
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;

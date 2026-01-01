@@ -3,6 +3,9 @@ use axum::{
     Extension, Json,
 };
 use chrono::Utc;
+use reqwest::Client;
+use serde::Deserialize;
+use serde_json::Value;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -11,20 +14,104 @@ use crate::db::repositories::UserRepository;
 use crate::error::{AppError, Result};
 use crate::models::{
     Address, AuthenticatedUser, CreateAddressRequest, DataResponse, UpdateAddressRequest,
-    UpdateUserRequest, UserPublic,
+    UpdateUserRequest, User, UserPublic, UserRole,
 };
+
+/// Supabase Auth のユーザー情報
+#[derive(Debug, Deserialize)]
+struct SupabaseAuthUser {
+    id: String,
+    email: String,
+    created_at: String,
+    #[serde(default)]
+    user_metadata: Value,
+    #[serde(default)]
+    email_confirmed_at: Option<String>,
+}
+
+/// Supabase Auth から現在のユーザー情報を取得
+async fn fetch_supabase_auth_user(base_url: &str, anon_key: &str, token: &str) -> Result<SupabaseAuthUser> {
+    let url = format!("{}/auth/v1/user", base_url.trim_end_matches('/'));
+
+    let res = Client::new()
+        .get(url)
+        .header("apikey", anon_key)
+        .header("Authorization", format!("Bearer {}", token))
+        .send()
+        .await
+        .map_err(|e| AppError::Unauthorized(format!("Supabase user fetch failed: {}", e)))?;
+
+    if !res.status().is_success() {
+        let body = res.text().await.unwrap_or_default();
+        return Err(AppError::Unauthorized(format!("Supabase user fetch failed: {}", body)));
+    }
+
+    res.json::<SupabaseAuthUser>()
+        .await
+        .map_err(|e| AppError::Unauthorized(format!("Supabase user parse failed: {}", e)))
+}
+
+/// usersテーブルに存在しない場合でも、Supabase Auth から取得して作成して返す
+pub async fn ensure_user_profile(
+    state: &AppState,
+    auth_user: &AuthenticatedUser,
+    token: &str,
+) -> Result<User> {
+    // RLSを確実に通すため、ユーザー自身のJWTでアクセス
+    let repo = UserRepository::new(state.db.with_auth(token));
+
+    if let Some(user) = repo.find_by_id(auth_user.id).await? {
+        return Ok(user);
+    }
+
+    // Supabase Auth からユーザー情報を取得し、足りない場合は空文字で補完
+    let supa_user = fetch_supabase_auth_user(
+        &state.config.database.url,
+        &state.config.database.anon_key,
+        token,
+    )
+    .await?;
+
+    let now = Utc::now();
+    let name = supa_user
+        .user_metadata
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let phone = supa_user
+        .user_metadata
+        .get("phone")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let user = User {
+        id: auth_user.id,
+        email: supa_user.email,
+        password_hash: String::new(),
+        name,
+        phone,
+        is_active: true,
+        is_verified: supa_user.email_confirmed_at.is_some(),
+        role: auth_user.role,
+        created_at: supa_user
+            .created_at
+            .parse()
+            .unwrap_or_else(|_| now),
+        updated_at: now,
+        last_login_at: Some(now),
+    };
+
+    repo.create(&user).await
+}
 
 /// 自分の情報取得
 pub async fn get_me(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
 ) -> Result<Json<DataResponse<UserPublic>>> {
-    let user_repo = UserRepository::new(state.db.anonymous());
-
-    let user = user_repo
-        .find_by_id(auth_user.id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+    let user = ensure_user_profile(&state, &auth_user, &token).await?;
 
     Ok(Json(DataResponse::new(UserPublic::from(user))))
 }
@@ -33,11 +120,15 @@ pub async fn get_me(
 pub async fn update_me(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Json(req): Json<UpdateUserRequest>,
 ) -> Result<Json<DataResponse<UserPublic>>> {
     req.validate()?;
 
-    let user_repo = UserRepository::new(state.db.anonymous());
+    // プロファイルがまだ存在しない場合は作成してから更新に進む
+    ensure_user_profile(&state, &auth_user, &token).await?;
+
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     let mut user = user_repo
         .find_by_id(auth_user.id)
@@ -62,8 +153,9 @@ pub async fn update_me(
 pub async fn list_addresses(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
 ) -> Result<Json<DataResponse<Vec<Address>>>> {
-    let user_repo = UserRepository::new(state.db.anonymous());
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     let addresses = user_repo.find_addresses_by_user(auth_user.id).await?;
 
@@ -74,6 +166,7 @@ pub async fn list_addresses(
 pub async fn create_address(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Json(mut req): Json<CreateAddressRequest>,
 ) -> Result<Json<DataResponse<Address>>> {
     // バリデーション
@@ -83,7 +176,7 @@ pub async fn create_address(
     req.sanitize_and_validate()
         .map_err(|e| AppError::BadRequest(e))?;
 
-    let user_repo = UserRepository::new(state.db.anonymous());
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     let address = Address {
         id: Uuid::new_v4(),
@@ -108,6 +201,7 @@ pub async fn create_address(
 pub async fn update_address(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
     Json(mut req): Json<UpdateAddressRequest>,
 ) -> Result<Json<DataResponse<Address>>> {
@@ -118,7 +212,7 @@ pub async fn update_address(
     req.sanitize_and_validate()
         .map_err(|e| AppError::BadRequest(e))?;
 
-    let user_repo = UserRepository::new(state.db.anonymous());
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     let mut address = user_repo
         .find_address(auth_user.id, id)
@@ -162,9 +256,10 @@ pub async fn update_address(
 pub async fn delete_address(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>> {
-    let user_repo = UserRepository::new(state.db.anonymous());
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     // 存在確認
     user_repo

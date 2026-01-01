@@ -120,8 +120,8 @@ curl -X POST http://localhost:8000/api/v1/payments/refund \
 
 ```env
 # .env
-STRIPE_SECRET_KEY=sk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_SECRET_KEY=<your-stripe-secret-key>
+STRIPE_WEBHOOK_SECRET=<your-webhook-secret>
 ```
 
 ## ✨ 追加実装されたStripe MCP機能

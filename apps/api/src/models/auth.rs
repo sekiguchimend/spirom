@@ -4,7 +4,7 @@ use validator::Validate;
 
 use super::{UserPublic, UserRole};
 
-/// ユーザー登録リクエスト
+/// ユーザー登録リクエスト（レガシー、Supabase Auth移行後は不使用）
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct RegisterRequest {
     #[validate(email)]
@@ -17,7 +17,7 @@ pub struct RegisterRequest {
     pub phone: Option<String>,
 }
 
-/// ログインリクエスト
+/// ログインリクエスト（レガシー、Supabase Auth移行後は不使用）
 #[derive(Debug, Clone, Deserialize, Validate)]
 pub struct LoginRequest {
     #[validate(email)]
@@ -76,31 +76,56 @@ pub struct ResetPasswordRequest {
     pub new_password: String,
 }
 
-/// JWTクレーム
+/// Supabase Auth JWTクレーム
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: Uuid,        // ユーザーID
-    pub email: String,
-    pub role: UserRole,
+    pub sub: String,      // ユーザーID (UUID as string)
     #[serde(default)]
-    pub token_use: Option<String>, // "access" | "refresh"
+    pub email: Option<String>,
+    #[serde(default)]
+    pub role: Option<String>,  // "authenticated" | "anon"
+    #[serde(default)]
+    pub aud: Option<String>,   // "authenticated"
     pub exp: i64,         // 有効期限
     pub iat: i64,         // 発行時刻
-    pub jti: String,      // トークンID
+    #[serde(default)]
+    pub iss: Option<String>,   // issuer
+    #[serde(default)]
+    pub app_metadata: Option<serde_json::Value>,
+    #[serde(default)]
+    pub user_metadata: Option<serde_json::Value>,
 }
 
 impl Claims {
-    pub fn new(user_id: Uuid, email: String, role: UserRole, expires_in: i64, token_use: impl Into<String>) -> Self {
-        let now = chrono::Utc::now().timestamp();
-        Self {
-            sub: user_id,
-            email,
-            role,
-            token_use: Some(token_use.into()),
-            exp: now + expires_in,
-            iat: now,
-            jti: Uuid::new_v4().to_string(),
+    /// ユーザーIDをUuidとして取得
+    pub fn user_id(&self) -> Option<Uuid> {
+        Uuid::parse_str(&self.sub).ok()
+    }
+
+    /// メールアドレスを取得
+    pub fn email(&self) -> String {
+        self.email.clone().unwrap_or_default()
+    }
+
+    /// ロールをUserRoleに変換
+    pub fn user_role(&self) -> UserRole {
+        // user_metadataからroleを取得（カスタムクレーム）
+        if let Some(metadata) = &self.user_metadata {
+            if let Some(role) = metadata.get("role").and_then(|r| r.as_str()) {
+                if role == "admin" {
+                    return UserRole::Admin;
+                }
+            }
         }
+        // app_metadataからroleを取得
+        if let Some(metadata) = &self.app_metadata {
+            if let Some(role) = metadata.get("role").and_then(|r| r.as_str()) {
+                if role == "admin" {
+                    return UserRole::Admin;
+                }
+            }
+        }
+        UserRole::User
     }
 }
 
@@ -112,12 +137,24 @@ pub struct AuthenticatedUser {
     pub role: UserRole,
 }
 
-impl From<Claims> for AuthenticatedUser {
-    fn from(claims: Claims) -> Self {
-        Self {
-            id: claims.sub,
-            email: claims.email,
-            role: claims.role,
-        }
+impl TryFrom<Claims> for AuthenticatedUser {
+    type Error = &'static str;
+
+    fn try_from(claims: Claims) -> Result<Self, Self::Error> {
+        let id = claims.user_id().ok_or("Invalid user ID in token")?;
+        Ok(Self {
+            id,
+            email: claims.email(),
+            role: claims.user_role(),
+        })
     }
+}
+
+/// プロファイル作成リクエスト（Supabase Auth登録後にusersテーブルに追加）
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct CreateProfileRequest {
+    #[validate(length(min = 1, max = 100))]
+    pub name: String,
+    #[validate(length(max = 20))]
+    pub phone: Option<String>,
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash, createHmac, randomUUID } from 'crypto';
+import { createServerClient } from '@supabase/ssr';
 
 /**
  * `/api/v1/*` を BFF にプロキシする Route Handler。
@@ -166,20 +167,29 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
   // ERR_CONTENT_DECODING_FAILED になることがあるため、上流には圧縮を要求しない
   headers.delete('accept-encoding');
 
-  // Authorization が無い場合は、cookie の spirom_auth_token から補完する
-  // （クライアント実装差異や将来の呼び出し元変更に強くする）
+  // Authorization が無い場合は、Supabase SSR セッション(cookie)から補完する（認証の単一ソース）
+  // ここで取得できる token と Server Component / Client のセッションが一致する
+  let cookiesToSet: Array<{ name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] }> = [];
   if (!headers.get('authorization')) {
-    const cookie = req.headers.get('cookie') || '';
-    const match = cookie.match(/(?:^|;\s*)spirom_auth_token=([^;]+)/);
-    if (match?.[1]) {
-      try {
-        const token = decodeURIComponent(match[1]);
-        headers.set('authorization', `Bearer ${token}`);
-      } catch {
-        // decode できない場合はそのまま使う
-        headers.set('authorization', `Bearer ${match[1]}`);
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return req.cookies.getAll();
+          },
+          setAll(nextCookies) {
+            cookiesToSet = nextCookies;
+            nextCookies.forEach(({ name, value }) => req.cookies.set(name, value));
+          },
+        },
       }
-    }
+    );
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (token) headers.set('authorization', `Bearer ${token}`);
   }
 
   // カート/注文で使うセッション（署名付き）を上流へ付与
@@ -361,6 +371,13 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
     statusText: upstreamRes.statusText,
     headers: resHeaders,
   });
+
+  // Supabase セッション更新が走った場合は、cookie をクライアントへ返す
+  if (cookiesToSet.length) {
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options);
+    });
+  }
 
   if (setSessionCookie && sessionId) {
     const secure = process.env.NODE_ENV === 'production';

@@ -85,8 +85,8 @@ API_DEBUG_ERRORS=1
 ENVIRONMENT=local
 
 # Stripe設定（テストモード）
-STRIPE_SECRET_KEY=sk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_SECRET_KEY=<your-stripe-secret-key>
+STRIPE_WEBHOOK_SECRET=<your-webhook-secret>
 
 # ログレベル
 RUST_LOG=info,spirom_api=debug
@@ -106,7 +106,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_BFF_URL=http://localhost:8787
 
 # Stripe公開キー（テストモード）
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<your-stripe-publishable-key>
 
 # ⚠️ 注意: StripeのPrice ID / Product ID を `NEXT_PUBLIC_*` に置かないでください。
 # クライアント公開すると不正購入や改ざんの足がかりになります。

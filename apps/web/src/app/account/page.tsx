@@ -1,24 +1,18 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { isAuthenticated, getServerUser } from '@/lib/server-api';
+import { redirect } from 'next/navigation';
+import { getServerUser, isAuthenticated } from '@/lib/server-api';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { ROUTES } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AccountPage() {
-  // Server Componentで認証チェック
   const authenticated = await isAuthenticated();
   if (!authenticated) {
     redirect(ROUTES.AUTH.LOGIN);
   }
 
-  // Server ComponentからBFFを直接叩く
   const user = await getServerUser();
-
-  if (!user) {
-    redirect(ROUTES.AUTH.LOGIN);
-  }
 
   return (
     <div className="min-h-screen bg-bg-light pt-24 pb-12 px-4 sm:px-6 lg:px-8">
@@ -51,7 +45,7 @@ export default async function AccountPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-gray-500 mb-0.5">お名前</p>
-                  <p className="text-sm font-bold text-text-dark truncate">{user.name || '未設定'}</p>
+                  <p className="text-sm font-bold text-text-dark truncate">{user?.name || '未設定'}</p>
                 </div>
               </div>
 
@@ -64,7 +58,7 @@ export default async function AccountPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-gray-500 mb-0.5">メールアドレス</p>
-                  <p className="text-sm font-bold text-text-dark truncate">{user.email || '未設定'}</p>
+                  <p className="text-sm font-bold text-text-dark truncate">{user?.email || '未設定'}</p>
                 </div>
               </div>
 
@@ -76,7 +70,7 @@ export default async function AccountPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-gray-500 mb-0.5">電話番号</p>
-                  <p className="text-sm font-bold text-text-dark truncate">{user.phone || '未設定'}</p>
+                  <p className="text-sm font-bold text-text-dark truncate">{user?.phone || '未設定'}</p>
                 </div>
               </div>
             </div>

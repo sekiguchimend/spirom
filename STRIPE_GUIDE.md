@@ -88,7 +88,7 @@ Stripeがホストする決済ページを使用。最も簡単で安全。
 
 ```env
 # apps/web/.env.local
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<your-stripe-publishable-key>
 
 # ⚠️ 注意: StripeのPrice ID / Product ID を `NEXT_PUBLIC_*` で公開しないでください。
 # 本実装では「DBの商品ID」を送って、サーバー側で金額/税/送料/在庫ロックを確定します。
@@ -300,8 +300,8 @@ sequenceDiagram
 
 ```.env
 # apps/api/.env
-STRIPE_SECRET_KEY=sk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_SECRET_KEY=<your-stripe-secret-key>
+STRIPE_WEBHOOK_SECRET=<your-webhook-secret>
 ```
 
 ### テスト方法
@@ -315,7 +315,7 @@ Stripe CLIを使用してローカルでWebhookをテストできます:
 stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe
 
 # 表示されたWebhook秘密鍵を.envに設定
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_WEBHOOK_SECRET=<your-webhook-secret>
 ```
 
 #### 2. PaymentIntentのテスト

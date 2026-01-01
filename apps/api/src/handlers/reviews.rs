@@ -3,6 +3,7 @@ use axum::{
     Extension, Json,
 };
 use chrono::Utc;
+use crate::handlers::users::ensure_user_profile;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -42,6 +43,7 @@ pub async fn get_review_stats(
 pub async fn create_review(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Path(product_id): Path<Uuid>,
     Json(req): Json<CreateReviewRequest>,
 ) -> Result<Json<DataResponse<Review>>> {
@@ -49,7 +51,6 @@ pub async fn create_review(
 
     let review_repo = ReviewRepository::new(state.db.anonymous());
     let product_repo = ProductRepository::new(state.db.anonymous());
-    let user_repo = UserRepository::new(state.db.anonymous());
 
     // 商品存在確認
     product_repo
@@ -62,11 +63,8 @@ pub async fn create_review(
         return Err(AppError::Conflict("この商品には既にレビューを投稿しています".to_string()));
     }
 
-    // ユーザー情報取得
-    let user = user_repo
-        .find_by_id(auth_user.id)
-        .await?
-        .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+    // ユーザー情報取得（無ければSupabase Authから同期して作成）
+    let user = ensure_user_profile(&state, &auth_user, &token).await?;
 
     // 購入済みかチェック
     let is_verified_purchase = review_repo.has_purchased(auth_user.id, product_id).await?;

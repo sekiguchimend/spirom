@@ -6,7 +6,7 @@ use axum::{
 
 use crate::config::AppState;
 use crate::handlers;
-use crate::middleware::{auth_middleware, admin_middleware};
+use crate::middleware::{auth_middleware, admin_middleware, rate_limiter::payment_rate_limiter_middleware};
 
 pub fn create_router(state: AppState) -> Router {
     let public_routes = Router::new()
@@ -14,12 +14,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/health", get(handlers::health::health_check))
         .route("/health/live", get(handlers::health::liveness))
         .route("/health/ready", get(handlers::health::readiness))
-        // 認証
+        // 認証（Supabase Auth経由）
         .route("/api/v1/auth/register", post(handlers::auth::register))
         .route("/api/v1/auth/login", post(handlers::auth::login))
         .route("/api/v1/auth/refresh", post(handlers::auth::refresh_token))
-        .route("/api/v1/auth/forgot-password", post(handlers::auth::forgot_password))
-        .route("/api/v1/auth/reset-password", post(handlers::auth::reset_password))
         // 商品（公開）
         .route("/api/v1/products", get(handlers::products::list_products))
         .route("/api/v1/products/featured", get(handlers::products::get_featured_products))
@@ -41,9 +39,18 @@ pub fn create_router(state: AppState) -> Router {
         // Webhook（公開：署名検証あり）
         .route("/api/v1/webhooks/stripe", post(handlers::payments::handle_webhook));
 
+    // 決済ルート（認証 + 専用レート制限）
+    // カードテスティング攻撃対策: 1IPあたり60秒間に5回まで
+    let payment_routes = Router::new()
+        .route("/api/v1/payments/intent", post(handlers::payments::create_payment_intent))
+        .route("/api/v1/payments/confirm", post(handlers::payments::confirm_payment))
+        .route("/api/v1/payments/refund", post(handlers::payments::create_refund))
+        .layer(middleware::from_fn(payment_rate_limiter_middleware))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
+
     let auth_routes = Router::new()
-        // 認証
-        .route("/api/v1/auth/logout", post(handlers::auth::logout))
+        // プロファイル作成（Supabase Auth登録後にusersテーブルに追加）
+        .route("/api/v1/auth/profile", post(handlers::auth::create_profile))
         // ユーザー
         .route("/api/v1/users/me", get(handlers::users::get_me))
         .route("/api/v1/users/me", put(handlers::users::update_me))
@@ -58,16 +65,13 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/orders", get(handlers::orders::list_orders))
         .route("/api/v1/orders/:id", get(handlers::orders::get_order))
         .route("/api/v1/orders/:id/cancel", post(handlers::orders::cancel_order))
-        // 決済
-        .route("/api/v1/payments/intent", post(handlers::payments::create_payment_intent))
-        .route("/api/v1/payments/confirm", post(handlers::payments::confirm_payment))
-        .route("/api/v1/payments/refund", post(handlers::payments::create_refund))
         // レビュー（投稿は認証必要）
         .route("/api/v1/products/:id/reviews", post(handlers::reviews::create_review))
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
 
     Router::new()
         .merge(public_routes)
+        .merge(payment_routes)
         .merge(auth_routes)
         .with_state(state)
 }

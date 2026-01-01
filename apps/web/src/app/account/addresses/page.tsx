@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { isAuthenticated, getServerAddresses } from '@/lib/server-api';
+import { getServerAddresses, isAuthenticated } from '@/lib/server-api';
 import { ROUTES } from '@/lib/routes';
 import { DeleteAddressButton } from '@/components/address/DeleteAddressButton';
 
