@@ -103,11 +103,11 @@ export function AddToCartButton({
       </div>
 
       {/* ボタン */}
-      <div className="flex gap-4 mb-10">
+      <div className="flex gap-3 mb-10">
         <button
           type="button"
           onClick={handleAddToCart}
-          className="flex-1 py-5 bg-white text-[#4a7c59] font-bold text-sm tracking-wider rounded-full hover:bg-white/90 transition-all duration-300 disabled:bg-white/30 disabled:text-white/50"
+          className="flex-1 py-3 bg-white/15 text-white font-bold text-sm tracking-wider rounded-full hover:bg-white/25 transition-all duration-300 disabled:bg-white/10 disabled:text-white/50 border border-white/30"
           disabled={!inStock || isAdding}
         >
           {isAdding ? '追加中...' : isAdded ? '追加しました!' : 'ADD TO BAG'}
@@ -115,22 +115,25 @@ export function AddToCartButton({
         <button
           type="button"
           onClick={handleBuyNow}
-          className="w-16 h-16 bg-white/15 rounded-full flex items-center justify-center hover:bg-white/25 transition-colors group"
+          className="flex-1 py-3 bg-white text-[#4a7c59] font-bold text-sm tracking-wider rounded-full hover:bg-white/90 transition-all duration-300 disabled:bg-white/30 disabled:text-white/50 flex items-center justify-center gap-2"
           disabled={!inStock}
-          title="今すぐ購入"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="white"
-            strokeWidth="1.5"
-            className="group-hover:scale-110 transition-transform"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <path d="M5 12h14M12 5l7 7-7 7" />
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
           </svg>
+          BUY NOW
         </button>
       </div>
 

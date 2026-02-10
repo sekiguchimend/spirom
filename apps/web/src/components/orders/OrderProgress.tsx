@@ -10,12 +10,12 @@ export function OrderProgress({ order }: OrderProgressProps) {
   const steps = [
     {
       id: 'pending_payment',
-      label: '支払い待ち',
+      label: '作成待ち',
       completed: order.status !== 'pending_payment',
     },
     {
       id: 'paid',
-      label: '支払い済み',
+      label: '作成済み',
       completed: ['paid', 'processing', 'shipped', 'delivered'].includes(order.status),
     },
     {

@@ -11,9 +11,12 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  phone?: string;
+  phone?: string | null;
+  role?: string;
+  is_active?: boolean;
   is_verified: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 // ============================================

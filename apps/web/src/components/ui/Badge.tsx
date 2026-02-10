@@ -1,11 +1,12 @@
-import { HTMLAttributes } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
   count?: number;
+  children?: ReactNode;
 }
 
 export function Badge({ count, className = '', children, ...props }: BadgeProps) {
-  const displayValue = count !== undefined ? (count > 99 ? '99+' : count) : children;
+  const displayValue: ReactNode = count !== undefined ? (count > 99 ? '99+' : count) : children;
 
   return (
     <span

@@ -5,8 +5,8 @@
 
 export function getOrderStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
-    pending_payment: '支払い待ち',
-    paid: '支払い済み',
+    pending_payment: '作成待ち',
+    paid: '作成済み',
     processing: '処理中',
     shipped: '発送済み',
     delivered: '配達済み',

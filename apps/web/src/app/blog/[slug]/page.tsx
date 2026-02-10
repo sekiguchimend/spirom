@@ -156,7 +156,7 @@ const portableTextComponents = {
     },
   },
   marks: {
-    link: ({ children, value }: { children: ReactNode; value?: LinkValue }) => {
+    link: ({ children, value }: { children?: ReactNode; value?: LinkValue }) => {
       const target = value?.blank ? "_blank" : undefined;
       return (
         <a
