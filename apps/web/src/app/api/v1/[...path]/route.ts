@@ -179,7 +179,7 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
           getAll() {
             return req.cookies.getAll();
           },
-          setAll(nextCookies) {
+          setAll(nextCookies: { name: string; value: string; options?: Record<string, unknown> }[]) {
             cookiesToSet = nextCookies;
             nextCookies.forEach(({ name, value }) => req.cookies.set(name, value));
           },

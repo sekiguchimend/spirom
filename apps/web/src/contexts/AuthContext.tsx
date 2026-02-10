@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     // セッション変更を監視
-    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(async (event, newSession) => {
+    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
 
       if (newSession?.user) {

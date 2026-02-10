@@ -4,8 +4,7 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "sanity/*"
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
@@ -20,8 +19,11 @@
     "turbo": "^2.3.0"
   },
   "overrides": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "next": "14.2.15",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1"
   },
   "packageManager": "npm@10.8.2"
 }

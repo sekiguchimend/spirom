@@ -1,6 +1,8 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
+:root {
   /* ブランドカラー - Juice Agency inspired */
   --color-brand-green: #446e87;
   --color-brand-cream: #FFFFEB;
@@ -26,9 +28,7 @@
   --shadow-cartoon-md: 4px 4px 0 #000000;
   --shadow-cartoon-lg: 5px 5px 0 #000000;
   --shadow-cartoon-xl: 6px 6px 0 #000000;
-}
 
-:root {
   --background: var(--color-brand-green);
   --foreground: var(--color-brand-cream);
 }

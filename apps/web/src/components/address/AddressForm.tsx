@@ -26,7 +26,7 @@ export function AddressForm() {
   const [error, setError] = useState<string | null>(null);
 
   // どこから来たかで戻り先を変える（デフォルトは住所一覧）
-  const redirectTo = searchParams.get('redirect') || ROUTES.ACCOUNT.ADDRESSES;
+  const redirectTo = searchParams?.get('redirect') || ROUTES.ACCOUNT.ADDRESSES;
 
   const [formData, setFormData] = useState<Omit<Address, 'id'>>({
     name: '',

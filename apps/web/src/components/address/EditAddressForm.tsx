@@ -26,7 +26,7 @@ export function EditAddressForm({ address }: { address: Address }) {
   const [error, setError] = useState<string | null>(null);
 
   const redirectTo = useMemo(
-    () => searchParams.get('redirect') || ROUTES.ACCOUNT.ADDRESSES,
+    () => searchParams?.get('redirect') || ROUTES.ACCOUNT.ADDRESSES,
     [searchParams]
   );
 

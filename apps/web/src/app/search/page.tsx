@@ -9,10 +9,10 @@ import { searchProducts, formatPrice, type SearchResponse, type ProductListItem 
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const query = searchParams.get('q') || '';
-  const category = searchParams.get('category') || undefined;
-  const sort = (searchParams.get('sort') as 'relevance' | 'price_asc' | 'price_desc' | 'newest' | 'popular') || undefined;
-  const page = parseInt(searchParams.get('page') || '1', 10);
+  const query = searchParams?.get('q') || '';
+  const category = searchParams?.get('category') || undefined;
+  const sort = (searchParams?.get('sort') as 'relevance' | 'price_asc' | 'price_desc' | 'newest' | 'popular') || undefined;
+  const page = parseInt(searchParams?.get('page') || '1', 10);
 
   const [results, setResults] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ function SearchContent() {
   }, [performSearch]);
 
   const updateParams = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() || '');
     if (value) {
       params.set(key, value);
     } else {
@@ -145,7 +145,7 @@ function SearchContent() {
                         <li key={index}>
                           <button
                             onClick={() => {
-                              const params = new URLSearchParams(searchParams.toString());
+                              const params = new URLSearchParams(searchParams?.toString() || '');
                               params.set('min_price', range.min.toString());
                               params.set('max_price', range.max.toString());
                               params.delete('page');

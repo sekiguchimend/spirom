@@ -1,4 +1,7 @@
 import type { Metadata, Viewport } from "next";
+
+// SSGを無効化してランタイムレンダリングにする
+export const dynamic = 'force-dynamic';
 import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { Header, Footer } from "@/components/layout";
