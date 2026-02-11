@@ -31,6 +31,7 @@ export default function Footer() {
             <ul className="space-y-4">
               <li><Link href="/privacy" className="text-sm font-bold hover:text-gray-300 transition-colors">Privacy</Link></li>
               <li><Link href="/terms" className="text-sm font-bold hover:text-gray-300 transition-colors">Terms</Link></li>
+              <li><Link href="/legal" className="text-sm font-bold hover:text-gray-300 transition-colors">特商法表記</Link></li>
             </ul>
           </nav>
         </div>
