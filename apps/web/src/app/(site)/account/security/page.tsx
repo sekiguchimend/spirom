@@ -26,7 +26,7 @@ interface EnrollResponse {
 }
 
 export default function SecurityPage() {
-  const { user, isLoading: authLoading, getAccessToken } = useAuth();
+  const { user, session, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const [factors, setFactors] = useState<MfaFactor[]>([]);
@@ -47,15 +47,16 @@ export default function SecurityPage() {
 
   // MFA要素一覧を取得
   useEffect(() => {
-    if (user) {
+    if (user && session?.access_token) {
       fetchFactors();
     }
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, session]);
 
   const fetchFactors = async () => {
     try {
       setIsLoading(true);
-      const token = await getAccessToken();
+      const token = session?.access_token;
       if (!token) return;
 
       const res = await fetch('/api/v1/auth/mfa/factors', {
@@ -80,7 +81,7 @@ export default function SecurityPage() {
     try {
       setIsEnrolling(true);
       setError(null);
-      const token = await getAccessToken();
+      const token = session?.access_token;
       if (!token) return;
 
       const res = await fetch('/api/v1/auth/mfa/enroll', {
@@ -112,7 +113,7 @@ export default function SecurityPage() {
     try {
       setIsVerifying(true);
       setError(null);
-      const token = await getAccessToken();
+      const token = session?.access_token;
       if (!token) return;
 
       const res = await fetch('/api/v1/auth/mfa/verify', {
@@ -149,7 +150,7 @@ export default function SecurityPage() {
 
     try {
       setError(null);
-      const token = await getAccessToken();
+      const token = session?.access_token;
       if (!token) return;
 
       const res = await fetch('/api/v1/auth/mfa/unenroll', {
