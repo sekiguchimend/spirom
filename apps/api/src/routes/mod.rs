@@ -85,9 +85,20 @@ pub fn create_router(state: AppState) -> Router {
         .layer(middleware::from_fn(session_signature_middleware))
         .layer(middleware::from_fn(bff_proxy_token_middleware));
 
+    // 管理者専用ルート
+    let admin_routes = Router::new()
+        // 商品管理
+        .route("/api/v1/admin/products/:id", delete(handlers::products::delete_product))
+        // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 認証 → 管理者権限）
+        .layer(middleware::from_fn_with_state(state.clone(), admin_middleware))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
+
     Router::new()
         .merge(public_routes)
         .merge(payment_routes)
         .merge(auth_routes)
+        .merge(admin_routes)
         .with_state(state)
 }

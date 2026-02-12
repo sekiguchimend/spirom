@@ -87,3 +87,25 @@ pub async fn get_featured_products(
 
     Ok(Json(DataResponse::new(products)))
 }
+
+/// 商品削除（管理者専用）
+pub async fn delete_product(
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<serde_json::Value>> {
+    let product_repo = ProductRepository::new(state.db.anonymous());
+
+    // 商品が存在するか確認
+    let product = product_repo
+        .find_by_id(id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
+
+    // 商品を削除
+    product_repo.delete(id).await?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": format!("商品「{}」を削除しました", product.name)
+    })))
+}

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getProductBySlug, getFeaturedProducts } from '@/lib/supabase';
-import { AddToCartButton } from '@/components/product';
+import { AddToCartButton, MediaGallery } from '@/components/product';
 import { formatPrice } from '@/lib/utils';
 import { safeJsonLd } from '@/lib/safeJsonLd';
 import { SITE_URL, SITE_NAME } from '@/lib/config';
@@ -94,47 +94,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="min-h-screen bg-bg-light">
         {/* メインコンテンツ */}
         <article className="grid grid-cols-1 lg:grid-cols-2">
-          {/* 左: 画像エリア - フル高さ、スティッキー */}
+          {/* 左: メディアエリア - フル高さ、スティッキー */}
           <div className="lg:sticky lg:top-0 lg:h-screen bg-bg-light flex items-center justify-center p-8 lg:p-16">
-            <div className="relative w-full max-w-lg">
-              {isNew && (
-                <div className="absolute -top-2 -right-2 z-10">
-                  <div className="bg-white text-text-dark text-xs font-black px-3 py-1.5 rounded-full transform rotate-12 shadow-lg border border-text-dark/10">
-                    NEW
-                  </div>
-                </div>
-              )}
-              <div className="aspect-square relative">
-                {product.images[0] ? (
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    fill
-                    className="object-contain drop-shadow-2xl"
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg">
-                    No Image
-                  </div>
-                )}
-              </div>
-              {/* サムネイル */}
-              {product.images.length > 1 && (
-                <div className="flex justify-center gap-3 mt-8">
-                  {product.images.slice(0, 4).map((image, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className={`w-14 h-14 relative bg-white rounded-lg overflow-hidden transition-all ${index === 0 ? 'ring-2 ring-primary scale-110' : 'opacity-60 hover:opacity-100'}`}
-                    >
-                      <Image src={image} alt={`${product.name} - 画像 ${index + 1}`} fill className="object-contain p-1" sizes="56px" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MediaGallery
+              media={product.images}
+              productName={product.name}
+              isNew={isNew}
+            />
           </div>
 
           {/* 右: 商品情報 - ビンテージグリーン */}

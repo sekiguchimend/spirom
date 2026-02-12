@@ -19,6 +19,8 @@ interface Product {
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProducts() {
@@ -34,6 +36,33 @@ export default function AdminProductsPage() {
     }
     fetchProducts();
   }, []);
+
+  const handleDelete = async (product: Product) => {
+    if (deleteConfirmId !== product.id) {
+      setDeleteConfirmId(product.id);
+      return;
+    }
+
+    setDeletingId(product.id);
+    try {
+      const res = await fetch(`/api/v1/admin/products/${product.id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setProducts(products.filter((p) => p.id !== product.id));
+      } else {
+        const data = await res.json();
+        alert(data.message || '削除に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('削除に失敗しました');
+    } finally {
+      setDeletingId(null);
+      setDeleteConfirmId(null);
+    }
+  };
 
   return (
     <div className="p-8">
@@ -143,6 +172,27 @@ export default function AdminProductsPage() {
                           <line x1="10" y1="14" x2="21" y2="3" />
                         </svg>
                       </Link>
+                      <button
+                        onClick={() => handleDelete(product)}
+                        disabled={deletingId === product.id}
+                        className={`p-2 rounded-lg transition-colors ${
+                          deleteConfirmId === product.id
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'hover:bg-red-100 text-red-500'
+                        } disabled:opacity-50`}
+                        title={deleteConfirmId === product.id ? 'もう一度クリックで削除' : '削除'}
+                      >
+                        {deletingId === product.id ? (
+                          <div className="w-[18px] h-[18px] border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        )}
+                      </button>
                     </div>
                   </td>
                 </tr>

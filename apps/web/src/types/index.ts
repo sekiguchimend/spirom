@@ -94,6 +94,16 @@ export interface ProductVariant {
   price_adjustment: number;
   sort_order: number;
   is_active: boolean;
+  // サイズ寸法 (cm)
+  body_length?: number;    // 身丈
+  body_width?: number;     // 身幅
+  shoulder_width?: number; // 肩幅
+  sleeve_length?: number;  // 袖丈
+}
+
+export interface ProductMaterial {
+  material: string;        // 素材（例：綿100％）
+  material_detail: string; // 素材詳細
 }
 
 // ============================================
