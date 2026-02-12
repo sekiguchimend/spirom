@@ -44,7 +44,7 @@ Printstar ヘビーウェイトTシャツ`,
 export default function AdminProductDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const productId = params.id as string;
+  const productId = (params?.id as string) || '';
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
