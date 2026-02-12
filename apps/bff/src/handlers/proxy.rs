@@ -35,6 +35,42 @@ impl ApiProxy {
             }
         }
 
+        // Forward BFF proxy token for API authentication
+        // Try multiple header name variations (case sensitivity)
+        let bff_token = req.headers().get("x-bff-proxy-token")
+            .or_else(|_| req.headers().get("X-Bff-Proxy-Token"))
+            .or_else(|_| req.headers().get("X-BFF-Proxy-Token"))
+            .ok()
+            .flatten();
+
+        if let Some(token) = bff_token {
+            if !token.contains('\r') && !token.contains('\n') && !token.contains('\0') && token.len() < 256 {
+                headers.set("X-BFF-Proxy-Token", &token).map_err(BffError::from)?;
+                console_log!("[bff-proxy] Forwarding BFF token (len={})", token.len());
+            }
+        } else {
+            console_log!("[bff-proxy] No BFF proxy token found in request headers");
+        }
+
+        // Forward session headers
+        if let Ok(Some(session_id)) = req.headers().get("x-session-id") {
+            if !session_id.contains('\r') && !session_id.contains('\n') && !session_id.contains('\0') && session_id.len() < 256 {
+                headers.set("x-session-id", &session_id).map_err(BffError::from)?;
+            }
+        }
+        if let Ok(Some(session_sig)) = req.headers().get("x-session-signature") {
+            if !session_sig.contains('\r') && !session_sig.contains('\n') && !session_sig.contains('\0') && session_sig.len() < 256 {
+                headers.set("x-session-signature", &session_sig).map_err(BffError::from)?;
+            }
+        }
+
+        // Forward request ID for tracing
+        if let Ok(Some(request_id)) = req.headers().get("x-request-id") {
+            if !request_id.contains('\r') && !request_id.contains('\n') && !request_id.contains('\0') && request_id.len() < 128 {
+                headers.set("x-request-id", &request_id).map_err(BffError::from)?;
+            }
+        }
+
         // Forward Content-Type for POST/PUT requests (with validation)
         if let Ok(Some(content_type)) = req.headers().get("Content-Type") {
             // ヘッダーインジェクション対策
