@@ -14,7 +14,7 @@ export default function LegalNoticePage() {
     <LegalPageLayout
       title="LEGAL"
       subtitle="特定商取引法に基づく表記"
-      lastUpdated="2024年1月1日"
+      lastUpdated="2025年2月12日"
     >
       <div className="space-y-6">
         <div className="border-b border-gray-200 pb-4">
@@ -24,26 +24,12 @@ export default function LegalNoticePage() {
 
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-sm font-bold text-gray-500 mb-2">運営統括責任者</h2>
-          <p className="text-base text-black font-medium">関口 太郎</p>
-        </div>
-
-        <div className="border-b border-gray-200 pb-4">
-          <h2 className="text-sm font-bold text-gray-500 mb-2">所在地</h2>
-          <p className="text-base text-black font-medium">
-            〒100-0001<br />
-            東京都千代田区千代田1-1-1
-          </p>
-        </div>
-
-        <div className="border-b border-gray-200 pb-4">
-          <h2 className="text-sm font-bold text-gray-500 mb-2">電話番号</h2>
-          <p className="text-base text-black font-medium">03-0000-0000</p>
-          <p className="text-sm text-gray-500 mt-1">受付時間：平日 10:00〜18:00（土日祝日を除く）</p>
+          <p className="text-base text-black font-medium">関口峻矢</p>
         </div>
 
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-sm font-bold text-gray-500 mb-2">メールアドレス</h2>
-          <p className="text-base text-black font-medium">support@spirom.com</p>
+          <p className="text-base text-black font-medium">sekiguchishunya0619@gmail.com</p>
         </div>
 
         <div className="border-b border-gray-200 pb-4">
@@ -98,8 +84,7 @@ export default function LegalNoticePage() {
         <div>
           <h2 className="text-sm font-bold text-gray-500 mb-2">返品連絡先</h2>
           <p className="text-base text-black font-medium">
-            メール：support@spirom.com<br />
-            電話：03-0000-0000
+            sekiguchishunya0619@gmail.com
           </p>
         </div>
       </div>

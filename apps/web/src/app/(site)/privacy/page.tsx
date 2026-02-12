@@ -14,7 +14,7 @@ export default function PrivacyPage() {
     <LegalPageLayout
       title="PRIVACY"
       subtitle="プライバシーポリシー"
-      lastUpdated="2024年1月1日"
+      lastUpdated="2025年2月12日"
     >
       <section className="mb-8">
         <h2 className="text-xl sm:text-2xl font-black mb-4 text-black">1. 個人情報の収集</h2>

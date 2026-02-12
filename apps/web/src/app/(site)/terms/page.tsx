@@ -14,7 +14,7 @@ export default function TermsPage() {
     <LegalPageLayout
       title="TERMS"
       subtitle="利用規約"
-      lastUpdated="2024年1月1日"
+      lastUpdated="2025年2月12日"
     >
       <section className="mb-8">
         <h2 className="text-xl sm:text-2xl font-black mb-4 text-black">第1条（適用）</h2>

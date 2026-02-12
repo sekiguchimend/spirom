@@ -58,6 +58,12 @@ pub fn create_router(state: AppState) -> Router {
     let auth_routes = Router::new()
         // プロファイル作成（Supabase Auth登録後にusersテーブルに追加）
         .route("/api/v1/auth/profile", post(handlers::auth::create_profile))
+        // MFA（二要素認証）
+        .route("/api/v1/auth/mfa/enroll", post(handlers::mfa::enroll))
+        .route("/api/v1/auth/mfa/challenge", post(handlers::mfa::challenge))
+        .route("/api/v1/auth/mfa/verify", post(handlers::mfa::verify))
+        .route("/api/v1/auth/mfa/unenroll", post(handlers::mfa::unenroll))
+        .route("/api/v1/auth/mfa/factors", get(handlers::mfa::list_factors))
         // ユーザー
         .route("/api/v1/users/me", get(handlers::users::get_me))
         .route("/api/v1/users/me", put(handlers::users::update_me))

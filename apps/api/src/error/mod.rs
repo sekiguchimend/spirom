@@ -27,6 +27,9 @@ pub enum AppError {
     #[error("Bad request: {0}")]
     BadRequest(String),
 
+    #[error("Too many requests: {0}")]
+    TooManyRequests(String),
+
     #[error("Internal server error: {0}")]
     Internal(String),
 
@@ -47,6 +50,7 @@ pub enum ErrorCode {
     NotFound,
     Conflict,
     BadRequest,
+    TooManyRequests,
     InternalError,
     DatabaseError,
     ExternalServiceError,
@@ -122,6 +126,10 @@ impl IntoResponse for AppError {
             AppError::BadRequest(msg) => (
                 StatusCode::BAD_REQUEST,
                 ErrorResponse::new(ErrorCode::BadRequest, msg),
+            ),
+            AppError::TooManyRequests(msg) => (
+                StatusCode::TOO_MANY_REQUESTS,
+                ErrorResponse::new(ErrorCode::TooManyRequests, msg),
             ),
             AppError::Internal(msg) => {
                 tracing::error!("Internal error: {}", msg);

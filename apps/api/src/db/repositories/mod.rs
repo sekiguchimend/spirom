@@ -5,6 +5,7 @@ pub mod cart_repository;
 pub mod order_repository;
 pub mod review_repository;
 pub mod token_blacklist_repository;
+pub mod login_attempts_repository;
 
 pub use user_repository::UserRepository;
 pub use product_repository::ProductRepository;
@@ -13,3 +14,4 @@ pub use cart_repository::CartRepository;
 pub use order_repository::OrderRepository;
 pub use review_repository::ReviewRepository;
 pub use token_blacklist_repository::TokenBlacklistRepository;
+pub use login_attempts_repository::{LoginAttemptsRepository, LoginAttemptResult, AccountLock};

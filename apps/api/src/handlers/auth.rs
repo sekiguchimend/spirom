@@ -1,4 +1,8 @@
-use axum::{extract::State, Extension, Json};
+use axum::{
+    extract::State,
+    http::{HeaderMap, header},
+    Extension, Json,
+};
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::Deserialize;
@@ -7,7 +11,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::config::AppState;
-use crate::db::repositories::UserRepository;
+use crate::db::repositories::{UserRepository, LoginAttemptsRepository, LoginAttemptResult};
 use crate::error::{AppError, Result};
 use crate::models::{AuthenticatedUser, CreateProfileRequest, DataResponse, User, UserPublic, UserRole};
 
@@ -183,12 +187,54 @@ pub async fn register(
     Ok(Json(response))
 }
 
-/// Supabase Auth: ログイン
+/// クライアントIPを取得
+fn get_client_ip(headers: &HeaderMap) -> String {
+    // X-Real-IP (信頼されたプロキシから)
+    if let Some(ip) = headers.get("x-real-ip").and_then(|v| v.to_str().ok()) {
+        return ip.to_string();
+    }
+
+    // X-Forwarded-For の最初のIP
+    if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
+        if let Some(ip) = xff.split(',').next() {
+            return ip.trim().to_string();
+        }
+    }
+
+    "unknown".to_string()
+}
+
+/// User-Agentを取得
+fn get_user_agent(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+}
+
+/// Supabase Auth: ログイン（アカウントロック機能付き）
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(req): Json<crate::models::LoginRequest>,
 ) -> Result<Json<Value>> {
     req.validate()?;
+
+    let client_ip = get_client_ip(&headers);
+    let user_agent = get_user_agent(&headers);
+
+    // ログイン試行リポジトリ
+    let login_repo = LoginAttemptsRepository::new(state.db.service());
+
+    // アカウントロックチェック
+    if let Some(lock) = login_repo.is_account_locked(&req.email).await? {
+        let remaining_minutes = (lock.locked_until - Utc::now()).num_minutes().max(1);
+        return Err(AppError::TooManyRequests(format!(
+            "アカウントがロックされています。{}分後に再試行してください。（失敗回数: {}回）",
+            remaining_minutes,
+            lock.failed_attempts
+        )));
+    }
 
     let client = Client::new();
     let body = serde_json::json!({
@@ -196,34 +242,69 @@ pub async fn login(
         "password": req.password
     });
 
-    let auth_res = supabase_auth_request(
+    // Supabase認証を試行
+    let auth_result = supabase_auth_request(
         &client,
         &state.config.database.url,
         &state.config.database.anon_key,
         "token?grant_type=password",
         body,
     )
-    .await?;
+    .await;
 
-    let repo = UserRepository::new(state.db.service());
-    let repo_user = repo
-        .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
-        .await
-        .ok()
-        .flatten();
-    let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+    match auth_result {
+        Ok(auth_res) => {
+            // 成功: ロック解除 & 成功記録
+            login_repo
+                .handle_successful_login(&req.email, &client_ip, user_agent.as_deref())
+                .await?;
 
-    let response = serde_json::json!({
-        "user": user_public,
-        "tokens": {
-            "access_token": auth_res.access_token,
-            "refresh_token": auth_res.refresh_token,
-            "token_type": auth_res.token_type,
-            "expires_in": auth_res.expires_in
+            let repo = UserRepository::new(state.db.service());
+            let repo_user = repo
+                .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+                .await
+                .ok()
+                .flatten();
+            let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+
+            let response = serde_json::json!({
+                "user": user_public,
+                "tokens": {
+                    "access_token": auth_res.access_token,
+                    "refresh_token": auth_res.refresh_token,
+                    "token_type": auth_res.token_type,
+                    "expires_in": auth_res.expires_in
+                }
+            });
+
+            Ok(Json(response))
         }
-    });
+        Err(e) => {
+            // 失敗: 試行を記録
+            let attempt_result = login_repo
+                .handle_failed_login(&req.email, &client_ip, user_agent.as_deref())
+                .await?;
 
-    Ok(Json(response))
+            match attempt_result {
+                LoginAttemptResult::Locked { until, attempts } => {
+                    let remaining_minutes = (until - Utc::now()).num_minutes().max(1);
+                    Err(AppError::TooManyRequests(format!(
+                        "ログイン試行回数が上限（{}回）に達しました。アカウントは{}分間ロックされます。",
+                        attempts,
+                        remaining_minutes
+                    )))
+                }
+                LoginAttemptResult::Failed { attempts, max_attempts } => {
+                    // 元のエラーに残り回数を追加
+                    let remaining = max_attempts - attempts;
+                    Err(AppError::Unauthorized(format!(
+                        "メールアドレスまたはパスワードが正しくありません。（残り試行回数: {}回）",
+                        remaining
+                    )))
+                }
+            }
+        }
+    }
 }
 
 /// Supabase Auth: リフレッシュ
