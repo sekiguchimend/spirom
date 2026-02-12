@@ -18,10 +18,10 @@ const BFF_BASE_URL =
 // - ブラウザには露出しない（NEXT_PUBLICは使わない）
 const BFF_PROXY_TOKEN = process.env.BFF_PROXY_TOKEN || process.env.API_PROXY_TOKEN || '';
 
+// デバッグログは明示的に有効化した場合のみ出力（パフォーマンス改善）
 const DEBUG_PROXY =
   process.env.DEBUG_API_PROXY === '1' ||
-  process.env.NEXT_PUBLIC_DEBUG_API_PROXY === '1' ||
-  process.env.NODE_ENV !== 'production';
+  process.env.NEXT_PUBLIC_DEBUG_API_PROXY === '1';
 
 const SESSION_COOKIE_NAME = 'spirom_session_id';
 
@@ -168,9 +168,16 @@ async function proxy(req: NextRequest, method: string, pathParts: string[]) {
   headers.delete('accept-encoding');
 
   // Authorization が無い場合は、Supabase SSR セッション(cookie)から補完する（認証の単一ソース）
-  // ここで取得できる token と Server Component / Client のセッションが一致する
+  // ただし、認証不要なエンドポイント（products, categories, health）はスキップして高速化
   let cookiesToSet: Array<{ name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] }> = [];
-  if (!headers.get('authorization')) {
+  const pathStr = pathParts.join('/');
+  const isPublicEndpoint =
+    pathStr.startsWith('products') ||
+    pathStr.startsWith('categories') ||
+    pathStr === 'health' ||
+    pathStr.startsWith('blog');
+
+  if (!headers.get('authorization') && !isPublicEndpoint) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

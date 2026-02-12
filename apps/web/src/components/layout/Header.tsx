@@ -12,10 +12,8 @@ export default function Header() {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    // 初期読み込み（APIを正として同期）
-    void refreshCart()
-      .catch(() => {})
-      .finally(() => setCartCount(getCartCount()));
+    // 初回はlocalStorageから即座に読み込み（高速）
+    setCartCount(getCartCount());
 
     // カート更新イベントをリッスン
     const handleCartUpdate = () => {

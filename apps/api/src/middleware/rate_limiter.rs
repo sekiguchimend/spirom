@@ -119,6 +119,85 @@ pub fn init_rate_limiter(window_seconds: u64, max_requests: u32) {
     });
 }
 
+/// 信頼できるプロキシIPリストを取得
+fn get_trusted_proxies() -> Vec<String> {
+    std::env::var("TRUSTED_PROXY_IPS")
+        .ok()
+        .map(|s| s.split(',').map(|ip| ip.trim().to_string()).collect())
+        .unwrap_or_else(|| {
+            // デフォルトで信頼するIP（ローカル、Fly.io、Cloudflare等のプライベートレンジ）
+            vec![
+                "127.0.0.1".to_string(),
+                "::1".to_string(),
+                // Fly.ioのプライベートネットワーク
+                "fdaa::".to_string(),
+            ]
+        })
+}
+
+/// クライアントIPを安全に取得
+/// - 直接接続の場合: ソケットアドレスを使用
+/// - 信頼できるプロキシ経由の場合のみ: X-Forwarded-Forを使用
+fn get_client_ip(addr: &SocketAddr, headers: &axum::http::HeaderMap) -> String {
+    let direct_ip = addr.ip().to_string();
+    let trusted_proxies = get_trusted_proxies();
+
+    // 直接接続が信頼できるプロキシからでない場合は、直接IPを使用
+    let is_from_trusted_proxy = trusted_proxies.iter().any(|trusted| {
+        if trusted.ends_with("::") {
+            // IPv6プレフィックスマッチ
+            direct_ip.starts_with(trusted)
+        } else {
+            direct_ip == *trusted
+        }
+    });
+
+    if !is_from_trusted_proxy {
+        // 信頼できないプロキシからのX-Forwarded-Forは無視
+        return direct_ip;
+    }
+
+    // X-Forwarded-Forから最右端の非信頼IP（実際のクライアントIP）を取得
+    // 形式: X-Forwarded-For: client, proxy1, proxy2
+    // 攻撃者が偽装できるのは左側のみ、最右端は直前のプロキシが付与
+    if let Some(xff) = headers.get("X-Forwarded-For").and_then(|h| h.to_str().ok()) {
+        let ips: Vec<&str> = xff.split(',').map(|s| s.trim()).collect();
+
+        // 右から走査して、最初の非信頼IPを返す
+        for ip in ips.iter().rev() {
+            let is_trusted = trusted_proxies.iter().any(|trusted| {
+                if trusted.ends_with("::") {
+                    ip.starts_with(trusted)
+                } else {
+                    *ip == trusted
+                }
+            });
+
+            if !is_trusted && !ip.is_empty() {
+                return ip.to_string();
+            }
+        }
+    }
+
+    // X-Real-IPもチェック（Cloudflare等が設定する）
+    if let Some(real_ip) = headers.get("X-Real-IP").and_then(|h| h.to_str().ok()) {
+        let real_ip = real_ip.trim();
+        if !real_ip.is_empty() {
+            return real_ip.to_string();
+        }
+    }
+
+    // CF-Connecting-IP（Cloudflare専用）
+    if let Some(cf_ip) = headers.get("CF-Connecting-IP").and_then(|h| h.to_str().ok()) {
+        let cf_ip = cf_ip.trim();
+        if !cf_ip.is_empty() {
+            return cf_ip.to_string();
+        }
+    }
+
+    direct_ip
+}
+
 /// レート制限ミドルウェア
 pub async fn rate_limiter_middleware(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -130,14 +209,8 @@ pub async fn rate_limiter_middleware(
         return next.run(request).await;
     };
 
-    // クライアントIP取得（プロキシ経由の場合はX-Forwarded-Forを優先）
-    let client_ip = request
-        .headers()
-        .get("X-Forwarded-For")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.split(',').next())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| addr.ip().to_string());
+    // クライアントIP取得（信頼できるプロキシ経由のみX-Forwarded-Forを使用）
+    let client_ip = get_client_ip(&addr, request.headers());
 
     let result = store.check(&client_ip).await;
 
@@ -187,14 +260,8 @@ pub async fn payment_rate_limiter_middleware(
         return next.run(request).await;
     };
 
-    // クライアントIP取得（プロキシ経由の場合はX-Forwarded-Forを優先）
-    let client_ip = request
-        .headers()
-        .get("X-Forwarded-For")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.split(',').next())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| addr.ip().to_string());
+    // クライアントIP取得（信頼できるプロキシ経由のみX-Forwarded-Forを使用）
+    let client_ip = get_client_ip(&addr, request.headers());
 
     // 決済エンドポイント専用のキー（通常のレート制限と分離）
     let key = format!("payment:{}", client_ip);

@@ -1,0 +1,25 @@
+app = "spirom"
+primary_region = "nrt"
+
+[build]
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  RUST_LOG = "info,spirom_api=info,tower_http=info"
+  ENVIRONMENT = "production"
+  # Fly.ioの内部ネットワークからのX-Forwarded-Forを信頼
+  TRUSTED_PROXY_IPS = "fdaa::"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

@@ -6,7 +6,11 @@ use axum::{
 
 use crate::config::AppState;
 use crate::handlers;
-use crate::middleware::{auth_middleware, admin_middleware, rate_limiter::payment_rate_limiter_middleware};
+use crate::middleware::{
+    auth_middleware, admin_middleware,
+    rate_limiter::payment_rate_limiter_middleware,
+    session::{session_signature_middleware, bff_proxy_token_middleware},
+};
 
 pub fn create_router(state: AppState) -> Router {
     let public_routes = Router::new()
@@ -45,8 +49,11 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/payments/intent", post(handlers::payments::create_payment_intent))
         .route("/api/v1/payments/confirm", post(handlers::payments::confirm_payment))
         .route("/api/v1/payments/refund", post(handlers::payments::create_refund))
+        // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 認証 → 決済レート制限）
         .layer(middleware::from_fn(payment_rate_limiter_middleware))
-        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
 
     let auth_routes = Router::new()
         // プロファイル作成（Supabase Auth登録後にusersテーブルに追加）
@@ -67,7 +74,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/orders/:id/cancel", post(handlers::orders::cancel_order))
         // レビュー（投稿は認証必要）
         .route("/api/v1/products/:id/reviews", post(handlers::reviews::create_review))
-        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
+        // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 認証）
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
 
     Router::new()
         .merge(public_routes)

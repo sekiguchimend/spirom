@@ -81,6 +81,8 @@ pub struct ResetPasswordRequest {
 pub struct Claims {
     pub sub: String,      // ユーザーID (UUID as string)
     #[serde(default)]
+    pub jti: Option<String>,   // JWT ID（トークンブラックリスト用）
+    #[serde(default)]
     pub email: Option<String>,
     #[serde(default)]
     pub role: Option<String>,  // "authenticated" | "anon"

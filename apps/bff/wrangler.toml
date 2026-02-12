@@ -20,6 +20,18 @@ SITE_URL = "http://localhost:3000"
 name = "spirom-bff"
 vars = { ENVIRONMENT = "production", API_BASE_URL = "https://spirom.fly.dev", SANITY_PROJECT_ID = "ef16j1jl", SANITY_DATASET = "production", SITE_URL = "https://spirom.com" }
 
+[[env.production.kv_namespaces]]
+binding = "CACHE"
+id = "86cb4f8aaa3649b890b5ad05e453dd34"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "6af4058e53654fd58e3f3098af5c2c52"
+
+[[env.production.r2_buckets]]
+binding = "ASSETS"
+bucket_name = "spirom-assets"
+
 # KV Namespaces
 [[kv_namespaces]]
 binding = "CACHE"

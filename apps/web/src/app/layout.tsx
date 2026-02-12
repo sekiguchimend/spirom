@@ -1,10 +1,6 @@
 import type { Metadata, Viewport } from "next";
-
-// SSGを無効化してランタイムレンダリングにする
-export const dynamic = 'force-dynamic';
 import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
-import { Header, Footer } from "@/components/layout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { safeJsonLd } from "@/lib/safeJsonLd";
 import { SITE_URL, SITE_NAME } from "@/lib/config";
@@ -186,11 +182,7 @@ export default function RootLayout({
           >
             メインコンテンツへスキップ
           </a>
-          <Header />
-          <main id="main-content" className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          {children}
         </AuthProvider>
       </body>
     </html>

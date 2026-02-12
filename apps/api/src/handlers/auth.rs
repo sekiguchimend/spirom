@@ -129,6 +129,7 @@ fn user_public_from_supabase(repo_user: Option<User>, supa: &SupabaseUser) -> Us
         email: supa.email.clone(),
         name,
         phone,
+        role: UserRole::User,
         is_verified: supa.email_confirmed_at.is_some(),
         created_at: supa.created_at.parse().unwrap_or_else(|_| Utc::now()),
     }

@@ -60,6 +60,7 @@ pub struct UserPublic {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
+    pub role: UserRole,
     pub is_verified: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -71,6 +72,7 @@ impl From<User> for UserPublic {
             email: u.email,
             name: u.name,
             phone: u.phone,
+            role: u.role,
             is_verified: u.is_verified,
             created_at: u.created_at,
         }

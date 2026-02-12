@@ -27,6 +27,8 @@ pub struct DatabaseConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
     pub secret: String,
+    pub issuer: String,            // Supabase project URL
+    pub audience: String,          // "authenticated"
     pub access_token_expiry: i64,  // 秒
     pub refresh_token_expiry: i64, // 秒
 }
@@ -60,6 +62,14 @@ impl Config {
             },
             jwt: JwtConfig {
                 secret: jwt_secret,
+                // issuerはSupabaseプロジェクトURL（末尾の/auth/v1を付与）
+                issuer: format!(
+                    "{}/auth/v1",
+                    std::env::var("SUPABASE_URL")
+                        .context("SUPABASE_URL must be set")?
+                        .trim_end_matches('/')
+                ),
+                audience: "authenticated".to_string(),
                 access_token_expiry: std::env::var("JWT_ACCESS_EXPIRY")
                     .unwrap_or_else(|_| "3600".to_string())
                     .parse()

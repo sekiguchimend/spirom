@@ -81,6 +81,21 @@ export interface CreateOrderRequest {
 }
 
 // ============================================
+// 商品バリアント（サイズ）関連
+// ============================================
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  size: string;
+  sku?: string;
+  stock: number;
+  price_adjustment: number;
+  sort_order: number;
+  is_active: boolean;
+}
+
+// ============================================
 // カート関連
 // ============================================
 
@@ -92,6 +107,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  variantId?: string;
+  size?: string;
 }
 
 // ============================================

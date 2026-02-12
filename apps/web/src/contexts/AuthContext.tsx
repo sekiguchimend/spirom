@@ -20,13 +20,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Supabase UserをアプリのUser型に変換
-function mapSupabaseUser(supabaseUser: SupabaseUser, profile?: { name?: string; phone?: string }): User {
+function mapSupabaseUser(supabaseUser: SupabaseUser, profile?: { name?: string; phone?: string; role?: string }): User {
   return {
     id: supabaseUser.id,
     email: supabaseUser.email || '',
     name: profile?.name || supabaseUser.user_metadata?.name || '',
     phone: profile?.phone || supabaseUser.user_metadata?.phone || null,
-    role: 'user',
+    role: profile?.role || 'customer',
     is_active: true,
     is_verified: supabaseUser.email_confirmed_at !== null,
     created_at: supabaseUser.created_at,
@@ -79,15 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    // セッション変更を監視
-    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(async (_event, newSession) => {
+    // セッション変更を監視（SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED のみ処理）
+    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(async (event, newSession) => {
+      // 初期化時のINITIAL_SESSIONは上で処理済みなのでスキップ
+      if (event === 'INITIAL_SESSION') return;
+
       setSession(newSession);
 
-      if (newSession?.user) {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // SIGNED_IN または TOKEN_REFRESHED の場合のみプロファイルを取得
+      if (newSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         const profile = await fetchProfile(newSession.user.id, newSession.access_token);
         setUser(mapSupabaseUser(newSession.user, profile));
-      } else {
-        setUser(null);
       }
 
       setIsLoading(false);
@@ -100,18 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ログイン
   const handleLogin = useCallback(async (email: string, password: string) => {
-    console.log('[Auth] ログイン試行:', { email });
-    console.log('[Auth] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-
     const { data, error } = await supabaseAuth.auth.signInWithPassword({
       email,
       password,
     });
 
-    console.log('[Auth] ログイン結果:', { data, error });
-
     if (error) {
-      console.error('[Auth] ログインエラー:', error);
       throw new Error(error.message);
     }
 
