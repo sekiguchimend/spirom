@@ -11,6 +11,9 @@ interface FetchOptions {
   requireAuth?: boolean;
 }
 
+// BFFプロキシトークン（サーバーサイドのみ）
+const BFF_PROXY_TOKEN = process.env.BFF_PROXY_TOKEN || '';
+
 async function serverFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const url = `${BFF_BASE_URL}${path}`;
 
@@ -18,6 +21,11 @@ async function serverFetch<T>(path: string, options: FetchOptions = {}): Promise
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  // BFFプロキシトークンを追加（Fly.io APIで必須）
+  if (BFF_PROXY_TOKEN) {
+    (headers as Record<string, string>)['X-BFF-Proxy-Token'] = BFF_PROXY_TOKEN;
+  }
 
   // サーバー側の認証状態は Supabase SSR セッションに一本化
   if (options.requireAuth !== false) {
