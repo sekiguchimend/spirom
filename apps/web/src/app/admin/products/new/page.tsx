@@ -173,7 +173,7 @@ export default function NewProductPage() {
                 onChange={handleChange}
                 onBlur={generateSlug}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="例: クラシックTシャツ"
               />
             </div>
@@ -186,7 +186,7 @@ export default function NewProductPage() {
                 value={formData.slug}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="例: classic-tshirt"
               />
             </div>
@@ -198,7 +198,7 @@ export default function NewProductPage() {
                 name="sku"
                 value={formData.sku}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="例: TSH-001"
               />
             </div>
@@ -210,7 +210,7 @@ export default function NewProductPage() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="商品の説明を入力..."
               />
             </div>
@@ -231,7 +231,7 @@ export default function NewProductPage() {
                 onChange={handleChange}
                 required
                 min="0"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="例: 3980"
               />
             </div>
@@ -244,7 +244,7 @@ export default function NewProductPage() {
                 value={formData.compare_at_price}
                 onChange={handleChange}
                 min="0"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="例: 4980 (セール前価格)"
               />
             </div>
@@ -272,7 +272,7 @@ export default function NewProductPage() {
                   <select
                     value={variant.size}
                     onChange={(e) => handleVariantChange(index, 'size', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
                   >
                     {SIZES.map(size => (
                       <option key={size} value={size}>{size}</option>
@@ -286,7 +286,7 @@ export default function NewProductPage() {
                     value={variant.stock}
                     onChange={(e) => handleVariantChange(index, 'stock', parseInt(e.target.value) || 0)}
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
                   />
                 </div>
                 <div className="flex-1">
@@ -295,7 +295,7 @@ export default function NewProductPage() {
                     type="number"
                     value={variant.price_adjustment}
                     onChange={(e) => handleVariantChange(index, 'price_adjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
                     placeholder="例: 500"
                   />
                 </div>
@@ -350,7 +350,7 @@ export default function NewProductPage() {
                       type="url"
                       value={image}
                       onChange={(e) => handleImageChange(index, e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                       placeholder="https://example.com/image.jpg または YouTube/Vimeo URL"
                     />
                   </div>
@@ -419,7 +419,7 @@ export default function NewProductPage() {
                 name="tags"
                 value={formData.tags}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
                 placeholder="例: new, sale, popular"
               />
             </div>

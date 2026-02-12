@@ -104,14 +104,14 @@ export default function AdminUsersPage() {
                     <select
                       value={user.role}
                       onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-bold border-0 ${
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold border-0 cursor-pointer ${
                         user.role === 'admin'
                           ? 'bg-purple-100 text-purple-700'
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      <option value="customer">customer</option>
-                      <option value="admin">admin</option>
+                      <option value="customer" className="text-gray-700 bg-white">customer</option>
+                      <option value="admin" className="text-purple-700 bg-white">admin</option>
                     </select>
                   </td>
                   <td className="px-6 py-4">

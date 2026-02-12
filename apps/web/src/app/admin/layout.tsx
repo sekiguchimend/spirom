@@ -121,7 +121,7 @@ export default function AdminLayout({
       </aside>
 
       {/* メインコンテンツ */}
-      <main className="ml-64 min-h-screen">
+      <main className="ml-64 min-h-screen text-gray-900">
         {children}
       </main>
     </div>
