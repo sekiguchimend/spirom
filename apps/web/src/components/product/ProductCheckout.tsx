@@ -23,12 +23,15 @@ interface Product {
 interface ProductCheckoutProps {
   product: Product;
   quantity: number;
+  size?: string;
+  variantId?: string;
   onClose: () => void;
 }
 
 export default function ProductCheckout({
   product,
   quantity,
+  variantId,
   onClose,
 }: ProductCheckoutProps) {
   const { user, isLoading: authLoading } = useAuth();
@@ -94,6 +97,7 @@ export default function ProductCheckout({
         {
           product_id: product.id,
           quantity: quantity,
+          variant_id: variantId,
         },
       ];
 
