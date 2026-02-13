@@ -261,6 +261,31 @@ impl ProductRepository {
         let query = format!("id=eq.{}", id);
         self.client.delete("product_variants", &query).await
     }
+
+    /// 商品のバリアント一括削除
+    pub async fn delete_variants_by_product(&self, product_id: Uuid) -> Result<()> {
+        let query = format!("product_id=eq.{}", product_id);
+        self.client.delete("product_variants", &query).await
+    }
+
+    /// 商品がorder_itemsに含まれているか確認
+    pub async fn has_order_items(&self, product_id: Uuid) -> Result<bool> {
+        #[derive(Debug, Deserialize)]
+        struct CountResult {
+            #[allow(dead_code)]
+            id: Uuid,
+        }
+
+        let query = format!("product_id=eq.{}&limit=1", product_id);
+        let results: Vec<CountResult> = self.client.select("order_items", &query).await?;
+        Ok(!results.is_empty())
+    }
+
+    /// 商品をカートから削除
+    pub async fn delete_cart_items_by_product(&self, product_id: Uuid) -> Result<()> {
+        let query = format!("product_id=eq.{}", product_id);
+        self.client.delete("cart_items", &query).await
+    }
 }
 
 // Supabase REST API用の構造体

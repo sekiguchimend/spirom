@@ -108,6 +108,24 @@ pub async fn delete_product(
         .await?
         .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
 
+    // 注文履歴に含まれているか確認
+    // 注文履歴がある場合は削除せず、非公開にすることを推奨
+    let has_orders = product_repo.has_order_items(id).await?;
+    if has_orders {
+        return Err(AppError::BadRequest(
+            format!(
+                "商品「{}」は注文履歴に含まれているため削除できません。代わりに非公開（is_active=false）にすることをお勧めします。",
+                product.name
+            )
+        ));
+    }
+
+    // カートから商品を削除（カートは一時的なものなので削除可能）
+    product_repo.delete_cart_items_by_product(id).await?;
+
+    // バリアントを先に削除
+    product_repo.delete_variants_by_product(id).await?;
+
     // 商品を削除
     product_repo.delete(id).await?;
 
