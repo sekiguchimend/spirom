@@ -379,3 +379,93 @@ pub async fn list_orders_admin(
 
     Ok(Json(DataResponse::new(orders)))
 }
+
+/// 注文詳細取得（管理者専用）
+/// RLSポリシーで管理者のみ閲覧可能
+pub async fn get_order_admin(
+    State(state): State<AppState>,
+    Extension(token): Extension<String>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<DataResponse<Order>>> {
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
+
+    let order = order_repo
+        .find_by_id(id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+    Ok(Json(DataResponse::new(order)))
+}
+
+/// ステータス更新リクエスト
+#[derive(Debug, serde::Deserialize)]
+pub struct UpdateOrderStatusRequest {
+    pub status: String,
+}
+
+/// 注文ステータス更新（管理者専用）
+/// RLSポリシーで管理者のみ更新可能
+pub async fn update_order_status_admin(
+    State(state): State<AppState>,
+    Extension(token): Extension<String>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateOrderStatusRequest>,
+) -> Result<Json<DataResponse<Order>>> {
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
+
+    // 注文を取得
+    let order = order_repo
+        .find_by_id(id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+    // ステータスをパース
+    let new_status: OrderStatus = req.status.parse()
+        .map_err(|_| AppError::BadRequest("無効なステータスです".to_string()))?;
+
+    // ステータス遷移のバリデーション
+    validate_status_transition(&order.status, &new_status)?;
+
+    // ステータス更新
+    order_repo.update_status(id, order.user_id, new_status.clone(), order.created_at.timestamp()).await?;
+
+    // 発送・配達日時の更新
+    if new_status == OrderStatus::Shipped && order.shipped_at.is_none() {
+        order_repo.update_shipped_at(id).await?;
+    }
+    if new_status == OrderStatus::Delivered && order.delivered_at.is_none() {
+        order_repo.update_delivered_at(id).await?;
+    }
+
+    // 更新後の注文を取得
+    let updated_order = order_repo
+        .find_by_id(id)
+        .await?
+        .ok_or_else(|| AppError::Internal("注文の再取得に失敗しました".to_string()))?;
+
+    Ok(Json(DataResponse::new(updated_order)))
+}
+
+/// ステータス遷移のバリデーション
+fn validate_status_transition(current: &OrderStatus, next: &OrderStatus) -> Result<()> {
+    use OrderStatus::*;
+
+    // 許可される遷移を定義
+    let valid = match current {
+        PendingPayment => matches!(next, Paid | Cancelled),
+        Paid => matches!(next, Processing | Cancelled | Refunded),
+        Processing => matches!(next, Shipped | Cancelled | Refunded),
+        Shipped => matches!(next, Delivered | Refunded),
+        Delivered => matches!(next, Refunded),
+        Cancelled | Refunded => false, // 終了状態からは遷移不可
+    };
+
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "{}から{}への遷移はできません",
+            current, next
+        )))
+    }
+}

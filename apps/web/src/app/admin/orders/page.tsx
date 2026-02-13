@@ -17,16 +17,18 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: '処理待ち', color: 'bg-yellow-100 text-yellow-700' },
-  confirmed: { label: '確認済み', color: 'bg-blue-100 text-blue-700' },
+  pending_payment: { label: '支払い待ち', color: 'bg-yellow-100 text-yellow-700' },
+  paid: { label: '支払い完了', color: 'bg-green-100 text-green-700' },
   processing: { label: '処理中', color: 'bg-blue-100 text-blue-700' },
   shipped: { label: '発送済み', color: 'bg-purple-100 text-purple-700' },
   delivered: { label: '配達完了', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'キャンセル', color: 'bg-red-100 text-red-700' },
+  refunded: { label: '返金済み', color: 'bg-gray-100 text-gray-700' },
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: '未払い', color: 'bg-yellow-100 text-yellow-700' },
+  succeeded: { label: '支払済', color: 'bg-green-100 text-green-700' },
   paid: { label: '支払済', color: 'bg-green-100 text-green-700' },
   failed: { label: '失敗', color: 'bg-red-100 text-red-700' },
   refunded: { label: '返金済', color: 'bg-gray-100 text-gray-700' },
@@ -36,6 +38,11 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -58,7 +65,9 @@ export default function AdminOrdersPage() {
     ? orders
     : orders.filter(o => o.status === statusFilter);
 
+  // ハイドレーションエラー防止: マウント後のみ日付をフォーマット
   const formatDate = (dateString: string) => {
+    if (!isMounted) return '';
     return new Date(dateString).toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
@@ -81,7 +90,7 @@ export default function AdminOrdersPage() {
       <div className="bg-white rounded-2xl p-4 shadow-sm mb-6">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-bold text-gray-600 mr-2">ステータス:</span>
-          {['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+          {['all', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}

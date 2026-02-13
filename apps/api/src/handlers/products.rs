@@ -95,6 +95,11 @@ pub async fn get_featured_products(
 /// 商品削除（管理者専用）
 /// 注: admin_middlewareで管理者権限チェック済み
 /// RLSポリシーで管理者のみ削除可能
+///
+/// 外部キー制約:
+/// - order_items: ON DELETE SET NULL（注文履歴は保持、product_idがNULLになる）
+/// - cart_items: ON DELETE CASCADE（カートから自動削除）
+/// - product_variants: ON DELETE CASCADE（バリアントも自動削除）
 pub async fn delete_product(
     State(state): State<AppState>,
     Extension(token): Extension<String>,
@@ -108,25 +113,7 @@ pub async fn delete_product(
         .await?
         .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
 
-    // 注文履歴に含まれているか確認
-    // 注文履歴がある場合は削除せず、非公開にすることを推奨
-    let has_orders = product_repo.has_order_items(id).await?;
-    if has_orders {
-        return Err(AppError::BadRequest(
-            format!(
-                "商品「{}」は注文履歴に含まれているため削除できません。代わりに非公開（is_active=false）にすることをお勧めします。",
-                product.name
-            )
-        ));
-    }
-
-    // カートから商品を削除（カートは一時的なものなので削除可能）
-    product_repo.delete_cart_items_by_product(id).await?;
-
-    // バリアントを先に削除
-    product_repo.delete_variants_by_product(id).await?;
-
-    // 商品を削除
+    // 商品を削除（外部キー制約でcart_items/variantsはCASCADE削除、order_itemsはSET NULL）
     product_repo.delete(id).await?;
 
     Ok(Json(serde_json::json!({

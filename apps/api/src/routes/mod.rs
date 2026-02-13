@@ -102,6 +102,8 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/admin/users/:id", patch(handlers::users::update_user_admin))
         // 注文管理
         .route("/api/v1/admin/orders", get(handlers::orders::list_orders_admin))
+        .route("/api/v1/admin/orders/:id", get(handlers::orders::get_order_admin))
+        .route("/api/v1/admin/orders/:id/status", patch(handlers::orders::update_order_status_admin))
         // 商品管理
         .route("/api/v1/admin/products", post(handlers::products::create_product))
         .route("/api/v1/admin/products/:id", put(handlers::products::update_product))
