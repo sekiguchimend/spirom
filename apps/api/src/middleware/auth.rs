@@ -8,7 +8,7 @@ use axum::{
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 
 use crate::config::{AppState, JwtConfig};
-use crate::db::repositories::TokenBlacklistRepository;
+use crate::db::repositories::{TokenBlacklistRepository, UserRepository};
 use crate::error::AppError;
 use crate::models::{AuthenticatedUser, Claims, UserRole};
 
@@ -86,7 +86,7 @@ pub async fn admin_middleware(
 
     let claims = validate_supabase_token(&token, &state.config.jwt)?;
 
-    let user: AuthenticatedUser = claims.clone().try_into()
+    let mut user: AuthenticatedUser = claims.clone().try_into()
         .map_err(|e: &str| AppError::Unauthorized(e.to_string()))?;
 
     // トークンブラックリストをチェック
@@ -101,6 +101,19 @@ pub async fn admin_middleware(
     if blacklist_repo.is_user_blacklisted(user.id).await.unwrap_or(false) {
         return Err(AppError::Unauthorized("再ログインが必要です".to_string()));
     }
+
+    // データベースから実際のロールを取得（JWTメタデータではなくDBを信頼）
+    // ユーザー自身のトークンでクエリ（RLSを通す）
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
+    let db_user = user_repo.find_by_id(user.id).await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch user for admin check: {}", e);
+            AppError::Internal("ユーザー情報の取得に失敗しました".to_string())
+        })?
+        .ok_or_else(|| AppError::Unauthorized("ユーザーが見つかりません".to_string()))?;
+
+    // DBから取得したロールで上書き
+    user.role = db_user.role;
 
     if user.role != UserRole::Admin {
         return Err(AppError::Forbidden("管理者権限が必要です".to_string()));

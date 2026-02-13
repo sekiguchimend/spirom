@@ -368,10 +368,12 @@ pub async fn cancel_order(
 // ========== 管理者専用エンドポイント ==========
 
 /// 全注文一覧取得（管理者専用）
+/// RLSポリシーで管理者のみ全注文閲覧可能
 pub async fn list_orders_admin(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
 ) -> Result<Json<DataResponse<Vec<OrderSummary>>>> {
-    let order_repo = OrderRepository::new(state.db.service());
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     let orders = order_repo.find_all(100).await?;
 

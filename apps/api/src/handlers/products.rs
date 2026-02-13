@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
-    Json,
+    Extension, Json,
 };
 use chrono::Utc;
 use uuid::Uuid;
@@ -94,12 +94,13 @@ pub async fn get_featured_products(
 
 /// 商品削除（管理者専用）
 /// 注: admin_middlewareで管理者権限チェック済み
-/// RLSポリシーをバイパスするためservice_roleを使用
+/// RLSポリシーで管理者のみ削除可能
 pub async fn delete_product(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>> {
-    let product_repo = ProductRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.with_auth(&token));
 
     // 商品が存在するか確認
     let product = product_repo
@@ -121,9 +122,10 @@ pub async fn delete_product(
 /// 商品作成（管理者専用）
 pub async fn create_product(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Json(req): Json<AdminCreateProductRequest>,
 ) -> Result<Json<DataResponse<Product>>> {
-    let product_repo = ProductRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.with_auth(&token));
 
     let now = Utc::now();
     let product = Product {
@@ -156,10 +158,11 @@ pub async fn create_product(
 /// 商品更新（管理者専用）
 pub async fn update_product(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
     Json(req): Json<AdminUpdateProductRequest>,
 ) -> Result<Json<DataResponse<Product>>> {
-    let product_repo = ProductRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.with_auth(&token));
 
     // 商品が存在するか確認
     product_repo
@@ -205,10 +208,11 @@ pub async fn list_variants(
 /// バリアント一括作成（管理者専用）
 pub async fn create_variants(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
     Json(req): Json<CreateVariantsRequest>,
 ) -> Result<Json<DataResponse<Vec<ProductVariant>>>> {
-    let product_repo = ProductRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.with_auth(&token));
 
     // 商品が存在するか確認
     product_repo
@@ -247,10 +251,11 @@ pub async fn create_variants(
 /// バリアント更新（管理者専用）
 pub async fn update_variant(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Path((product_id, variant_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<UpdateVariantRequest>,
 ) -> Result<Json<DataResponse<ProductVariant>>> {
-    let product_repo = ProductRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.with_auth(&token));
 
     // 商品が存在するか確認
     product_repo
@@ -277,9 +282,10 @@ pub async fn update_variant(
 /// バリアント削除（管理者専用）
 pub async fn delete_variant(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Path((product_id, variant_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<serde_json::Value>> {
-    let product_repo = ProductRepository::new(state.db.service());
+    let product_repo = ProductRepository::new(state.db.with_auth(&token));
 
     // 商品が存在するか確認
     product_repo

@@ -275,10 +275,12 @@ pub async fn delete_address(
 // ========== 管理者専用エンドポイント ==========
 
 /// ユーザー一覧取得（管理者専用）
+/// RLSポリシーで管理者のみ全ユーザー閲覧可能
 pub async fn list_users_admin(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
 ) -> Result<Json<DataResponse<Vec<UserPublic>>>> {
-    let user_repo = UserRepository::new(state.db.service());
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     let users = user_repo.find_all(100).await?;
     let users_public: Vec<UserPublic> = users.into_iter().map(UserPublic::from).collect();
@@ -293,12 +295,14 @@ pub struct UpdateUserRoleRequest {
 }
 
 /// ユーザー情報更新（管理者専用）
+/// RLSポリシーで管理者のみ更新可能
 pub async fn update_user_admin(
     State(state): State<AppState>,
+    Extension(token): Extension<String>,
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateUserRoleRequest>,
 ) -> Result<Json<DataResponse<UserPublic>>> {
-    let user_repo = UserRepository::new(state.db.service());
+    let user_repo = UserRepository::new(state.db.with_auth(&token));
 
     let mut user = user_repo
         .find_by_id(id)

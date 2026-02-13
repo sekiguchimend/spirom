@@ -1,7 +1,7 @@
 use axum::{
     extract::{ConnectInfo, State, Query},
     http::HeaderMap,
-    Json,
+    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -125,7 +125,8 @@ struct ContactUpdate {
 /// - レート制限（ミドルウェアで適用）
 pub async fn submit_contact(
     State(state): State<AppState>,
-    axum::Extension(auth_user): axum::Extension<AuthenticatedUser>,
+    Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(req): Json<ContactSubmissionRequest>,
@@ -141,7 +142,8 @@ pub async fn submit_contact(
     }
 
     // 3. 認証済みユーザーの情報をDBから取得（リクエストボディを信用しない）
-    let db = state.db.service();
+    // RLSポリシーで本人のみ閲覧可能
+    let db = state.db.with_auth(&token);
     let user_info: Option<UserInfo> = db
         .select_single("users", &format!("id=eq.{}&select=name,email", auth_user.id))
         .await
@@ -185,7 +187,7 @@ pub async fn submit_contact(
                 elapsed
             );
             // 疑わしいが、一応保存はする（status: spam）
-            let _ = save_submission(&state, &auth_user.id, &user_name, &user_email, &req, &addr, &headers, "spam").await;
+            let _ = save_submission(&state, &token, &auth_user.id, &user_name, &user_email, &req, &addr, &headers, "spam").await;
             return Ok(Json(ContactSubmissionResponse {
                 success: true,
                 message: "お問い合わせを受け付けました。".to_string(),
@@ -249,6 +251,7 @@ pub async fn submit_contact(
 /// スパム判定時の保存
 async fn save_submission(
     state: &AppState,
+    token: &str,
     user_id: &Uuid,
     user_name: &str,
     user_email: &str,
@@ -263,7 +266,8 @@ async fn save_submission(
         .and_then(|h| h.to_str().ok())
         .map(|s| s.chars().take(500).collect::<String>());
 
-    let db = state.db.service();
+    // RLSポリシーで認証ユーザーのINSERTを許可
+    let db = state.db.with_auth(token);
 
     let insert_data = ContactInsert {
         id: Uuid::new_v4().to_string(),
@@ -290,12 +294,13 @@ async fn save_submission(
 }
 
 /// お問い合わせ一覧取得（管理者専用）
+/// RLSポリシーで管理者のみ閲覧可能
 pub async fn list_contacts(
     State(state): State<AppState>,
-    _auth_user: axum::Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     Query(query): Query<ListContactQuery>,
 ) -> Result<Json<Vec<ContactSubmission>>> {
-    let db = state.db.service();
+    let db = state.db.with_auth(&token);
 
     let limit = query.limit.unwrap_or(50).min(100);
     let offset = query.offset.unwrap_or(0);
@@ -319,15 +324,16 @@ pub async fn list_contacts(
 }
 
 /// お問い合わせ詳細取得（管理者専用）
+/// RLSポリシーで管理者のみ閲覧可能
 pub async fn get_contact(
     State(state): State<AppState>,
-    _auth_user: axum::Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Result<Json<ContactSubmission>> {
     // UUIDバリデーション
     Uuid::parse_str(&id).map_err(|_| AppError::BadRequest("無効なIDです".to_string()))?;
 
-    let db = state.db.service();
+    let db = state.db.with_auth(&token);
 
     let submission: Option<ContactSubmission> = db
         .select_single("contact_submissions", &format!("id=eq.{}&select=*", id))
@@ -340,9 +346,10 @@ pub async fn get_contact(
 }
 
 /// ステータス更新（管理者専用）
+/// RLSポリシーで管理者のみ更新可能
 pub async fn update_contact_status(
     State(state): State<AppState>,
-    _auth_user: axum::Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
     axum::extract::Path(id): axum::extract::Path<String>,
     Json(req): Json<UpdateStatusRequest>,
 ) -> Result<Json<ContactSubmission>> {
@@ -355,7 +362,7 @@ pub async fn update_contact_status(
         return Err(AppError::BadRequest("無効なステータスです".to_string()));
     }
 
-    let db = state.db.service();
+    let db = state.db.with_auth(&token);
 
     // ステータスに応じてタイムスタンプを設定
     let read_at = if req.status == "read" {
