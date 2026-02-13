@@ -8,3 +8,4 @@ pub mod orders;
 pub mod reviews;
 pub mod payments;
 pub mod mfa;
+pub mod contact;

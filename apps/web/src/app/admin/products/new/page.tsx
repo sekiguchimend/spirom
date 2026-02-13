@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'FREE'];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'FREE'];
 
 interface VariantInput {
   size: string;

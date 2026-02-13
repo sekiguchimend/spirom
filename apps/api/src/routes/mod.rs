@@ -1,6 +1,6 @@
 use axum::{
     middleware,
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post, put},
     Router,
 };
 
@@ -8,7 +8,7 @@ use crate::config::AppState;
 use crate::handlers;
 use crate::middleware::{
     auth_middleware, admin_middleware,
-    rate_limiter::payment_rate_limiter_middleware,
+    rate_limiter::{payment_rate_limiter_middleware, contact_rate_limiter_middleware},
     session::{session_signature_middleware, bff_proxy_token_middleware},
 };
 
@@ -26,6 +26,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/products", get(handlers::products::list_products))
         .route("/api/v1/products/featured", get(handlers::products::get_featured_products))
         .route("/api/v1/products/:slug", get(handlers::products::get_product))
+        .route("/api/v1/products/:slug/variants", get(handlers::products::list_variants))
         // カテゴリ（公開）
         .route("/api/v1/categories", get(handlers::categories::list_categories))
         .route("/api/v1/categories/tree", get(handlers::categories::get_category_tree))
@@ -42,6 +43,15 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/products/:id/reviews/stats", get(handlers::reviews::get_review_stats))
         // Webhook（公開：署名検証あり）
         .route("/api/v1/webhooks/stripe", post(handlers::payments::handle_webhook));
+
+    // お問い合わせルート（認証必須、専用レート制限）
+    // スパム対策: 1IPあたり1時間に5回まで
+    let contact_routes = Router::new()
+        .route("/api/v1/contact", post(handlers::contact::submit_contact))
+        .layer(middleware::from_fn(contact_rate_limiter_middleware))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
 
     // 決済ルート（認証 + 専用レート制限）
     // カードテスティング攻撃対策: 1IPあたり60秒間に5回まで
@@ -87,8 +97,23 @@ pub fn create_router(state: AppState) -> Router {
 
     // 管理者専用ルート
     let admin_routes = Router::new()
+        // ユーザー管理
+        .route("/api/v1/admin/users", get(handlers::users::list_users_admin))
+        .route("/api/v1/admin/users/:id", patch(handlers::users::update_user_admin))
+        // 注文管理
+        .route("/api/v1/admin/orders", get(handlers::orders::list_orders_admin))
         // 商品管理
+        .route("/api/v1/admin/products", post(handlers::products::create_product))
+        .route("/api/v1/admin/products/:id", put(handlers::products::update_product))
         .route("/api/v1/admin/products/:id", delete(handlers::products::delete_product))
+        // バリアント管理
+        .route("/api/v1/admin/products/:id/variants", post(handlers::products::create_variants))
+        .route("/api/v1/admin/products/:id/variants/:variant_id", put(handlers::products::update_variant))
+        .route("/api/v1/admin/products/:id/variants/:variant_id", delete(handlers::products::delete_variant))
+        // お問い合わせ管理
+        .route("/api/v1/admin/contacts", get(handlers::contact::list_contacts))
+        .route("/api/v1/admin/contacts/:id", get(handlers::contact::get_contact))
+        .route("/api/v1/admin/contacts/:id", put(handlers::contact::update_contact_status))
         // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 認証 → 管理者権限）
         .layer(middleware::from_fn_with_state(state.clone(), admin_middleware))
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
@@ -97,6 +122,7 @@ pub fn create_router(state: AppState) -> Router {
 
     Router::new()
         .merge(public_routes)
+        .merge(contact_routes)
         .merge(payment_routes)
         .merge(auth_routes)
         .merge(admin_routes)

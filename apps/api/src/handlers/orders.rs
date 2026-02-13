@@ -364,3 +364,16 @@ pub async fn cancel_order(
 
     Ok(Json(DataResponse::new(updated_order)))
 }
+
+// ========== 管理者専用エンドポイント ==========
+
+/// 全注文一覧取得（管理者専用）
+pub async fn list_orders_admin(
+    State(state): State<AppState>,
+) -> Result<Json<DataResponse<Vec<OrderSummary>>>> {
+    let order_repo = OrderRepository::new(state.db.service());
+
+    let orders = order_repo.find_all(100).await?;
+
+    Ok(Json(DataResponse::new(orders)))
+}

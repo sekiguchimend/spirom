@@ -271,3 +271,49 @@ pub async fn delete_address(
 
     Ok(Json(serde_json::json!({ "message": "住所を削除しました" })))
 }
+
+// ========== 管理者専用エンドポイント ==========
+
+/// ユーザー一覧取得（管理者専用）
+pub async fn list_users_admin(
+    State(state): State<AppState>,
+) -> Result<Json<DataResponse<Vec<UserPublic>>>> {
+    let user_repo = UserRepository::new(state.db.service());
+
+    let users = user_repo.find_all(100).await?;
+    let users_public: Vec<UserPublic> = users.into_iter().map(UserPublic::from).collect();
+
+    Ok(Json(DataResponse::new(users_public)))
+}
+
+/// ユーザーロール更新リクエスト
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserRoleRequest {
+    pub role: String,
+}
+
+/// ユーザー情報更新（管理者専用）
+pub async fn update_user_admin(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateUserRoleRequest>,
+) -> Result<Json<DataResponse<UserPublic>>> {
+    let user_repo = UserRepository::new(state.db.service());
+
+    let mut user = user_repo
+        .find_by_id(id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("ユーザーが見つかりません".to_string()))?;
+
+    // ロール更新
+    user.role = match req.role.as_str() {
+        "admin" => UserRole::Admin,
+        "customer" | "user" => UserRole::User,
+        _ => return Err(AppError::BadRequest("無効なロールです".to_string())),
+    };
+    user.updated_at = Utc::now();
+
+    user_repo.update(&user).await?;
+
+    Ok(Json(DataResponse::new(UserPublic::from(user))))
+}

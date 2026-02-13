@@ -110,6 +110,7 @@ impl OrderRepository {
                     id: order.id,
                     order_number: order.order_number,
                     status: order.status.parse().unwrap_or_default(),
+                    payment_status: serde_json::from_str(&order.payment_status).unwrap_or_default(),
                     total: order.total,
                     currency: order.currency,
                     item_count,
@@ -221,6 +222,47 @@ impl OrderRepository {
 
         let _: Vec<OrderRow> = self.client.update("orders", &query, &update).await?;
         Ok(())
+    }
+
+    /// 全注文取得（管理者用）
+    pub async fn find_all(&self, limit: i32) -> Result<Vec<OrderSummary>> {
+        let query = format!("order=created_at.desc&limit={}", limit);
+        let orders: Vec<OrderRow> = self.client.select("orders", &query).await?;
+
+        if orders.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // アイテム数を取得
+        let order_ids: Vec<String> = orders.iter().map(|o| o.id.to_string()).collect();
+        let item_query = format!("order_id=in.({})", order_ids.join(","));
+        let items: Vec<OrderItemWithOrderId> = self.client.select("order_items", &item_query).await?;
+
+        let mut item_counts: std::collections::HashMap<Uuid, i32> = std::collections::HashMap::new();
+        for item in items {
+            *item_counts.entry(item.order_id).or_insert(0) += 1;
+        }
+
+        let summaries = orders
+            .into_iter()
+            .map(|order| {
+                let item_count = item_counts.get(&order.id).copied().unwrap_or(0);
+                OrderSummary {
+                    id: order.id,
+                    order_number: order.order_number,
+                    status: order.status.parse().unwrap_or_default(),
+                    payment_status: serde_json::from_str(&order.payment_status).unwrap_or_default(),
+                    total: order.total,
+                    currency: order.currency,
+                    item_count,
+                    created_at: order.created_at,
+                    shipped_at: order.shipped_at,
+                    delivered_at: order.delivered_at,
+                }
+            })
+            .collect();
+
+        Ok(summaries)
     }
 }
 

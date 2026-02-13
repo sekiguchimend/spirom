@@ -156,3 +156,107 @@ pub enum ProductSortField {
     #[default]
     CreatedAt,
 }
+
+/// 商品バリアント（サイズ別在庫）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductVariant {
+    pub id: Uuid,
+    pub product_id: Uuid,
+    pub size: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sku: Option<String>,
+    pub stock: i32,
+    pub price_adjustment: i64,
+    pub sort_order: i32,
+    pub is_active: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_length: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shoulder_width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sleeve_length: Option<i32>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// バリアント作成リクエスト（単一）
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateVariantInput {
+    pub size: String,
+    pub stock: i32,
+    #[serde(default)]
+    pub price_adjustment: i64,
+    #[serde(default)]
+    pub sort_order: i32,
+    #[serde(default = "default_true")]
+    pub is_active: bool,
+    pub body_length: Option<i32>,
+    pub body_width: Option<i32>,
+    pub shoulder_width: Option<i32>,
+    pub sleeve_length: Option<i32>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+/// バリアント一括作成リクエスト
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateVariantsRequest {
+    pub variants: Vec<CreateVariantInput>,
+}
+
+/// バリアント更新リクエスト
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateVariantRequest {
+    pub stock: Option<i32>,
+    pub price_adjustment: Option<i64>,
+    pub is_active: Option<bool>,
+    pub body_length: Option<i32>,
+    pub body_width: Option<i32>,
+    pub shoulder_width: Option<i32>,
+    pub sleeve_length: Option<i32>,
+}
+
+/// 商品作成リクエスト（管理者用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdminCreateProductRequest {
+    pub name: String,
+    pub slug: String,
+    #[serde(default)]
+    pub description: String,
+    pub price: i64,
+    pub compare_at_price: Option<i64>,
+    pub category_id: Option<Uuid>,
+    #[serde(default)]
+    pub images: Vec<String>,
+    #[serde(default)]
+    pub stock: i32,
+    #[serde(default)]
+    pub sku: String,
+    pub weight: Option<i32>,
+    #[serde(default = "default_true")]
+    pub is_active: bool,
+    #[serde(default)]
+    pub is_featured: bool,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+/// 商品更新リクエスト（管理者用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdminUpdateProductRequest {
+    pub name: Option<String>,
+    pub slug: Option<String>,
+    pub description: Option<String>,
+    pub price: Option<i64>,
+    pub compare_at_price: Option<i64>,
+    pub stock: Option<i32>,
+    pub is_active: Option<bool>,
+    pub is_featured: Option<bool>,
+    pub product_type: Option<String>,
+    pub material: Option<String>,
+    pub material_detail: Option<String>,
+}

@@ -96,6 +96,13 @@ impl UserRepository {
         let _: Vec<UserRow> = self.client.update("users", &query, &update).await?;
         Ok(())
     }
+
+    /// 全ユーザー取得（管理者用）
+    pub async fn find_all(&self, limit: i32) -> Result<Vec<User>> {
+        let query = format!("order=created_at.desc&limit={}", limit);
+        let results: Vec<UserRow> = self.client.select("users", &query).await?;
+        Ok(results.into_iter().map(|r| r.into_user()).collect())
+    }
 }
 
 // 住所リポジトリ

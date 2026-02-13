@@ -118,25 +118,6 @@ export default async function AccountPage() {
                   <path d="m9 18 6-6-6-6"/>
                 </svg>
               </Link>
-
-              <Link
-                href={ROUTES.ACCOUNT.SECURITY}
-                className="flex items-center gap-4 p-4 bg-bg-light rounded-xl hover:bg-primary/5 transition-colors group"
-              >
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-text-dark">セキュリティ設定</p>
-                  <p className="text-xs text-gray-500">二要素認証（2FA）の設定</p>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m9 18 6-6-6-6"/>
-                </svg>
-              </Link>
             </div>
           </div>
 

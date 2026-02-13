@@ -19,7 +19,6 @@ export const ROUTES = {
     ADDRESSES: '/account/addresses',
     NEW_ADDRESS: '/account/addresses/new',
     EDIT_ADDRESS: (id: string) => `/account/addresses/${id}/edit`,
-    SECURITY: '/account/security',
   },
 
   // 商品

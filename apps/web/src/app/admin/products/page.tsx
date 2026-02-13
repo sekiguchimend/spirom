@@ -151,7 +151,7 @@ export default function AdminProductsPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Link
-                        href={`/admin/products/${product.id}`}
+                        href={`/admin/products/${product.slug}`}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                         title="編集"
                       >

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   ShoppingCart,
   Tag,
@@ -11,12 +13,10 @@ import {
   Clock,
   Zap,
   BookOpen,
-  Instagram,
-  Twitter,
-  MessageSquare,
   Check,
   ArrowLeft,
   ArrowRight,
+  AlertCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -35,27 +35,87 @@ const inquiryTypes: InquiryType[] = [
 ];
 
 export default function ContactPage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  // name/emailはサーバー側でユーザー情報から取得するため、フォームには含めない
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
     type: '',
     orderNumber: '',
     message: '',
+    website: '', // ハニーポットフィールド（ボット検出用）
   });
+  const [formRenderedAt, setFormRenderedAt] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 認証チェック
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login?redirect=/contact');
+    }
+  }, [user, authLoading, router]);
+
+  // フォーム表示時刻を記録（ボット検出用）
+  useEffect(() => {
+    setFormRenderedAt(Date.now());
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    setError(null);
+
+    try {
+      // name/emailはサーバー側で認証ユーザー情報から取得するため送信しない
+      const response = await fetch('/api/v1/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inquiry_type: formData.type,
+          order_number: formData.orderNumber.trim() || null,
+          message: formData.message.trim(),
+          website: formData.website, // ハニーポット
+          form_rendered_at: formRenderedAt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // レート制限エラー
+        if (response.status === 429) {
+          throw new Error('お問い合わせの送信回数が上限に達しました。しばらくしてから再度お試しください。');
+        }
+        // その他のエラー
+        throw new Error(data.error?.message || data.message || '送信に失敗しました。');
+      }
+
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '送信に失敗しました。しばらくしてから再度お試しください。');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  // 認証確認中のローディング
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-[#FFFFF5] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-bold">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
@@ -118,42 +178,35 @@ export default function ContactPage() {
               onSubmit={handleSubmit}
               className="bg-white border-4 border-black rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
             >
-              {/* お名前 */}
-              <div className="mb-6">
-                <label htmlFor="name" className="block font-black text-sm uppercase tracking-wider mb-2 text-black">
-                  NAME <span className="text-[#ff2d78]" aria-hidden="true">*</span>
-                  <span className="sr-only">（必須）</span>
-                </label>
+              {/* エラーメッセージ */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border-3 border-red-500 rounded-xl flex items-start gap-3">
+                  <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700 font-bold text-sm">{error}</p>
+                </div>
+              )}
+
+              {/* ハニーポットフィールド（ボット検出用 - 非表示） */}
+              <div className="absolute -left-[9999px]" aria-hidden="true">
+                <label htmlFor="website">Website</label>
                 <input
-                  id="name"
                   type="text"
-                  name="name"
-                  value={formData.name}
+                  id="website"
+                  name="website"
+                  value={formData.website}
                   onChange={handleChange}
-                  required
-                  autoComplete="name"
-                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
-                  placeholder="山田 太郎"
+                  tabIndex={-1}
+                  autoComplete="off"
                 />
               </div>
 
-              {/* メール */}
-              <div className="mb-6">
-                <label htmlFor="email" className="block font-black text-sm uppercase tracking-wider mb-2 text-black">
-                  EMAIL <span className="text-[#ff2d78]" aria-hidden="true">*</span>
-                  <span className="sr-only">（必須）</span>
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  autoComplete="email"
-                  className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
-                  placeholder="your@email.com"
-                />
+              {/* ログインユーザー情報（読み取り専用） */}
+              <div className="mb-6 p-4 bg-gray-50 border-3 border-gray-300 rounded-xl">
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">
+                  LOGGED IN AS
+                </p>
+                <p className="font-bold text-black">{user.name || '名前未設定'}</p>
+                <p className="text-sm text-gray-600">{user.email}</p>
               </div>
 
               {/* お問い合わせ種別 */}
@@ -195,6 +248,7 @@ export default function ContactPage() {
                   name="orderNumber"
                   value={formData.orderNumber}
                   onChange={handleChange}
+                  maxLength={50}
                   className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="SP-XXXX-XXXX"
                 />
@@ -212,16 +266,21 @@ export default function ContactPage() {
                   value={formData.message}
                   onChange={handleChange}
                   required
+                  minLength={10}
+                  maxLength={5000}
                   rows={5}
                   className="w-full px-4 py-3 bg-white border-3 border-black rounded-xl font-medium text-black resize-none focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow"
                   placeholder="お問い合わせ内容をお書きください..."
                 />
+                <p className="text-xs text-gray-400 mt-1 text-right">
+                  {formData.message.length} / 5000
+                </p>
               </div>
 
               {/* 送信ボタン */}
               <button
                 type="submit"
-                disabled={isSubmitting || !formData.type}
+                disabled={isSubmitting || !formData.type || formData.message.length < 10}
                 className="w-full py-4 bg-black text-white font-black text-xl uppercase tracking-wider border-4 border-black rounded-xl shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] hover:shadow-[8px_8px_0px_0px_rgba(125,255,58,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[5px_5px_0px_0px_rgba(125,255,58,1)] disabled:hover:translate-x-0 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? 'SENDING...' : (
@@ -285,29 +344,12 @@ export default function ContactPage() {
               </Link>
             </div>
 
-            {/* SNS */}
+            {/* SNS - リンク削除（空のリンクは良くないため） */}
             <div className="bg-[#323232] text-white border-4 border-black rounded-2xl p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
               <h2 className="font-black text-lg uppercase mb-4 text-center">FOLLOW US</h2>
-              <div className="flex justify-center gap-4">
-                <a
-                  href="#"
-                  className="w-12 h-12 rounded-full border-3 border-white flex items-center justify-center hover:scale-110 transition-transform bg-[#ff2d78]"
-                >
-                  <Instagram size={24} strokeWidth={2} />
-                </a>
-                <a
-                  href="#"
-                  className="w-12 h-12 rounded-full border-3 border-white flex items-center justify-center hover:scale-110 transition-transform bg-[#00d4ff]"
-                >
-                  <Twitter size={24} strokeWidth={2} />
-                </a>
-                <a
-                  href="#"
-                  className="w-12 h-12 rounded-full border-3 border-white flex items-center justify-center hover:scale-110 transition-transform bg-[#7dff3a]"
-                >
-                  <MessageSquare size={24} strokeWidth={2} />
-                </a>
-              </div>
+              <p className="text-sm text-center text-gray-300">
+                Coming soon...
+              </p>
             </div>
           </aside>
         </div>

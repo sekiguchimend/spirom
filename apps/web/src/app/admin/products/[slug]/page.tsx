@@ -44,7 +44,7 @@ Printstar ヘビーウェイトTシャツ`,
 export default function AdminProductDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const productId = (params?.id as string) || '';
+  const productSlug = (params?.slug as string) || '';
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +69,7 @@ export default function AdminProductDetailPage() {
     async function fetchProduct() {
       try {
         // 商品情報取得
-        const res = await fetch(`/api/v1/products/${productId}`);
+        const res = await fetch(`/api/v1/products/${productSlug}`);
         if (!res.ok) throw new Error('商品が見つかりません');
         const data = await res.json();
         const prod = data.data || data;
@@ -87,7 +87,7 @@ export default function AdminProductDetailPage() {
         });
 
         // バリアント取得
-        const varRes = await fetch(`/api/v1/products/${productId}/variants`);
+        const varRes = await fetch(`/api/v1/products/${productSlug}/variants`);
         if (varRes.ok) {
           const varData = await varRes.json();
           setVariants(varData.data || []);
@@ -99,7 +99,7 @@ export default function AdminProductDetailPage() {
       }
     }
     fetchProduct();
-  }, [productId]);
+  }, [productSlug]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -111,10 +111,14 @@ export default function AdminProductDetailPage() {
   };
 
   const handleSave = async () => {
+    if (!product?.id) {
+      setError('商品IDが見つかりません');
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/admin/products/${productId}`, {
+      const res = await fetch(`/api/v1/admin/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -144,8 +148,9 @@ export default function AdminProductDetailPage() {
   };
 
   const handleVariantStockChange = async (variantId: string, newStock: number) => {
+    if (!product?.id) return;
     try {
-      const res = await fetch(`/api/v1/admin/products/${productId}/variants/${variantId}`, {
+      const res = await fetch(`/api/v1/admin/products/${product.id}/variants/${variantId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: newStock }),
@@ -197,7 +202,7 @@ export default function AdminProductDetailPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-black text-gray-900">商品編集</h1>
-            <p className="text-gray-500 text-sm">ID: {productId}</p>
+            <p className="text-gray-500 text-sm">Slug: {productSlug}</p>
           </div>
         </div>
         <button

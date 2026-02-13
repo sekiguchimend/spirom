@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::db::AuthenticatedClient;
 use crate::error::{AppError, Result};
-use crate::models::{CategorySummary, Product, ProductSummary};
+use crate::models::{CategorySummary, Product, ProductSummary, ProductVariant};
 
 pub struct ProductRepository {
     client: AuthenticatedClient,
@@ -201,6 +201,66 @@ impl ProductRepository {
         let query = format!("id=eq.{}", id);
         self.client.delete("products", &query).await
     }
+
+    /// 商品更新
+    pub async fn update(&self, id: Uuid, updates: &ProductUpdateInput) -> Result<Product> {
+        let query = format!("id=eq.{}", id);
+        let results: Vec<ProductRow> = self.client.update("products", &query, updates).await?;
+        results
+            .into_iter()
+            .next()
+            .map(|r| r.into_product())
+            .ok_or_else(|| crate::error::AppError::NotFound("商品が見つかりません".to_string()))
+    }
+
+    // ========== バリアント関連 ==========
+
+    /// 商品のバリアント一覧取得
+    pub async fn find_variants_by_product(&self, product_id: Uuid) -> Result<Vec<ProductVariant>> {
+        let query = format!("product_id=eq.{}&order=sort_order.asc", product_id);
+        let rows: Vec<VariantRow> = self.client.select("product_variants", &query).await?;
+        Ok(rows.into_iter().map(|r| r.into_variant()).collect())
+    }
+
+    /// バリアント作成
+    pub async fn create_variant(&self, variant: &ProductVariant) -> Result<ProductVariant> {
+        let input = VariantInput {
+            id: variant.id,
+            product_id: variant.product_id,
+            size: variant.size.clone(),
+            sku: variant.sku.clone(),
+            stock: variant.stock,
+            price_adjustment: variant.price_adjustment,
+            sort_order: variant.sort_order,
+            is_active: variant.is_active,
+            body_length: variant.body_length,
+            body_width: variant.body_width,
+            shoulder_width: variant.shoulder_width,
+            sleeve_length: variant.sleeve_length,
+            created_at: variant.created_at,
+            updated_at: variant.updated_at,
+        };
+
+        let result: VariantRow = self.client.insert("product_variants", &input).await?;
+        Ok(result.into_variant())
+    }
+
+    /// バリアント更新
+    pub async fn update_variant(&self, id: Uuid, updates: &VariantUpdateInput) -> Result<ProductVariant> {
+        let query = format!("id=eq.{}", id);
+        let results: Vec<VariantRow> = self.client.update("product_variants", &query, updates).await?;
+        results
+            .into_iter()
+            .next()
+            .map(|r| r.into_variant())
+            .ok_or_else(|| crate::error::AppError::NotFound("バリアントが見つかりません".to_string()))
+    }
+
+    /// バリアント削除
+    pub async fn delete_variant(&self, id: Uuid) -> Result<()> {
+        let query = format!("id=eq.{}", id);
+        self.client.delete("product_variants", &query).await
+    }
 }
 
 // Supabase REST API用の構造体
@@ -373,6 +433,106 @@ impl ProductSummaryWithCategory {
             images: self.images,
             is_active: self.is_active,
             category,
+        }
+    }
+}
+
+/// 商品更新用入力
+#[derive(Debug, Serialize)]
+pub struct ProductUpdateInput {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub price: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub compare_at_price: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stock: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_featured: Option<bool>,
+    pub updated_at: DateTime<Utc>,
+}
+
+// ========== バリアント関連の構造体 ==========
+
+#[derive(Debug, Serialize)]
+struct VariantInput {
+    id: Uuid,
+    product_id: Uuid,
+    size: String,
+    sku: Option<String>,
+    stock: i32,
+    price_adjustment: i64,
+    sort_order: i32,
+    is_active: bool,
+    body_length: Option<i32>,
+    body_width: Option<i32>,
+    shoulder_width: Option<i32>,
+    sleeve_length: Option<i32>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct VariantUpdateInput {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stock: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub price_adjustment: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_length: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shoulder_width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sleeve_length: Option<i32>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+struct VariantRow {
+    id: Uuid,
+    product_id: Uuid,
+    size: String,
+    sku: Option<String>,
+    stock: i32,
+    price_adjustment: i64,
+    sort_order: i32,
+    is_active: bool,
+    body_length: Option<i32>,
+    body_width: Option<i32>,
+    shoulder_width: Option<i32>,
+    sleeve_length: Option<i32>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl VariantRow {
+    fn into_variant(self) -> ProductVariant {
+        ProductVariant {
+            id: self.id,
+            product_id: self.product_id,
+            size: self.size,
+            sku: self.sku,
+            stock: self.stock,
+            price_adjustment: self.price_adjustment,
+            sort_order: self.sort_order,
+            is_active: self.is_active,
+            body_length: self.body_length,
+            body_width: self.body_width,
+            shoulder_width: self.shoulder_width,
+            sleeve_length: self.sleeve_length,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
         }
     }
 }
