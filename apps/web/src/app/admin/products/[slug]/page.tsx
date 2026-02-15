@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import type { ProductVariant } from '@/types';
 import MediaUploader from '@/components/admin/MediaUploader';
@@ -42,7 +42,6 @@ Printstar ヘビーウェイトTシャツ`,
 };
 
 export default function AdminProductDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const productSlug = (params?.slug as string) || '';
   const [product, setProduct] = useState<Product | null>(null);

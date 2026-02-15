@@ -63,7 +63,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.supabase.co",
+        hostname: "**.supabase.co",
       },
     ],
     formats: ['image/avif', 'image/webp'],
