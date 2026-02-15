@@ -65,6 +65,9 @@ pub struct ContactSubmission {
     pub replied_at: Option<String>,
 }
 
+/// 有効なステータス値
+const VALID_STATUSES: [&str; 5] = ["unread", "read", "replied", "resolved", "spam"];
+
 /// 一覧取得クエリパラメータ
 #[derive(Debug, Deserialize)]
 pub struct ListContactQuery {
@@ -312,6 +315,10 @@ pub async fn list_contacts(
     );
 
     if let Some(status) = &query.status {
+        // SQLインジェクション対策: ホワイトリストによるバリデーション
+        if !VALID_STATUSES.contains(&status.as_str()) {
+            return Err(AppError::BadRequest("無効なステータスです".to_string()));
+        }
         query_str.push_str(&format!("&status=eq.{}", status));
     }
 

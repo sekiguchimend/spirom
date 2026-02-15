@@ -12,6 +12,7 @@ use crate::db::repositories::{OrderRepository, ProductRepository};
 use crate::error::{AppError, Result};
 use crate::models::{
     AuthenticatedUser, DataResponse, OrderStatus, PaymentStatus, UserRole,
+    hash_guest_token,
 };
 use crate::services::payment::{
     CreateIntentParams, PaymentProvider, ShippingAddress, StripePaymentProvider, WebhookEventType,
@@ -66,7 +67,7 @@ pub async fn create_payment_intent(
         .await?
         .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
 
-    if order.user_id != auth_user.id {
+    if order.user_id != Some(auth_user.id) {
         return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
     }
 
@@ -78,15 +79,17 @@ pub async fn create_payment_intent(
     let age_seconds = (chrono::Utc::now() - order.created_at).num_seconds();
     if age_seconds > max_age_seconds {
         // 期限切れは自動キャンセルして在庫を解放（Webhook到達前提の業務フローを避ける）
-        let service_order_repo = OrderRepository::new(state.db.service());
+        // 在庫操作はRPCベースなのでservice_role（クライアント直叩き防止）
         let product_repo = ProductRepository::new(state.db.service());
         let release_items: Vec<(Uuid, i32)> =
             order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
         let _ = product_repo.release_stock_bulk(&release_items).await;
-        let _ = service_order_repo
-            .update_status(order.id, order.user_id, OrderStatus::Cancelled, order.created_at.timestamp_millis())
+        // 注文更新はRPC関数を使用（anon + SECURITY DEFINER）
+        // ※64-72行目でuser_id検証済みなので、ここまで到達するのは正当なユーザーのみ
+        let anon_order_repo = OrderRepository::new(state.db.anonymous());
+        let _ = anon_order_repo
+            .update_order_from_webhook_rpc(order.id, None, Some("cancelled"), Some("\"failed\""))
             .await;
-        let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Failed).await;
 
         return Err(AppError::BadRequest("この注文は有効期限切れです。再度ご注文ください。".to_string()));
     }
@@ -138,8 +141,112 @@ pub async fn create_payment_intent(
     })?;
 
     // 注文にPaymentIntent IDを紐付け（同一注文の二重生成を防ぐ）
-    let service_order_repo = OrderRepository::new(state.db.service());
-    service_order_repo.update_payment_id(order.id, order.user_id, &payment_intent.id).await?;
+    // RPC関数を使用（anon + SECURITY DEFINER）
+    // ※64-72行目でuser_id検証済みなので、ここまで到達するのは正当なユーザーのみ
+    let anon_order_repo = OrderRepository::new(state.db.anonymous());
+    anon_order_repo.update_order_from_webhook_rpc(order.id, Some(&payment_intent.id), None, None).await?;
+
+    Ok(Json(DataResponse::new(CreatePaymentIntentResponse {
+        client_secret: payment_intent.client_secret,
+        payment_intent_id: payment_intent.id,
+        order_id: order.id,
+    })))
+}
+
+/// ゲスト用PaymentIntent作成リクエスト
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateGuestPaymentIntentRequest {
+    pub order_id: Uuid,
+    pub guest_token: String,
+}
+
+/// ゲスト用PaymentIntent作成（認証不要、トークンで認可）
+pub async fn create_payment_intent_guest(
+    State(state): State<AppState>,
+    Json(req): Json<CreateGuestPaymentIntentRequest>,
+) -> Result<Json<DataResponse<CreatePaymentIntentResponse>>> {
+    req.validate()?;
+
+    // トークンをハッシュ化してゲスト注文を取得（anon + RPC関数で認可）
+    let token_hash = hash_guest_token(&req.guest_token);
+    let order_repo = OrderRepository::new(state.db.anonymous());
+    let order = order_repo
+        .find_by_guest_token_rpc(&token_hash, req.order_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+    // ゲスト注文であることを確認
+    if !order.is_guest_order {
+        return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
+    }
+
+    // 期限切れチェック
+    let max_age_seconds: i64 = std::env::var("PAYMENT_INTENT_MAX_AGE_SECONDS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1800);
+    let age_seconds = (chrono::Utc::now() - order.created_at).num_seconds();
+    if age_seconds > max_age_seconds {
+        // 期限切れは自動キャンセルして在庫を解放（在庫操作はRPCベースなのでservice_role）
+        let product_repo = ProductRepository::new(state.db.service());
+        let release_items: Vec<(uuid::Uuid, i32)> =
+            order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
+        let _ = product_repo.release_stock_bulk(&release_items).await;
+        // ステータス更新はRPC関数（トークン検証付き）
+        let _ = order_repo
+            .update_guest_order_status_rpc(order.id, &token_hash, "cancelled", Some("\"failed\""))
+            .await;
+
+        return Err(AppError::BadRequest("この注文は有効期限切れです。再度ご注文ください。".to_string()));
+    }
+
+    if order.status != OrderStatus::PendingPayment || order.payment_status != PaymentStatus::Pending {
+        return Err(AppError::BadRequest("この注文は決済できません".to_string()));
+    }
+
+    // Stripe PaymentIntent作成
+    let stripe_key = std::env::var("STRIPE_SECRET_KEY")
+        .map_err(|_| AppError::Internal("Stripe APIキーが設定されていません".to_string()))?;
+    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secrets = std::env::var("STRIPE_WEBHOOK_SECRETS").ok();
+
+    let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
+
+    // metadataに最小限の注文情報のみを含める
+    let mut metadata = std::collections::HashMap::new();
+    metadata.insert("order_id".to_string(), order.id.to_string());
+    metadata.insert("is_guest_order".to_string(), "true".to_string());
+
+    // Stripe用の配送先住所情報を作成
+    let stripe_shipping_address = ShippingAddress {
+        name: order.shipping_address.name.clone(),
+        postal_code: order.shipping_address.postal_code.clone(),
+        prefecture: order.shipping_address.prefecture.clone(),
+        city: order.shipping_address.city.clone(),
+        address_line1: order.shipping_address.address_line1.clone(),
+        address_line2: order.shipping_address.address_line2.clone(),
+        phone: order.shipping_address.phone.clone(),
+    };
+
+    let params = CreateIntentParams {
+        order_id: order.id,
+        amount: order.total,
+        currency: "JPY".to_string(),
+        customer_email: order.guest_email.clone().unwrap_or_default(),
+        customer_name: Some(order.shipping_address.name.clone()),
+        description: Some(format!("SPIROM 注文 {}", order.order_number)),
+        metadata: Some(metadata),
+        shipping_address: Some(stripe_shipping_address),
+        idempotency_key: Some(format!("pi_order_{}", order.id)),
+    };
+
+    let payment_intent = payment_provider.create_intent(params).await.map_err(|e| {
+        tracing::error!("PaymentIntent作成エラー: {}", e);
+        AppError::Internal("決済の初期化に失敗しました。しばらくしてから再試行してください。".to_string())
+    })?;
+
+    // 注文にPaymentIntent IDを紐付け（RPC関数でトークン検証付き）
+    order_repo.update_guest_order_payment_id_rpc(order.id, &token_hash, &payment_intent.id).await?;
 
     Ok(Json(DataResponse::new(CreatePaymentIntentResponse {
         client_secret: payment_intent.client_secret,
@@ -173,10 +280,11 @@ pub async fn handle_webhook(
         .verify_webhook(&body, signature)
         .map_err(|e| AppError::BadRequest(format!("Webhook検証に失敗しました: {}", e)))?;
 
-    // WebhookはStripeからのリクエストなので、service_roleを使用
-    let db = state.db.service();
+    // anon key + SECURITY DEFINER関数を使用（service_roleを使わない）
+    let db = state.db.anonymous();
     let order_repo = OrderRepository::new(db.clone());
-    let product_repo = ProductRepository::new(db.clone());
+    // 在庫操作はRPCベースなのでservice_role（クライアント直叩き防止）
+    let product_repo = ProductRepository::new(state.db.service());
 
     // ---- 冪等性: Stripe Event ID を保存して多重実行を防ぐ ----
     let payload_summary = stripe_event_summary(&event);
@@ -224,7 +332,7 @@ pub async fn handle_webhook(
                 .ok_or_else(|| AppError::BadRequest("注文IDが見つかりません".to_string()))?;
 
             let order = order_repo
-                .find_by_id(order_id)
+                .find_by_id_for_webhook(order_id)
                 .await?
                 .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
 
@@ -246,18 +354,15 @@ pub async fn handle_webhook(
                 );
 
                 // 自動返金（安全側に倒す）
-                // Webhookは同期で重くしない：レスポンス返却後に非同期で実行
                 let refund_provider = payment_provider.clone();
                 let payment_id = event.payment_id.clone();
                 tokio::spawn(async move {
                     let _ = refund_provider.refund(&payment_id, None).await;
                 });
 
-                // 注文キャンセル扱い + 在庫復旧（後続でRPC化する）
-                order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
-                order_repo.update_payment_status(order_id, PaymentStatus::Failed).await?;
+                // 注文キャンセル扱い + 在庫復旧（RPC関数で更新）
                 order_repo
-                    .update_status(order_id, order.user_id, OrderStatus::Cancelled, order.created_at.timestamp_millis())
+                    .update_order_from_webhook_rpc(order_id, Some(&event.payment_id), Some("cancelled"), Some("\"failed\""))
                     .await?;
 
                 // 在庫復旧（原子操作 / best-effort）
@@ -268,20 +373,19 @@ pub async fn handle_webhook(
                 return Ok(StatusCode::OK);
             }
 
-            order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
-            order_repo.update_payment_status(order_id, PaymentStatus::Paid).await?;
+            // 決済成功（RPC関数で更新）
             order_repo
-                .update_status(order_id, order.user_id, OrderStatus::Paid, order.created_at.timestamp_millis())
+                .update_order_from_webhook_rpc(order_id, Some(&event.payment_id), Some("paid"), Some("\"paid\""))
                 .await?;
         }
         WebhookEventType::PaymentFailed => {
             if let Some(order_id) = event.order_id {
-                if let Some(order) = order_repo.find_by_id(order_id).await? {
+                if let Some(order) = order_repo.find_by_id_for_webhook(order_id).await? {
                     tracing::warn!("決済失敗Webhook: order_id={}, payment_id={}", order_id, event.payment_id);
-                    order_repo.update_payment_id(order_id, order.user_id, &event.payment_id).await?;
-                    order_repo.update_payment_status(order_id, PaymentStatus::Failed).await?;
+
+                    // 注文キャンセル（RPC関数で更新）
                     order_repo
-                        .update_status(order_id, order.user_id, OrderStatus::Cancelled, order.created_at.timestamp_millis())
+                        .update_order_from_webhook_rpc(order_id, Some(&event.payment_id), Some("cancelled"), Some("\"failed\""))
                         .await?;
 
                     // 在庫復旧（原子操作 / best-effort）
@@ -295,9 +399,9 @@ pub async fn handle_webhook(
         }
         WebhookEventType::RefundSucceeded => {
             if let Some(order_id) = event.order_id {
-                // 返金完了状態に更新
+                // 返金完了状態に更新（RPC関数）
                 order_repo
-                    .update_payment_status(order_id, PaymentStatus::Refunded)
+                    .update_order_from_webhook_rpc(order_id, None, Some("refunded"), Some("\"refunded\""))
                     .await?;
 
                 tracing::info!(
@@ -370,7 +474,7 @@ pub struct CreateRefundRequest {
 pub async fn create_refund(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
-    Extension(_token): Extension<String>,
+    Extension(token): Extension<String>,
     Json(req): Json<CreateRefundRequest>,
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;
@@ -380,8 +484,8 @@ pub async fn create_refund(
         return Err(AppError::Forbidden("返金には管理者権限が必要です".to_string()));
     }
 
-    // 管理者はservice roleで全注文にアクセス可能
-    let order_repo = OrderRepository::new(state.db.service());
+    // 管理者JWTでアクセス（RLSポリシー is_admin() で許可）
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     // 注文取得
     let order = order_repo
@@ -391,7 +495,7 @@ pub async fn create_refund(
 
     // 管理者は全ての注文を返金可能（user_idチェック不要）
     tracing::info!(
-        "Admin refund initiated: admin_id={}, order_user_id={}, order_id={}",
+        "Admin refund initiated: admin_id={}, order_user_id={:?}, order_id={}",
         auth_user.id,
         order.user_id,
         order.id

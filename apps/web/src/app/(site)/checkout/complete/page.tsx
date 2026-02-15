@@ -3,9 +3,11 @@ import type { Metadata } from 'next';
 import { ROUTES } from '@/lib/routes';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getServerOrder, isAuthenticated } from '@/lib/server-api';
+import { getGuestOrderAction } from '@/lib/actions';
 import { OrderProgress } from '@/components/orders/OrderProgress';
 import { getOrderStatusBadgeClass, getOrderStatusLabel } from '@/lib/orderStatus';
 import { ClearLocalCart } from './ClearLocalCart';
+import type { Order } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,14 +19,28 @@ export const metadata: Metadata = {
 export default async function CheckoutCompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ order_id?: string }>;
+  searchParams: Promise<{ order_id?: string; guest?: string; token?: string }>;
 }) {
-  const { order_id: orderId } = await searchParams;
+  const { order_id: orderId, guest, token: guestToken } = await searchParams;
+  const isGuestOrder = guest === 'true' && guestToken;
 
-  // middleware で /checkout/:path* は保護されているが、念のためここでも防御的に扱う
-  const authed = await isAuthenticated();
+  let order: Order | null = null;
 
-  const order = authed && orderId ? await getServerOrder(orderId) : null;
+  if (orderId) {
+    if (isGuestOrder && guestToken) {
+      // ゲスト注文の場合
+      const result = await getGuestOrderAction(orderId, guestToken);
+      if (result.success && result.data) {
+        order = result.data;
+      }
+    } else {
+      // 認証済みユーザーの場合
+      const authed = await isAuthenticated();
+      if (authed) {
+        order = await getServerOrder(orderId);
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg-light pt-24 pb-14 px-4 sm:px-6 lg:px-8">
@@ -68,6 +84,14 @@ export default async function CheckoutCompletePage({
           <p className="text-sm text-gray-600 mt-2">
             決済が完了しました。ご注文内容をご確認ください。
           </p>
+          <p className="text-sm text-primary font-bold mt-2">
+            お届けまで約2週間かかります。
+          </p>
+          {isGuestOrder && (
+            <p className="text-xs text-gray-500 mt-2">
+              ゲスト購入でご注文いただきました
+            </p>
+          )}
         </div>
 
         {/* 本文カード */}
@@ -88,7 +112,9 @@ export default async function CheckoutCompletePage({
               <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 mb-6">
                 <p className="font-bold text-text-dark">注文内容を読み込めませんでした</p>
                 <p className="text-sm text-gray-700 mt-1">
-                  しばらくしてから「注文履歴」でご確認ください。
+                  {isGuestOrder
+                    ? 'ゲスト注文のリンクが無効または期限切れです。'
+                    : 'しばらくしてから「注文履歴」でご確認ください。'}
                 </p>
               </div>
             )}
@@ -117,6 +143,17 @@ export default async function CheckoutCompletePage({
                     </div>
                   </div>
                 </div>
+
+                {/* ゲスト注文の場合の案内 */}
+                {isGuestOrder && guestToken && (
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                    <p className="font-bold text-text-dark text-sm">注文確認リンク</p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      このページのURLをブックマークしておくと、後から注文状況を確認できます。
+                      リンクの有効期限は7日間です。
+                    </p>
+                  </div>
+                )}
 
                 {/* 進捗 */}
                 <OrderProgress order={order} />
@@ -189,15 +226,21 @@ export default async function CheckoutCompletePage({
 
             {/* CTA */}
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link
-                href={ROUTES.ORDERS.INDEX}
-                className="flex-1 px-6 py-3 text-sm font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-sm text-center"
-              >
-                注文履歴へ
-              </Link>
+              {!isGuestOrder && (
+                <Link
+                  href={ROUTES.ORDERS.INDEX}
+                  className="flex-1 px-6 py-3 text-sm font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-sm text-center"
+                >
+                  注文履歴へ
+                </Link>
+              )}
               <Link
                 href={ROUTES.PRODUCTS.INDEX}
-                className="flex-1 px-6 py-3 text-sm font-bold border-2 border-gray-200 text-text-dark rounded-xl hover:bg-gray-50 transition-colors text-center"
+                className={`${isGuestOrder ? 'flex-1' : 'flex-1'} px-6 py-3 text-sm font-bold ${
+                  isGuestOrder
+                    ? 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+                    : 'border-2 border-gray-200 text-text-dark hover:bg-gray-50'
+                } rounded-xl transition-colors text-center`}
               >
                 買い物を続ける
               </Link>
@@ -212,5 +255,3 @@ export default async function CheckoutCompletePage({
     </div>
   );
 }
-
-

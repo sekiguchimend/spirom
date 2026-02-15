@@ -12,9 +12,10 @@ use crate::db::repositories::{CartRepository, OrderRepository, ProductRepository
 use crate::error::{AppError, Result};
 use crate::middleware::generate_session_id;
 use crate::models::{
-    AuthenticatedUser, CreateOrderRequest, DataResponse, Order, OrderAddress, OrderItem,
+    AuthenticatedUser, CreateOrderRequest, CreateGuestOrderRequest, DataResponse, Order, OrderAddress, OrderItem,
     OrderStatus, OrderSummary, PaginatedResponse, PaymentStatus,
     calculate_shipping_fee, calculate_tax, generate_order_number,
+    generate_guest_access_token, guest_token_expiry, hash_guest_token,
 };
 use crate::services::payment::{PaymentProvider, StripePaymentProvider};
 use crate::handlers::users::ensure_user_profile;
@@ -156,7 +157,7 @@ pub async fn create_order(
     // 注文作成
     let order = Order {
         id: Uuid::new_v4(),
-        user_id: auth_user.id,
+        user_id: Some(auth_user.id),
         order_number: generate_order_number(),
         status: OrderStatus::PendingPayment,
         items: order_items,
@@ -176,6 +177,13 @@ pub async fn create_order(
         updated_at: now,
         shipped_at: None,
         delivered_at: None,
+        // 認証済みユーザーの注文はゲスト注文ではない
+        is_guest_order: false,
+        guest_email: None,
+        guest_name: None,
+        guest_phone: None,
+        guest_access_token_hash: None,
+        guest_token_expires_at: None,
     };
 
     // 在庫を原子的に確保（同時購入で在庫マイナスになるのを防ぐ）
@@ -226,7 +234,7 @@ pub async fn get_order(
         .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
 
     // 自分の注文かチェック
-    if order.user_id != auth_user.id {
+    if order.user_id != Some(auth_user.id) {
         return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
     }
 
@@ -242,7 +250,9 @@ pub async fn get_order(
                 let payment_provider = StripePaymentProvider::new(stripe_key, webhook_secret, webhook_secrets);
 
                 if let Ok(pi) = payment_provider.retrieve_intent(&payment_id).await {
-                    let service_order_repo = OrderRepository::new(state.db.service());
+                    // anon + RPC関数で更新（service_roleを使わない）
+                    let reconcile_order_repo = OrderRepository::new(state.db.anonymous());
+                    // 在庫操作はRPCベースなのでservice_role
                     let product_repo = ProductRepository::new(state.db.service());
 
                     match pi.status {
@@ -259,43 +269,38 @@ pub async fn get_order(
                                     order.currency
                                 );
 
-                                // 返金は非同期で（同期を重くしない）
+                                // 返金は非同期で
                                 let refund_provider = payment_provider.clone();
                                 let pid = payment_id.clone();
                                 tokio::spawn(async move {
                                     let _ = refund_provider.refund(&pid, None).await;
                                 });
 
-                                let updated = service_order_repo
-                                    .update_status_if_current(order.id, OrderStatus::PendingPayment, OrderStatus::Cancelled)
+                                // RPC関数で更新（ステータス遷移チェック付き）
+                                let updated = reconcile_order_repo
+                                    .update_order_from_webhook_rpc(order.id, None, Some("cancelled"), Some("\"failed\""))
                                     .await
                                     .unwrap_or(false);
                                 if updated {
-                                    let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Failed).await;
                                     // 在庫復旧
                                     let release_items: Vec<(Uuid, i32)> =
                                         order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
                                     let _ = product_repo.release_stock_bulk(&release_items).await;
                                 }
                             } else {
-                                // 正常確定
-                                let updated = service_order_repo
-                                    .update_status_if_current(order.id, OrderStatus::PendingPayment, OrderStatus::Paid)
-                                    .await
-                                    .unwrap_or(false);
-                                if updated {
-                                    let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Paid).await;
-                                }
+                                // 正常確定（RPC関数で更新）
+                                let _ = reconcile_order_repo
+                                    .update_order_from_webhook_rpc(order.id, None, Some("paid"), Some("\"paid\""))
+                                    .await;
                             }
                         }
                         crate::services::payment::PaymentResultStatus::Failed => {
-                            // 失敗確定 -> キャンセル + 在庫復旧
-                            let updated = service_order_repo
-                                .update_status_if_current(order.id, OrderStatus::PendingPayment, OrderStatus::Cancelled)
+                            // 失敗確定 -> キャンセル + 在庫復旧（RPC関数で更新）
+                            let updated = reconcile_order_repo
+                                .update_order_from_webhook_rpc(order.id, None, Some("cancelled"), Some("\"failed\""))
                                 .await
                                 .unwrap_or(false);
                             if updated {
-                                let _ = service_order_repo.update_payment_status(order.id, PaymentStatus::Failed).await;
                                 let release_items: Vec<(Uuid, i32)> =
                                     order.items.iter().map(|i| (i.product_id, i.quantity)).collect();
                                 let _ = product_repo.release_stock_bulk(&release_items).await;
@@ -336,7 +341,7 @@ pub async fn cancel_order(
         .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
 
     // 自分の注文かチェック
-    if order.user_id != auth_user.id {
+    if order.user_id != Some(auth_user.id) {
         return Err(AppError::Forbidden("この注文にアクセスする権限がありません".to_string()));
     }
 
@@ -468,4 +473,197 @@ fn validate_status_transition(current: &OrderStatus, next: &OrderStatus) -> Resu
             current, next
         )))
     }
+}
+
+// ========== ゲスト注文エンドポイント ==========
+
+/// ゲスト注文作成レスポンス
+#[derive(Debug, serde::Serialize)]
+pub struct CreateGuestOrderResponse {
+    pub order: Order,
+    pub guest_access_token: String,
+}
+
+/// ゲスト注文作成（認証不要）
+pub async fn create_guest_order(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<CreateGuestOrderRequest>,
+) -> Result<Json<DataResponse<CreateGuestOrderResponse>>> {
+    req.validate()?;
+
+    let session_id = headers
+        .get("X-Session-ID")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_else(generate_session_id);
+
+    // ゲスト注文は anon key で作成（RLSポリシー orders_insert_guest で許可）
+    // 在庫操作のみ service_role を使用
+    let db_anon = state.db.anonymous();
+    let db_service = state.db.service();
+    let cart_repo = CartRepository::new(db_service.clone());
+    let product_repo = ProductRepository::new(db_service.clone());
+    let order_repo = OrderRepository::new(db_anon);
+
+    // リクエストボディのitemsを優先的に使用、なければカートから取得
+    let source_items = if let Some(ref items) = req.items {
+        if items.is_empty() {
+            return Err(AppError::BadRequest("注文アイテムが指定されていません".to_string()));
+        }
+        for item in items {
+            item.validate()?;
+        }
+        items.clone()
+    } else {
+        // カートから取得
+        let cart = cart_repo.find_by_session(&session_id).await?;
+        if cart.items.is_empty() {
+            return Err(AppError::BadRequest("カートが空です".to_string()));
+        }
+        cart.items
+            .iter()
+            .map(|item| crate::models::OrderItemRequest {
+                product_id: item.product_id,
+                quantity: item.quantity,
+            })
+            .collect()
+    };
+
+    // 在庫確認と注文アイテム作成
+    let product_ids: Vec<_> = source_items.iter().map(|i| i.product_id).collect();
+    let products = product_repo.find_by_ids(&product_ids).await?;
+
+    let mut order_items = Vec::new();
+    let mut subtotal = 0i64;
+    let mut stock_reserve_items: Vec<(Uuid, i32)> = Vec::new();
+
+    for item_req in &source_items {
+        let product = products
+            .get(&item_req.product_id)
+            .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
+
+        if !product.is_active {
+            return Err(AppError::BadRequest(format!(
+                "「{}」は現在販売されていません",
+                product.name
+            )));
+        }
+
+        if product.stock < item_req.quantity {
+            return Err(AppError::BadRequest(format!(
+                "「{}」の在庫が不足しています",
+                product.name
+            )));
+        }
+
+        let item_price = product.price;
+        let item_subtotal = item_price * item_req.quantity as i64;
+        subtotal += item_subtotal;
+
+        order_items.push(OrderItem {
+            product_id: product.id,
+            product_name: product.name.clone(),
+            product_sku: product.sku.clone(),
+            price: item_price,
+            quantity: item_req.quantity,
+            subtotal: item_subtotal,
+            image_url: product.images.first().cloned(),
+        });
+
+        stock_reserve_items.push((product.id, item_req.quantity));
+    }
+
+    // 金額計算
+    let shipping_fee = calculate_shipping_fee(subtotal);
+    let tax = calculate_tax(subtotal);
+    let total = subtotal + shipping_fee + tax;
+
+    let now = Utc::now();
+
+    // ゲストアクセストークン生成
+    let (guest_access_token, guest_access_token_hash) = generate_guest_access_token();
+    let guest_token_expires = guest_token_expiry();
+
+    // 配送先住所を変換
+    let shipping_address = req.shipping_address.to_order_address();
+    let billing_address = req.billing_address.as_ref().map(|addr| addr.to_order_address());
+
+    // ゲスト注文作成
+    let order = Order {
+        id: Uuid::new_v4(),
+        user_id: None, // ゲスト注文なのでuser_idはNULL
+        order_number: generate_order_number(),
+        status: OrderStatus::PendingPayment,
+        items: order_items,
+        subtotal,
+        shipping_fee,
+        tax,
+        total,
+        currency: "JPY".to_string(),
+        shipping_address,
+        billing_address,
+        payment_method: req.payment_method,
+        payment_status: PaymentStatus::Pending,
+        payment_id: None,
+        notes: req.notes,
+        created_at: now,
+        updated_at: now,
+        shipped_at: None,
+        delivered_at: None,
+        // ゲスト注文フィールド
+        is_guest_order: true,
+        guest_email: req.email.clone(),
+        guest_name: Some(req.shipping_address.name.clone()),
+        guest_phone: Some(req.shipping_address.phone.clone()),
+        guest_access_token_hash: Some(guest_access_token_hash),
+        guest_token_expires_at: Some(guest_token_expires),
+    };
+
+    // 在庫を原子的に確保
+    let reserved = product_repo.reserve_stock_bulk(&stock_reserve_items).await?;
+    if !reserved {
+        return Err(AppError::BadRequest("在庫が不足しています".to_string()));
+    }
+
+    // 注文作成（失敗したら在庫を戻す）
+    if let Err(e) = order_repo.create(&order).await {
+        let _ = product_repo.release_stock_bulk(&stock_reserve_items).await;
+        return Err(e);
+    }
+
+    // カートから注文した場合のみクリア
+    if req.items.is_none() {
+        cart_repo.clear(&session_id).await?;
+    }
+
+    Ok(Json(DataResponse::new(CreateGuestOrderResponse {
+        order,
+        guest_access_token,
+    })))
+}
+
+/// ゲスト注文取得パラメータ
+#[derive(Debug, serde::Deserialize)]
+pub struct GetGuestOrderParams {
+    pub token: String,
+}
+
+/// ゲスト注文取得（認証不要、トークンで認可）
+pub async fn get_guest_order(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    axum::extract::Query(params): axum::extract::Query<GetGuestOrderParams>,
+) -> Result<Json<DataResponse<Order>>> {
+    // トークンをハッシュ化
+    let token_hash = hash_guest_token(&params.token);
+
+    // anon key + RPC関数でゲスト注文を取得（SECURITY DEFINER関数がトークンを検証）
+    let order_repo = OrderRepository::new(state.db.anonymous());
+    let order = order_repo
+        .find_by_guest_token_rpc(&token_hash, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+    Ok(Json(DataResponse::new(order)))
 }

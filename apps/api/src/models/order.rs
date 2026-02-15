@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -91,7 +92,8 @@ impl std::fmt::Display for PaymentMethod {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Order {
     pub id: Uuid,
-    pub user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<Uuid>,
     pub order_number: String,
     pub status: OrderStatus,
     pub items: Vec<OrderItem>,
@@ -115,6 +117,19 @@ pub struct Order {
     pub shipped_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delivered_at: Option<DateTime<Utc>>,
+    // ゲスト注文用フィールド
+    #[serde(default)]
+    pub is_guest_order: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guest_email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guest_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guest_phone: Option<String>,
+    #[serde(skip)]
+    pub guest_access_token_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guest_token_expires_at: Option<DateTime<Utc>>,
 }
 
 /// 注文アイテム
@@ -226,12 +241,109 @@ pub fn calculate_tax(subtotal: i64) -> i64 {
     (subtotal as f64 * 0.1).round() as i64
 }
 
-/// 送料計算
-pub fn calculate_shipping_fee(subtotal: i64) -> i64 {
-    // 5000円以上で送料無料
-    if subtotal >= 5000 {
-        0
-    } else {
-        500
+/// 送料計算（全国一律750円）
+pub fn calculate_shipping_fee(_subtotal: i64) -> i64 {
+    750
+}
+
+// ============================================
+// ゲストチェックアウト用構造体
+// ============================================
+
+/// ゲスト配送先住所
+#[derive(Debug, Clone, Deserialize, Validate)]
+pub struct GuestShippingAddress {
+    #[validate(length(min = 1, max = 100, message = "名前は1〜100文字で入力してください"))]
+    pub name: String,
+    #[validate(length(min = 7, max = 8, message = "郵便番号は7桁で入力してください"))]
+    pub postal_code: String,
+    #[validate(length(min = 1, max = 10, message = "都道府県を選択してください"))]
+    pub prefecture: String,
+    #[validate(length(min = 1, max = 100, message = "市区町村は1〜100文字で入力してください"))]
+    pub city: String,
+    #[validate(length(min = 1, max = 200, message = "住所は1〜200文字で入力してください"))]
+    pub address_line1: String,
+    #[validate(length(max = 200, message = "建物名は200文字以内で入力してください"))]
+    pub address_line2: Option<String>,
+    #[validate(length(min = 10, max = 14, message = "電話番号は10〜14文字で入力してください"))]
+    pub phone: String,
+}
+
+impl GuestShippingAddress {
+    /// GuestShippingAddressからOrderAddressに変換
+    pub fn to_order_address(&self) -> OrderAddress {
+        OrderAddress {
+            name: self.name.clone(),
+            postal_code: self.postal_code.clone(),
+            prefecture: self.prefecture.clone(),
+            city: self.city.clone(),
+            address_line1: self.address_line1.clone(),
+            address_line2: self.address_line2.clone(),
+            phone: Some(self.phone.clone()),
+        }
     }
+}
+
+/// ゲスト注文作成リクエスト
+#[derive(Debug, Clone, Deserialize, Validate)]
+#[validate(schema(function = "validate_create_guest_order_request"))]
+pub struct CreateGuestOrderRequest {
+    /// 配送先住所
+    #[validate(nested)]
+    pub shipping_address: GuestShippingAddress,
+    /// 請求先住所（指定しない場合は配送先と同じ）
+    #[validate(nested)]
+    pub billing_address: Option<GuestShippingAddress>,
+    /// 決済方法
+    pub payment_method: PaymentMethod,
+    /// 備考
+    #[validate(length(max = 500))]
+    pub notes: Option<String>,
+    /// メールアドレス（任意、注文確認リンク送信用）
+    #[validate(email(message = "正しいメールアドレスを入力してください"))]
+    pub email: Option<String>,
+    /// 注文アイテム（指定された場合はカートではなくこちらを使用）
+    #[serde(default)]
+    pub items: Option<Vec<OrderItemRequest>>,
+}
+
+/// ゲスト注文作成リクエストのバリデーション
+fn validate_create_guest_order_request(req: &CreateGuestOrderRequest) -> Result<(), validator::ValidationError> {
+    if let Some(items) = &req.items {
+        // アイテム数上限チェック（DoS対策）
+        if items.len() > 50 {
+            let mut err = validator::ValidationError::new("too_many_items");
+            err.message = Some("注文アイテムは最大50件までです".into());
+            return Err(err);
+        }
+        // 重複商品チェック
+        let mut seen = std::collections::HashSet::new();
+        for item in items {
+            if !seen.insert(item.product_id) {
+                let mut err = validator::ValidationError::new("duplicate_product");
+                err.message = Some("同じ商品が複数回指定されています".into());
+                return Err(err);
+            }
+        }
+    }
+    Ok(())
+}
+
+/// ゲストアクセストークンを生成
+pub fn generate_guest_access_token() -> (String, String) {
+    let token = Uuid::new_v4().to_string();
+    let hash = hash_guest_token(&token);
+    (token, hash)
+}
+
+/// ゲストトークンをハッシュ化
+pub fn hash_guest_token(token: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+/// ゲストトークンの有効期限（7日間）
+pub fn guest_token_expiry() -> DateTime<Utc> {
+    Utc::now() + chrono::Duration::days(7)
 }

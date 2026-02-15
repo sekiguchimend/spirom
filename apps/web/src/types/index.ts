@@ -82,6 +82,39 @@ export interface CreateOrderRequest {
 }
 
 // ============================================
+// ゲストチェックアウト関連
+// ============================================
+
+export interface GuestShippingAddress {
+  name: string;
+  postal_code: string;
+  prefecture: string;
+  city: string;
+  address_line1: string;
+  address_line2?: string;
+  phone: string;
+}
+
+export interface CreateGuestOrderRequest {
+  shipping_address: GuestShippingAddress;
+  billing_address?: GuestShippingAddress;
+  payment_method: PaymentMethod;
+  notes?: string;
+  email?: string;
+  items?: CreateOrderItemRequest[];
+}
+
+export interface CreateGuestOrderResponse {
+  order: Order;
+  guest_access_token: string;
+}
+
+export interface CreateGuestPaymentIntentRequest {
+  order_id: string;
+  guest_token: string;
+}
+
+// ============================================
 // 商品バリアント（サイズ）関連
 // ============================================
 

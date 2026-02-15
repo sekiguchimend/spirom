@@ -3,17 +3,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { useRouter } from 'next/navigation';
-import type { Address, CartItem, CreateOrderRequest } from '@/types';
+import Link from 'next/link';
+import type { Address, CartItem, CreateOrderRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
 import { getStripe } from '@/lib/stripe';
 import { formatPrice } from '@/lib/utils';
-import { createOrderAction, createPaymentIntentAction } from '@/lib/actions';
+import { createOrderAction, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
 import { getCart, refreshCart } from '@/lib/cart';
 import { ROUTES } from '@/lib/routes';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
+import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
 
-export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
+interface CheckoutPageClientProps {
+  addresses: Address[];
+  isGuest?: boolean;
+}
+
+export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageClientProps) {
   const router = useRouter();
-  const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'empty-cart'>('loading');
+  const [step, setStep] = useState<'loading' | 'address-input' | 'ready' | 'error' | 'empty-cart'>('loading');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -21,6 +28,8 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
   const [subtotal, setSubtotal] = useState<number>(0);
   const [total, setTotal] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [guestAddress, setGuestAddress] = useState<GuestShippingAddress | null>(null);
+  const [guestToken, setGuestToken] = useState<string | null>(null);
 
   const defaultAddress = useMemo(
     () => addresses.find((a) => a.is_default) || addresses[0] || null,
@@ -41,7 +50,8 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
     [cart]
   );
 
-  const initializeCheckout = async () => {
+  // 認証済みユーザー用のチェックアウト初期化
+  const initializeAuthenticatedCheckout = async () => {
     if (!defaultAddress) {
       router.push(`${ROUTES.ACCOUNT.NEW_ADDRESS}?redirect=${encodeURIComponent(ROUTES.CHECKOUT.INDEX)}`);
       return;
@@ -56,7 +66,6 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
       setError(null);
       setStep('loading');
 
-      // 注文作成：items を送らないことで、API側が「セッションのカート」を正として注文化する
       const request: CreateOrderRequest = {
         shipping_address_id: defaultAddress.id,
         payment_method: 'credit_card',
@@ -90,14 +99,77 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
     }
   };
 
+  // ゲスト用のチェックアウト（住所入力後）
+  const initializeGuestCheckout = async (address: GuestShippingAddress, email?: string) => {
+    if (cart.length === 0) {
+      setStep('empty-cart');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStep('loading');
+      setGuestAddress(address);
+
+      const request: CreateGuestOrderRequest = {
+        shipping_address: address,
+        payment_method: 'credit_card',
+        email,
+      };
+
+      const orderResult = await createGuestOrderAction(request);
+      if (!orderResult.success || !orderResult.data) {
+        setError(orderResult.error || '注文の作成に失敗しました');
+        setStep('error');
+        return;
+      }
+
+      const { order, guest_access_token } = orderResult.data;
+      setOrderId(order.id);
+      setOrderNumber(order.order_number);
+      setSubtotal(order.subtotal ?? computedSubtotal);
+      setTotal(order.total);
+      setGuestToken(guest_access_token);
+
+      // sessionStorageにゲストトークンを保存
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`guest_order_${order.id}`, guest_access_token);
+      }
+
+      const paymentResult = await createGuestPaymentIntentAction(order.id, guest_access_token);
+      if (!paymentResult.success || !paymentResult.data) {
+        setError(paymentResult.error || '決済の準備中にエラーが発生しました');
+        setStep('error');
+        return;
+      }
+
+      setClientSecret(paymentResult.data.client_secret);
+      setStep('ready');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '決済準備に失敗しました');
+      setStep('error');
+    }
+  };
+
   useEffect(() => {
     if (cart.length === 0 && step === 'loading') return;
-    // 初回ロード後に開始
-    void initializeCheckout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart.length]);
 
-  const totalForSummary = total || (computedSubtotal + (computedSubtotal >= 5000 ? 0 : 500));
+    if (isGuest) {
+      // ゲストの場合は住所入力画面を表示
+      if (cart.length === 0) {
+        setStep('empty-cart');
+      } else {
+        setStep('address-input');
+      }
+    } else {
+      // 認証済みユーザーの場合は直接チェックアウト開始
+      void initializeAuthenticatedCheckout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.length, isGuest]);
+
+  const totalForSummary = total || (computedSubtotal + 750);
+  const displayAddress = isGuest ? guestAddress : defaultAddress;
 
   return (
     <div className="min-h-screen bg-bg-light pb-10 pt-24 px-4 sm:px-6 lg:px-8">
@@ -113,6 +185,14 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
           <h1 className="text-center text-2xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>
             お支払い
           </h1>
+          {isGuest && (
+            <p className="text-center text-sm text-gray-600 mt-2">
+              ゲスト購入 ・{' '}
+              <Link href={ROUTES.AUTH.LOGIN} className="text-primary hover:underline">
+                ログインはこちら
+              </Link>
+            </p>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-5 gap-6">
@@ -149,35 +229,37 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
                 </div>
               </div>
 
-              {defaultAddress && (
+              {displayAddress && step !== 'address-input' && (
                 <div className="mt-5 bg-primary/5 rounded-xl p-4">
                   <p className="text-xs font-bold text-primary mb-2 uppercase tracking-wider">
                     配送先
                   </p>
-                  <p className="text-sm font-bold text-text-dark">{defaultAddress.name || '住所'}</p>
-                  <p className="text-xs text-gray-600">〒{defaultAddress.postal_code}</p>
+                  <p className="text-sm font-bold text-text-dark">{displayAddress.name || '住所'}</p>
+                  <p className="text-xs text-gray-600">〒{displayAddress.postal_code}</p>
                   <p className="text-xs text-gray-600">
-                    {defaultAddress.prefecture}{defaultAddress.city}{defaultAddress.address_line1}
+                    {displayAddress.prefecture}{displayAddress.city}{displayAddress.address_line1}
                   </p>
-                  {defaultAddress.address_line2 && (
-                    <p className="text-xs text-gray-600">{defaultAddress.address_line2}</p>
+                  {displayAddress.address_line2 && (
+                    <p className="text-xs text-gray-600">{displayAddress.address_line2}</p>
                   )}
                 </div>
               )}
 
-              <div className="mt-5">
-                <button
-                  type="button"
-                  onClick={() => router.push(ROUTES.ACCOUNT.ADDRESSES)}
-                  className="w-full px-4 py-3 text-sm font-bold border-2 border-gray-200 text-text-dark rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  住所を変更する
-                </button>
-              </div>
+              {!isGuest && (
+                <div className="mt-5">
+                  <button
+                    type="button"
+                    onClick={() => router.push(ROUTES.ACCOUNT.ADDRESSES)}
+                    className="w-full px-4 py-3 text-sm font-bold border-2 border-gray-200 text-text-dark rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    住所を変更する
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 右: 決済 */}
+          {/* 右: 住所入力または決済 */}
           <div className="lg:col-span-3">
             {step === 'loading' && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
@@ -185,6 +267,17 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
                   <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
                   <p className="font-bold text-base text-text-dark">準備中...</p>
                 </div>
+              </div>
+            )}
+
+            {step === 'address-input' && isGuest && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 className="text-base font-black text-text-dark mb-5">配送先情報</h2>
+                <GuestAddressForm
+                  onSubmit={initializeGuestCheckout}
+                  isSubmitting={false}
+                  error={error}
+                />
               </div>
             )}
 
@@ -213,7 +306,13 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
                   <p className="text-gray-600 text-center text-sm mb-5">{error}</p>
                   <button
                     type="button"
-                    onClick={() => void initializeCheckout()}
+                    onClick={() => {
+                      if (isGuest) {
+                        setStep('address-input');
+                      } else {
+                        void initializeAuthenticatedCheckout();
+                      }
+                    }}
                     className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                   >
                     再試行
@@ -242,7 +341,13 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
                     locale: 'ja',
                   }}
                 >
-                  <PaymentForm orderId={orderId} orderNumber={orderNumber} total={totalForSummary} />
+                  <PaymentForm
+                    orderId={orderId}
+                    orderNumber={orderNumber}
+                    total={totalForSummary}
+                    isGuest={isGuest}
+                    guestToken={guestToken || undefined}
+                  />
                 </Elements>
               </div>
             )}
@@ -252,5 +357,3 @@ export function CheckoutPageClient({ addresses }: { addresses: Address[] }) {
     </div>
   );
 }
-
-

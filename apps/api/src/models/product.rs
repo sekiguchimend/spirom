@@ -16,7 +16,8 @@ pub struct Product {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub compare_at_price: Option<i64>,
     pub currency: String,
-    pub category_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<CategorySummary>,
     pub images: Vec<String>,

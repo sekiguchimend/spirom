@@ -52,11 +52,17 @@ pub async fn session_signature_middleware(
 /// セッションID署名を検証
 fn verify_session_signature(session_id: &str, signature: &str) -> bool {
     let secret = get_session_secret();
+    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+
     if secret.is_empty() {
-        tracing::error!("SESSION_SECRET is not set, skipping signature verification");
-        // 開発環境では署名検証をスキップする場合がある
-        let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
-        return env == "development" || env == "local";
+        // 本番環境では必ずSESSION_SECRETが必要
+        if env == "production" {
+            tracing::error!("SESSION_SECRET is not set in production - rejecting request");
+            return false;
+        }
+        // 開発環境でのみ署名検証をスキップ（警告付き）
+        tracing::warn!("SESSION_SECRET is not set in development - skipping signature verification");
+        return true;
     }
 
     // HMAC-SHA256で署名を計算
@@ -111,10 +117,10 @@ pub async fn bff_proxy_token_middleware(
 
     let expected_token = std::env::var("BFF_PROXY_TOKEN").unwrap_or_default();
 
-    // トークンが設定されていない場合は検証をスキップ（後方互換性）
+    // 本番環境でトークンが設定されていない場合は拒否（セキュリティ強化）
     if expected_token.is_empty() {
-        tracing::warn!("BFF_PROXY_TOKEN is not set in production, skipping validation");
-        return Ok(next.run(request).await);
+        tracing::error!("BFF_PROXY_TOKEN is not set in production - rejecting request");
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Server configuration error"));
     }
 
     let provided_token = request

@@ -42,7 +42,7 @@ export default function LegalNoticePage() {
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-sm font-bold text-gray-500 mb-2">商品代金以外の必要料金</h2>
           <p className="text-base text-black font-medium">
-            送料：全国一律 無料<br />
+            送料：全国一律 750円（税込）<br />
             ※振込手数料はお客様負担となります
           </p>
         </div>
@@ -64,7 +64,7 @@ export default function LegalNoticePage() {
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-sm font-bold text-gray-500 mb-2">商品の引渡時期</h2>
           <p className="text-base text-black font-medium">
-            ご注文確認後、3〜7営業日以内に発送いたします。<br />
+            ご注文確認後、約2週間でお届けいたします。<br />
             ※在庫状況や配送地域により、お届けまでの日数が異なる場合がございます。
           </p>
         </div>

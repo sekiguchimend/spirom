@@ -218,15 +218,7 @@ export default function ProductCheckout({
                   </div>
                   <div className="flex justify-between text-xs text-gray-600">
                     <dt>送料</dt>
-                    <dd className="font-bold text-text-dark">
-                      {shippingFee === 0 ? (
-                        <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full text-xs font-bold">
-                          無料
-                        </span>
-                      ) : (
-                        formatPrice(shippingFee)
-                      )}
-                    </dd>
+                    <dd className="font-bold text-text-dark">{formatPrice(shippingFee)}</dd>
                   </div>
                   <div className="pt-2.5 border-t-2 border-gray-100 flex justify-between items-baseline">
                     <dt className="font-bold text-text-dark text-sm">合計</dt>

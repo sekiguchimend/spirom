@@ -40,7 +40,7 @@ export default function TermsPage() {
       <section className="mb-8">
         <h2 className="text-xl sm:text-2xl font-black mb-4 text-black">第4条（配送）</h2>
         <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-          商品の配送は、日本国内に限ります。配送日数は地域により異なりますが、通常ご注文から3〜7営業日以内に発送いたします。
+          商品の配送は、日本国内に限ります。ご注文確認後、約2週間でお届けいたします。送料は全国一律750円（税込）です。
         </p>
       </section>
 

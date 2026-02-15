@@ -110,7 +110,7 @@ export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
         src={activeItem.url}
         alt={productName}
         fill
-        className="object-contain drop-shadow-2xl"
+        className="object-contain"
         priority
         sizes="(max-width: 1024px) 100vw, 50vw"
       />

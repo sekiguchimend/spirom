@@ -4,15 +4,21 @@ import { useState } from 'react';
 import { PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { formatPrice } from '@/lib/utils';
 
+interface PaymentFormProps {
+  orderId: string;
+  orderNumber: string;
+  total: number;
+  isGuest?: boolean;
+  guestToken?: string;
+}
+
 export function PaymentForm({
   orderId,
   orderNumber,
   total,
-}: {
-  orderId: string;
-  orderNumber: string;
-  total: number;
-}) {
+  isGuest = false,
+  guestToken,
+}: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,10 +34,16 @@ export function PaymentForm({
     setIsProcessing(true);
     setErrorMessage(null);
 
+    // ゲスト注文の場合はトークンをURLに含める
+    let returnUrl = `${window.location.origin}/checkout/complete?order_id=${orderId}`;
+    if (isGuest && guestToken) {
+      returnUrl += `&guest=true&token=${encodeURIComponent(guestToken)}`;
+    }
+
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/complete?order_id=${orderId}`,
+        return_url: returnUrl,
       },
     });
 

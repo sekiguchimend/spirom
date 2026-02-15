@@ -42,7 +42,7 @@ export default function CartPage() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal >= 5000 ? 0 : 500;
+  const shipping = 750;
   const total = subtotal + shipping;
 
   if (!isLoaded) {
@@ -204,15 +204,8 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-white/85">
                 <span className="font-medium">送料</span>
-                <span className="font-bold">
-                  {shipping === 0 ? '無料' : formatPrice(shipping)}
-                </span>
+                <span className="font-bold">{formatPrice(shipping)}</span>
               </div>
-              {subtotal > 0 && subtotal < 5000 && (
-                <p className="text-xs text-white/60 font-medium">
-                  あと{formatPrice(5000 - subtotal)}で送料無料！
-                </p>
-              )}
               <div className="flex justify-between text-white pt-4 border-t border-white/20">
                 <span className="text-xl font-black">合計</span>
                 <span className="text-3xl font-black">{formatPrice(total)}</span>
@@ -253,7 +246,7 @@ export default function CartPage() {
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
                 </div>
-                <span className="text-sm text-white font-bold">5,000円以上で送料無料</span>
+                <span className="text-sm text-white font-bold">送料 全国一律750円</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center">

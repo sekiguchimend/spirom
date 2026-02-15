@@ -74,8 +74,10 @@ pub async fn get_product(
         .ok_or_else(|| AppError::NotFound("商品が見つかりません".to_string()))?;
 
     // カテゴリ情報を付与
-    if let Some(category) = category_repo.find_by_id(product.category_id).await? {
-        product.category = Some(CategorySummary::from(category));
+    if let Some(cat_id) = product.category_id {
+        if let Some(category) = category_repo.find_by_id(cat_id).await? {
+            product.category = Some(CategorySummary::from(category));
+        }
     }
 
     Ok(Json(DataResponse::new(product)))
@@ -141,7 +143,7 @@ pub async fn create_product(
         price: req.price,
         compare_at_price: req.compare_at_price,
         currency: "JPY".to_string(),
-        category_id: req.category_id.unwrap_or_default(),
+        category_id: req.category_id,
         category: None,
         images: req.images,
         stock: req.stock,

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseAuth } from '@/lib/supabase-auth';
+import { mergeLocalCartToServer } from '@/lib/cart';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { User } from '@/types';
 import { ROUTES } from '@/lib/routes';
@@ -121,6 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(data.session);
       const profile = await fetchProfile(data.user.id, data.session.access_token);
       setUser(mapSupabaseUser(data.user, profile));
+
+      // ローカルカートをサーバーに統合
+      try {
+        await mergeLocalCartToServer();
+      } catch (e) {
+        console.error('Failed to merge local cart:', e);
+      }
     }
   }, [fetchProfile]);
 

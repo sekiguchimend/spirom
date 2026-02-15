@@ -6,6 +6,8 @@ import type {
   Address,
   Order,
   CreateOrderRequest,
+  CreateGuestOrderRequest,
+  CreateGuestOrderResponse,
 } from '@/types';
 
 // ============================================
@@ -294,5 +296,94 @@ export async function createProfileAction(
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create profile' };
+  }
+}
+
+// ============================================
+// ゲスト注文関連
+// ============================================
+
+export async function createGuestOrderAction(
+  request: CreateGuestOrderRequest
+): Promise<{ success: boolean; data?: CreateGuestOrderResponse; error?: string }> {
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/orders/guest`, {
+      method: 'POST',
+      headers: {
+        ...withBffProxyToken({
+          'Content-Type': 'application/json',
+        }),
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create guest order' };
+  }
+}
+
+export async function createGuestPaymentIntentAction(
+  orderId: string,
+  guestToken: string
+): Promise<{ success: boolean; data?: { client_secret: string; payment_intent_id: string }; error?: string }> {
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/guest/intent`, {
+      method: 'POST',
+      headers: {
+        ...withBffProxyToken({
+          'Content-Type': 'application/json',
+        }),
+      },
+      body: JSON.stringify({ order_id: orderId, guest_token: guestToken }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create payment intent' };
+  }
+}
+
+export async function getGuestOrderAction(
+  orderId: string,
+  guestToken: string
+): Promise<{ success: boolean; data?: Order; error?: string }> {
+  try {
+    const response = await fetch(
+      `${BFF_BASE_URL}/api/v1/orders/guest/${orderId}?token=${encodeURIComponent(guestToken)}`,
+      {
+        headers: {
+          ...withBffProxyToken({
+            'Content-Type': 'application/json',
+          }),
+        },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { success: false, error: '注文が見つかりません' };
+      }
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get guest order' };
   }
 }

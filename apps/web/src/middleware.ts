@@ -28,13 +28,22 @@ function isIpInCidr(ip: string, cidr: string): boolean {
 
 // IPアドレスが許可リストに含まれるかチェック
 function isIpAllowed(ip: string): boolean {
-  // 許可リストが空の場合は全て許可（開発環境用）
-  if (ADMIN_ALLOWED_IPS.length === 0) {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // localhost は常に許可（開発環境のみ）
+  if (!isProduction && (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost')) {
     return true;
   }
 
-  // localhost は常に許可
-  if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') {
+  // 許可リストが空の場合
+  if (ADMIN_ALLOWED_IPS.length === 0) {
+    if (isProduction) {
+      // 本番環境では許可リストが必須 - 空の場合は全て拒否
+      console.error('[Security] ADMIN_ALLOWED_IPS is not configured in production - denying all admin access');
+      return false;
+    }
+    // 開発環境では全て許可（警告付き）
+    console.warn('[Security] ADMIN_ALLOWED_IPS is empty - allowing all IPs in development');
     return true;
   }
 
@@ -140,7 +149,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/checkout/:path*',
+    // /checkout は認証不要（ゲスト購入対応）
     '/account/:path*',
     '/login',
     '/register',

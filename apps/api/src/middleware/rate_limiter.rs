@@ -95,6 +95,10 @@ static PAYMENT_RATE_LIMITER: std::sync::OnceLock<RateLimiterStore> = std::sync::
 /// スパム対策: 1IPあたり1時間に5回まで
 static CONTACT_RATE_LIMITER: std::sync::OnceLock<RateLimiterStore> = std::sync::OnceLock::new();
 
+/// ゲスト注文専用レート制限ストア
+/// DoS/在庫枯渇攻撃対策: 1IPあたり60秒間に3回まで
+static GUEST_ORDER_RATE_LIMITER: std::sync::OnceLock<RateLimiterStore> = std::sync::OnceLock::new();
+
 /// レート制限ストアを初期化
 pub fn init_rate_limiter(window_seconds: u64, max_requests: u32) {
     let _ = RATE_LIMITER.set(RateLimiterStore::new(window_seconds, max_requests));
@@ -121,10 +125,22 @@ pub fn init_rate_limiter(window_seconds: u64, max_requests: u32) {
         .unwrap_or(5);
     let _ = CONTACT_RATE_LIMITER.set(RateLimiterStore::new(contact_window, contact_max));
 
+    // ゲスト注文専用: 60秒間に3リクエストまで（DoS/在庫枯渇攻撃対策）
+    let guest_order_window = std::env::var("GUEST_ORDER_RATE_LIMIT_WINDOW_SECONDS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(60);
+    let guest_order_max = std::env::var("GUEST_ORDER_RATE_LIMIT_MAX_REQUESTS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3);
+    let _ = GUEST_ORDER_RATE_LIMITER.set(RateLimiterStore::new(guest_order_window, guest_order_max));
+
     // 定期的なクリーンアップタスクを起動
     let store = RATE_LIMITER.get().unwrap().clone();
     let payment_store = PAYMENT_RATE_LIMITER.get().unwrap().clone();
     let contact_store = CONTACT_RATE_LIMITER.get().unwrap().clone();
+    let guest_order_store = GUEST_ORDER_RATE_LIMITER.get().unwrap().clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
@@ -132,6 +148,7 @@ pub fn init_rate_limiter(window_seconds: u64, max_requests: u32) {
             store.cleanup().await;
             payment_store.cleanup().await;
             contact_store.cleanup().await;
+            guest_order_store.cleanup().await;
         }
     });
 }
@@ -295,6 +312,65 @@ pub async fn payment_rate_limiter_middleware(
             "error": {
                 "code": "PAYMENT_RATE_LIMITED",
                 "message": "決済リクエストが多すぎます。しばらくしてから再試行してください。"
+            }
+        });
+
+        return Response::builder()
+            .status(StatusCode::TOO_MANY_REQUESTS)
+            .header("Content-Type", "application/json")
+            .header("X-RateLimit-Limit", result.limit.to_string())
+            .header("X-RateLimit-Remaining", "0")
+            .header("Retry-After", "60")
+            .body(Body::from(serde_json::to_string(&body).unwrap()))
+            .unwrap();
+    }
+
+    let mut response = next.run(request).await;
+
+    // レート制限ヘッダーを追加
+    let headers = response.headers_mut();
+    headers.insert(
+        "X-RateLimit-Limit",
+        result.limit.to_string().parse().unwrap(),
+    );
+    headers.insert(
+        "X-RateLimit-Remaining",
+        result.remaining.to_string().parse().unwrap(),
+    );
+
+    response
+}
+
+/// ゲスト注文専用レート制限ミドルウェア
+/// DoS/在庫枯渇攻撃対策として、60秒に3回までに制限
+pub async fn guest_order_rate_limiter_middleware(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    request: Request<Body>,
+    next: Next,
+) -> Response<Body> {
+    let Some(store) = GUEST_ORDER_RATE_LIMITER.get() else {
+        // レート制限が初期化されていない場合はスキップ
+        return next.run(request).await;
+    };
+
+    // クライアントIP取得
+    let client_ip = get_client_ip(&addr, request.headers());
+
+    // ゲスト注文専用のキー
+    let key = format!("guest_order:{}", client_ip);
+    let result = store.check(&key).await;
+
+    if !result.allowed {
+        tracing::warn!(
+            "Guest order rate limit exceeded: ip={}, limit={}, window=60s",
+            client_ip,
+            result.limit
+        );
+
+        let body = serde_json::json!({
+            "error": {
+                "code": "GUEST_ORDER_RATE_LIMITED",
+                "message": "注文リクエストが多すぎます。しばらくしてから再試行してください。"
             }
         });
 

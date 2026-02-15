@@ -145,7 +145,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                   </div>
-                  <span className="text-sm text-white font-bold">5,000円以上で送料無料</span>
+                  <span className="text-sm text-white font-bold">送料 全国一律750円</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center">

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { ProductVariant } from '@/types';
+import MediaUploader from '@/components/admin/MediaUploader';
 
 interface Product {
   id: string;
@@ -65,6 +65,9 @@ export default function AdminProductDetailPage() {
     material_detail: '',
   });
 
+  // 画像URL
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+
   useEffect(() => {
     async function fetchProduct() {
       try {
@@ -85,6 +88,7 @@ export default function AdminProductDetailPage() {
           material: prod.material || '',
           material_detail: prod.material_detail || '',
         });
+        setImageUrls(prod.images || []);
 
         // バリアント取得
         const varRes = await fetch(`/api/v1/products/${productSlug}/variants`);
@@ -121,7 +125,10 @@ export default function AdminProductDetailPage() {
       const res = await fetch(`/api/v1/admin/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          images: imageUrls,
+        }),
       });
 
       if (!res.ok) {
@@ -145,6 +152,10 @@ export default function AdminProductDetailPage() {
       material: TSHIRT_MATERIAL.material,
       material_detail: TSHIRT_MATERIAL.material_detail,
     }));
+  };
+
+  const handleMediaUpload = (urls: string[]) => {
+    setImageUrls(urls);
   };
 
   const handleVariantStockChange = async (variantId: string, newStock: number) => {
@@ -226,16 +237,18 @@ export default function AdminProductDetailPage() {
         </div>
       )}
 
-      {/* 商品画像 */}
-      {product?.images && product.images.length > 0 && (
-        <div className="mb-8 flex gap-4 overflow-x-auto pb-4">
-          {product.images.map((img, idx) => (
-            <div key={idx} className="w-32 h-32 bg-gray-100 rounded-xl overflow-hidden relative flex-shrink-0">
-              <Image src={img} alt={`商品画像 ${idx + 1}`} fill className="object-contain p-2" sizes="128px" />
-            </div>
-          ))}
+      {/* メディア（画像・動画） */}
+      <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold">メディア</h2>
+          <p className="text-sm text-gray-500 mt-1">商品の画像・動画をアップロードできます</p>
         </div>
-      )}
+        <MediaUploader
+          onUploadComplete={handleMediaUpload}
+          existingUrls={imageUrls}
+          maxFiles={10}
+        />
+      </div>
 
       {/* 基本情報 */}
       <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">

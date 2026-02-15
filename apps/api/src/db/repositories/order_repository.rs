@@ -36,6 +36,13 @@ impl OrderRepository {
             notes: order.notes.clone(),
             created_at: order.created_at,
             updated_at: order.updated_at,
+            // ゲスト注文用フィールド
+            is_guest_order: if order.is_guest_order { Some(true) } else { None },
+            guest_email: order.guest_email.clone(),
+            guest_name: order.guest_name.clone(),
+            guest_phone: order.guest_phone.clone(),
+            guest_access_token_hash: order.guest_access_token_hash.clone(),
+            guest_token_expires_at: order.guest_token_expires_at,
         };
 
         let result: OrderRow = self.client.insert("orders", &input).await?;
@@ -133,7 +140,7 @@ impl OrderRepository {
     }
 
     /// ステータス更新
-    pub async fn update_status(&self, id: Uuid, _user_id: Uuid, status: OrderStatus, _created_at: i64) -> Result<()> {
+    pub async fn update_status(&self, id: Uuid, _user_id: Option<Uuid>, status: OrderStatus, _created_at: i64) -> Result<()> {
         let query = format!("id=eq.{}", id);
         let update = StatusUpdate {
             status: status.to_string(),
@@ -175,7 +182,7 @@ impl OrderRepository {
     }
 
     /// 決済ID更新
-    pub async fn update_payment_id(&self, id: Uuid, _user_id: Uuid, payment_id: &str) -> Result<()> {
+    pub async fn update_payment_id(&self, id: Uuid, _user_id: Option<Uuid>, payment_id: &str) -> Result<()> {
         let query = format!("id=eq.{}", id);
         let update = PaymentIdUpdate {
             payment_id: Some(payment_id.to_string()),
@@ -224,6 +231,183 @@ impl OrderRepository {
         Ok(())
     }
 
+    /// ゲストトークンで注文取得（直接クエリ版 - service_role用）
+    pub async fn find_by_guest_token(&self, token_hash: &str, order_id: Uuid) -> Result<Option<Order>> {
+        let query = format!(
+            "id=eq.{}&guest_access_token_hash=eq.{}&is_guest_order=eq.true",
+            order_id, token_hash
+        );
+        let result: Option<OrderRow> = self.client.select_single("orders", &query).await?;
+
+        if let Some(row) = result {
+            // トークンの有効期限を確認
+            if let Some(expires_at) = row.guest_token_expires_at {
+                if expires_at < Utc::now() {
+                    return Ok(None); // トークン期限切れ
+                }
+            }
+            let mut order = row.into_order();
+            order.items = self.find_order_items(order_id).await?;
+            Ok(Some(order))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// ゲストトークンで注文取得（RPC関数版 - anon key用）
+    /// SECURITY DEFINER関数を使用してトークン検証と取得を行う
+    pub async fn find_by_guest_token_rpc(&self, token_hash: &str, order_id: Uuid) -> Result<Option<Order>> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+            p_token_hash: String,
+        }
+
+        let params = RpcParams {
+            p_order_id: order_id,
+            p_token_hash: token_hash.to_string(),
+        };
+
+        // RPC関数を呼び出し
+        let rows: Vec<OrderRow> = self.client.rpc("get_guest_order_by_token", &params).await?;
+
+        if let Some(row) = rows.into_iter().next() {
+            let mut order = row.into_order();
+            // アイテムもRPC関数で取得
+            order.items = self.find_guest_order_items_rpc(token_hash, order_id).await?;
+            Ok(Some(order))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// ゲスト注文のアイテム取得（RPC関数版）
+    async fn find_guest_order_items_rpc(&self, token_hash: &str, order_id: Uuid) -> Result<Vec<OrderItem>> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+            p_token_hash: String,
+        }
+
+        let params = RpcParams {
+            p_order_id: order_id,
+            p_token_hash: token_hash.to_string(),
+        };
+
+        let rows: Vec<OrderItemRow> = self.client.rpc("get_guest_order_items_by_token", &params).await?;
+        Ok(rows.into_iter().map(|r| r.into_order_item()).collect())
+    }
+
+    /// ゲスト注文のpayment_id更新（RPC関数版 - トークン検証付き）
+    pub async fn update_guest_order_payment_id_rpc(
+        &self,
+        order_id: Uuid,
+        token_hash: &str,
+        payment_id: &str,
+    ) -> Result<bool> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+            p_token_hash: String,
+            p_payment_id: String,
+        }
+
+        let params = RpcParams {
+            p_order_id: order_id,
+            p_token_hash: token_hash.to_string(),
+            p_payment_id: payment_id.to_string(),
+        };
+
+        self.client.rpc("update_guest_order_payment_id", &params).await
+    }
+
+    /// ゲスト注文のステータス更新（RPC関数版 - トークン検証付き）
+    pub async fn update_guest_order_status_rpc(
+        &self,
+        order_id: Uuid,
+        token_hash: &str,
+        status: &str,
+        payment_status: Option<&str>,
+    ) -> Result<bool> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+            p_token_hash: String,
+            p_status: String,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            p_payment_status: Option<String>,
+        }
+
+        let params = RpcParams {
+            p_order_id: order_id,
+            p_token_hash: token_hash.to_string(),
+            p_status: status.to_string(),
+            p_payment_status: payment_status.map(|s| s.to_string()),
+        };
+
+        self.client.rpc("update_guest_order_status", &params).await
+    }
+
+    /// Webhook用の注文更新（RPC関数版 - ステータス遷移チェック付き）
+    pub async fn update_order_from_webhook_rpc(
+        &self,
+        order_id: Uuid,
+        payment_id: Option<&str>,
+        status: Option<&str>,
+        payment_status: Option<&str>,
+    ) -> Result<bool> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            p_payment_id: Option<String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            p_status: Option<String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            p_payment_status: Option<String>,
+        }
+
+        let params = RpcParams {
+            p_order_id: order_id,
+            p_payment_id: payment_id.map(|s| s.to_string()),
+            p_status: status.map(|s| s.to_string()),
+            p_payment_status: payment_status.map(|s| s.to_string()),
+        };
+
+        self.client.rpc("update_order_from_webhook", &params).await
+    }
+
+    /// Webhook用の注文取得（RPC関数版）
+    pub async fn find_by_id_for_webhook(&self, order_id: Uuid) -> Result<Option<Order>> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+        }
+
+        let params = RpcParams { p_order_id: order_id };
+        let rows: Vec<OrderRow> = self.client.rpc("get_order_for_webhook", &params).await?;
+
+        if let Some(row) = rows.into_iter().next() {
+            let mut order = row.into_order();
+            order.items = self.find_order_items_for_webhook(order_id).await?;
+            Ok(Some(order))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Webhook用の注文アイテム取得（RPC関数版）
+    async fn find_order_items_for_webhook(&self, order_id: Uuid) -> Result<Vec<OrderItem>> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+        }
+
+        let params = RpcParams { p_order_id: order_id };
+        let rows: Vec<OrderItemRow> = self.client.rpc("get_order_items_for_webhook", &params).await?;
+        Ok(rows.into_iter().map(|r| r.into_order_item()).collect())
+    }
+
     /// 全注文取得（管理者用）
     pub async fn find_all(&self, limit: i32) -> Result<Vec<OrderSummary>> {
         let query = format!("order=created_at.desc&limit={}", limit);
@@ -270,7 +454,8 @@ impl OrderRepository {
 #[derive(Debug, Serialize)]
 struct OrderInput {
     id: Uuid,
-    user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user_id: Option<Uuid>,
     order_number: String,
     status: String,
     subtotal: i64,
@@ -286,6 +471,19 @@ struct OrderInput {
     notes: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
+    // ゲスト注文用フィールド
+    #[serde(skip_serializing_if = "Option::is_none")]
+    is_guest_order: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    guest_email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    guest_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    guest_phone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    guest_access_token_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    guest_token_expires_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -335,7 +533,7 @@ struct DeliveredAtUpdate {
 #[derive(Debug, Deserialize)]
 struct OrderRow {
     id: Uuid,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     order_number: String,
     status: String,
     subtotal: i64,
@@ -353,6 +551,14 @@ struct OrderRow {
     updated_at: DateTime<Utc>,
     shipped_at: Option<DateTime<Utc>>,
     delivered_at: Option<DateTime<Utc>>,
+    // ゲスト注文用フィールド
+    #[serde(default)]
+    is_guest_order: Option<bool>,
+    guest_email: Option<String>,
+    guest_name: Option<String>,
+    guest_phone: Option<String>,
+    guest_access_token_hash: Option<String>,
+    guest_token_expires_at: Option<DateTime<Utc>>,
 }
 
 impl OrderRow {
@@ -379,6 +585,13 @@ impl OrderRow {
             updated_at: self.updated_at,
             shipped_at: self.shipped_at,
             delivered_at: self.delivered_at,
+            // ゲスト注文用フィールド
+            is_guest_order: self.is_guest_order.unwrap_or(false),
+            guest_email: self.guest_email,
+            guest_name: self.guest_name,
+            guest_phone: self.guest_phone,
+            guest_access_token_hash: self.guest_access_token_hash,
+            guest_token_expires_at: self.guest_token_expires_at,
         }
     }
 }

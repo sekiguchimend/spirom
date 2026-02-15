@@ -8,7 +8,7 @@ use crate::config::AppState;
 use crate::handlers;
 use crate::middleware::{
     auth_middleware, admin_middleware,
-    rate_limiter::{payment_rate_limiter_middleware, contact_rate_limiter_middleware},
+    rate_limiter::{payment_rate_limiter_middleware, contact_rate_limiter_middleware, guest_order_rate_limiter_middleware},
     session::{session_signature_middleware, bff_proxy_token_middleware},
 };
 
@@ -44,6 +44,13 @@ pub fn create_router(state: AppState) -> Router {
         // Webhook（公開：署名検証あり）
         .route("/api/v1/webhooks/stripe", post(handlers::payments::handle_webhook));
 
+    // ゲスト注文ルート（認証不要 + 専用レート制限）
+    // DoS/在庫枯渇攻撃対策: 1IPあたり60秒間に3回まで
+    let guest_order_routes = Router::new()
+        .route("/api/v1/orders/guest", post(handlers::orders::create_guest_order))
+        .route("/api/v1/orders/guest/:id", get(handlers::orders::get_guest_order))
+        .layer(middleware::from_fn(guest_order_rate_limiter_middleware));
+
     // お問い合わせルート（認証必須、専用レート制限）
     // スパム対策: 1IPあたり1時間に5回まで
     let contact_routes = Router::new()
@@ -62,6 +69,14 @@ pub fn create_router(state: AppState) -> Router {
         // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 認証 → 決済レート制限）
         .layer(middleware::from_fn(payment_rate_limiter_middleware))
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
+
+    // ゲスト決済ルート（認証不要 + 専用レート制限）
+    let guest_payment_routes = Router::new()
+        .route("/api/v1/payments/guest/intent", post(handlers::payments::create_payment_intent_guest))
+        // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 決済レート制限）
+        .layer(middleware::from_fn(payment_rate_limiter_middleware))
         .layer(middleware::from_fn(session_signature_middleware))
         .layer(middleware::from_fn(bff_proxy_token_middleware));
 
@@ -124,8 +139,10 @@ pub fn create_router(state: AppState) -> Router {
 
     Router::new()
         .merge(public_routes)
+        .merge(guest_order_routes)
         .merge(contact_routes)
         .merge(payment_routes)
+        .merge(guest_payment_routes)
         .merge(auth_routes)
         .merge(admin_routes)
         .with_state(state)

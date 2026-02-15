@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import MediaUploader from '@/components/admin/MediaUploader';
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'FREE'];
 
@@ -24,12 +25,13 @@ export default function NewProductPage() {
     price: '',
     compare_at_price: '',
     category_id: '',
-    images: [''],
     sku: '',
     is_active: true,
     is_featured: false,
     tags: '',
   });
+
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 
   const [variants, setVariants] = useState<VariantInput[]>([
     { size: 'S', stock: 10, price_adjustment: 0 },
@@ -46,23 +48,8 @@ export default function NewProductPage() {
     }));
   };
 
-  const handleImageChange = (index: number, value: string) => {
-    const newImages = [...formData.images];
-    newImages[index] = value;
-    setFormData(prev => ({ ...prev, images: newImages }));
-  };
-
-  const addImageField = () => {
-    setFormData(prev => ({ ...prev, images: [...prev.images, ''] }));
-  };
-
-  const removeImageField = (index: number) => {
-    if (formData.images.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        images: prev.images.filter((_, i) => i !== index),
-      }));
-    }
+  const handleMediaUpload = (urls: string[]) => {
+    setMediaUrls(urls);
   };
 
   const handleVariantChange = (index: number, field: keyof VariantInput, value: string | number) => {
@@ -110,7 +97,7 @@ export default function NewProductPage() {
           price: parseInt(formData.price) || 0,
           compare_at_price: formData.compare_at_price ? parseInt(formData.compare_at_price) : null,
           category_id: formData.category_id || null,
-          images: formData.images.filter(Boolean),
+          images: mediaUrls,
           sku: formData.sku,
           stock: variants.reduce((sum, v) => sum + v.stock, 0),
           is_active: formData.is_active,
@@ -317,94 +304,16 @@ export default function NewProductPage() {
 
         {/* メディア（画像・動画） */}
         <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-black text-gray-900">メディア</h2>
-              <p className="text-sm text-gray-500 mt-1">画像・動画のURLを追加できます</p>
-            </div>
-            <button
-              type="button"
-              onClick={addImageField}
-              className="text-sm font-bold text-black hover:underline"
-            >
-              + メディアを追加
-            </button>
+          <div className="mb-4">
+            <h2 className="text-xl font-black text-gray-900">メディア</h2>
+            <p className="text-sm text-gray-500 mt-1">商品の画像・動画をアップロードできます</p>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <p className="text-xs text-gray-600 font-medium mb-2">対応フォーマット:</p>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-white rounded text-xs text-gray-700">画像: JPG, PNG, WebP, GIF</span>
-              <span className="px-2 py-1 bg-white rounded text-xs text-gray-700">動画: MP4, WebM, MOV</span>
-              <span className="px-2 py-1 bg-white rounded text-xs text-gray-700">YouTube / Vimeo URL</span>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {formData.images.map((image, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-400 w-6">{index + 1}.</span>
-                    <input
-                      type="url"
-                      value={image}
-                      onChange={(e) => handleImageChange(index, e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 bg-white"
-                      placeholder="https://example.com/image.jpg または YouTube/Vimeo URL"
-                    />
-                  </div>
-                  {image && (
-                    <div className="mt-2 ml-8">
-                      {image.includes('youtube.com') || image.includes('youtu.be') ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-red-600 font-medium">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
-                          </svg>
-                          YouTube動画
-                        </span>
-                      ) : image.includes('vimeo.com') ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M22.875 10.063c-2.442 5.217-8.337 12.319-12.063 12.319-3.672 0-4.203-7.831-6.208-13.043-.987-2.565-1.624-1.976-3.474-.681l-1.128-1.455c2.698-2.372 5.398-5.127 7.057-5.28 1.868-.179 3.018 1.098 3.448 3.832.568 3.593 1.362 9.17 2.748 9.17 1.08 0 3.741-4.424 3.878-6.006.243-2.316-1.703-2.386-3.392-1.663 2.673-8.754 13.793-7.142 9.134 2.807z"/>
-                          </svg>
-                          Vimeo動画
-                        </span>
-                      ) : image.match(/\.(mp4|webm|mov|ogg)($|\?)/i) ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-purple-600 font-medium">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="5 3 19 12 5 21 5 3"/>
-                          </svg>
-                          動画ファイル
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
-                          </svg>
-                          画像
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {formData.images.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeImageField(index)}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          <MediaUploader
+            onUploadComplete={handleMediaUpload}
+            existingUrls={mediaUrls}
+            maxFiles={10}
+          />
         </div>
 
         {/* オプション */}
