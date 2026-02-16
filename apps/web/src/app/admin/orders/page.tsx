@@ -8,7 +8,6 @@ interface Order {
   id: string;
   order_number: string;
   status: string;
-  payment_status: string;
   total: number;
   currency: string;
   created_at: string;
@@ -17,22 +16,14 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending_payment: { label: '支払い待ち', color: 'bg-yellow-100 text-yellow-700' },
-  paid: { label: '支払い完了', color: 'bg-green-100 text-green-700' },
-  processing: { label: '処理中', color: 'bg-blue-100 text-blue-700' },
-  shipped: { label: '発送済み', color: 'bg-purple-100 text-purple-700' },
-  delivered: { label: '配達完了', color: 'bg-green-100 text-green-700' },
+  pending_payment: { label: '作成待ち', color: 'bg-yellow-100 text-yellow-700' },
+  paid: { label: '作成済み', color: 'bg-blue-100 text-blue-700' },
+  processing: { label: '処理中', color: 'bg-purple-100 text-purple-700' },
+  shipped: { label: '発送済み', color: 'bg-indigo-100 text-indigo-700' },
+  delivered: { label: '配達済み', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'キャンセル', color: 'bg-red-100 text-red-700' },
-  refunded: { label: '返金済み', color: 'bg-gray-100 text-gray-700' },
 };
 
-const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: '未払い', color: 'bg-yellow-100 text-yellow-700' },
-  succeeded: { label: '支払済', color: 'bg-green-100 text-green-700' },
-  paid: { label: '支払済', color: 'bg-green-100 text-green-700' },
-  failed: { label: '失敗', color: 'bg-red-100 text-red-700' },
-  refunded: { label: '返金済', color: 'bg-gray-100 text-gray-700' },
-};
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -89,8 +80,8 @@ export default function AdminOrdersPage() {
       {/* フィルター */}
       <div className="bg-white rounded-2xl p-4 shadow-sm mb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-bold text-gray-600 mr-2">ステータス:</span>
-          {['all', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'].map((status) => (
+          <span className="text-sm font-bold text-gray-600 mr-2">進捗状況:</span>
+          {['all', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -121,8 +112,7 @@ export default function AdminOrdersPage() {
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-bold text-gray-600">注文番号</th>
                 <th className="text-left px-6 py-4 text-sm font-bold text-gray-600">日時</th>
-                <th className="text-left px-6 py-4 text-sm font-bold text-gray-600">ステータス</th>
-                <th className="text-left px-6 py-4 text-sm font-bold text-gray-600">支払い</th>
+                <th className="text-left px-6 py-4 text-sm font-bold text-gray-600">進捗状況</th>
                 <th className="text-right px-6 py-4 text-sm font-bold text-gray-600">金額</th>
                 <th className="text-right px-6 py-4 text-sm font-bold text-gray-600">操作</th>
               </tr>
@@ -130,7 +120,6 @@ export default function AdminOrdersPage() {
             <tbody className="divide-y">
               {filteredOrders.map((order) => {
                 const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: 'bg-gray-100 text-gray-600' };
-                const paymentInfo = PAYMENT_STATUS_LABELS[order.payment_status] || { label: order.payment_status, color: 'bg-gray-100 text-gray-600' };
 
                 return (
                   <tr key={order.id} className="hover:bg-gray-50">
@@ -143,11 +132,6 @@ export default function AdminOrdersPage() {
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${statusInfo.color}`}>
                         {statusInfo.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${paymentInfo.color}`}>
-                        {paymentInfo.label}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">

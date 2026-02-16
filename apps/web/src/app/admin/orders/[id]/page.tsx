@@ -31,7 +31,6 @@ interface Order {
   user_id: string;
   order_number: string;
   status: string;
-  payment_status: string;
   payment_method: string;
   payment_id?: string;
   items: OrderItem[];
@@ -50,21 +49,12 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending_payment: { label: '支払い待ち', color: 'bg-yellow-100 text-yellow-700' },
-  paid: { label: '支払い完了', color: 'bg-green-100 text-green-700' },
-  processing: { label: '処理中', color: 'bg-blue-100 text-blue-700' },
-  shipped: { label: '発送済み', color: 'bg-purple-100 text-purple-700' },
-  delivered: { label: '配達完了', color: 'bg-green-100 text-green-700' },
+  pending_payment: { label: '作成待ち', color: 'bg-yellow-100 text-yellow-700' },
+  paid: { label: '作成済み', color: 'bg-blue-100 text-blue-700' },
+  processing: { label: '処理中', color: 'bg-purple-100 text-purple-700' },
+  shipped: { label: '発送済み', color: 'bg-indigo-100 text-indigo-700' },
+  delivered: { label: '配達済み', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'キャンセル', color: 'bg-red-100 text-red-700' },
-  refunded: { label: '返金済み', color: 'bg-gray-100 text-gray-700' },
-};
-
-const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: '未払い', color: 'bg-yellow-100 text-yellow-700' },
-  succeeded: { label: '支払済', color: 'bg-green-100 text-green-700' },
-  paid: { label: '支払済', color: 'bg-green-100 text-green-700' },
-  failed: { label: '失敗', color: 'bg-red-100 text-red-700' },
-  refunded: { label: '返金済', color: 'bg-gray-100 text-gray-700' },
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -75,15 +65,15 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   bank_transfer: '銀行振込',
 };
 
-// ステータス遷移の定義
+// 進捗状況の遷移定義（adminが手動で更新）
+// OrderProgressの流れに合わせる: 作成待ち → 作成済み → 処理中 → 発送済み → 配達済み
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending_payment: ['paid', 'cancelled'],
-  paid: ['processing', 'cancelled', 'refunded'],
-  processing: ['shipped', 'cancelled', 'refunded'],
-  shipped: ['delivered', 'refunded'],
-  delivered: ['refunded'],
+  pending_payment: ['paid'],
+  paid: ['processing'],
+  processing: ['shipped'],
+  shipped: ['delivered'],
+  delivered: [],
   cancelled: [],
-  refunded: [],
 };
 
 export default function AdminOrderDetailPage() {
@@ -149,17 +139,17 @@ export default function AdminOrderDetailPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'ステータスの更新に失敗しました');
+        throw new Error(errorData.error || '進捗状況の更新に失敗しました');
       }
 
       const data = await res.json();
       setOrder(data.data);
-      setUpdateSuccess('ステータスを更新しました');
+      setUpdateSuccess('進捗状況を更新しました');
 
       // 3秒後にメッセージをクリア
       setTimeout(() => setUpdateSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ステータスの更新に失敗しました');
+      setError(err instanceof Error ? err.message : '進捗状況の更新に失敗しました');
     } finally {
       setIsUpdating(false);
     }
@@ -209,7 +199,6 @@ export default function AdminOrderDetailPage() {
   if (!order) return null;
 
   const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: 'bg-gray-100 text-gray-600' };
-  const paymentStatusInfo = PAYMENT_STATUS_LABELS[order.payment_status] || { label: order.payment_status, color: 'bg-gray-100 text-gray-600' };
   const availableTransitions = STATUS_TRANSITIONS[order.status] || [];
 
   return (
@@ -232,14 +221,9 @@ export default function AdminOrderDetailPage() {
               {formatDate(order.created_at)}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
-            <span className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${paymentStatusInfo.color}`}>
-              {paymentStatusInfo.label}
-            </span>
-          </div>
+          <span className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${statusInfo.color}`}>
+            {statusInfo.label}
+          </span>
         </div>
       </div>
 
@@ -343,12 +327,12 @@ export default function AdminOrderDetailPage() {
 
         {/* 右カラム: ステータス更新 */}
         <div className="space-y-6">
-          {/* ステータス更新 */}
+          {/* 進捗状況 */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">ステータス更新</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">進捗状況</h2>
 
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">現在のステータス</p>
+              <p className="text-sm text-gray-600 mb-2">現在の状況</p>
               <span className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${statusInfo.color}`}>
                 {statusInfo.label}
               </span>
@@ -356,7 +340,7 @@ export default function AdminOrderDetailPage() {
 
             {availableTransitions.length > 0 ? (
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 mb-2">ステータスを変更</p>
+                <p className="text-sm text-gray-600 mb-2">進捗を更新</p>
                 {availableTransitions.map((status) => {
                   const info = STATUS_LABELS[status] || { label: status, color: 'bg-gray-100 text-gray-600' };
                   return (
@@ -377,26 +361,18 @@ export default function AdminOrderDetailPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                このステータスからは変更できません
+                これ以上の進捗更新はありません
               </p>
             )}
           </div>
 
-          {/* 支払い情報 */}
+          {/* 決済情報 */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">支払い情報</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">決済情報</h2>
             <dl className="space-y-3">
               <div>
                 <dt className="text-sm text-gray-600">支払い方法</dt>
                 <dd className="font-bold">{PAYMENT_METHOD_LABELS[order.payment_method] || order.payment_method}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-600">支払いステータス</dt>
-                <dd>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${paymentStatusInfo.color}`}>
-                    {paymentStatusInfo.label}
-                  </span>
-                </dd>
               </div>
               {order.payment_id && (
                 <div>

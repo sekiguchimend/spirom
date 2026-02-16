@@ -155,8 +155,8 @@ export default async function CheckoutCompletePage({
                   </div>
                 )}
 
-                {/* 進捗 */}
-                <OrderProgress order={order} />
+                {/* 進捗（認証済みユーザーのみ） */}
+                {!isGuestOrder && <OrderProgress order={order} />}
 
                 {/* 商品明細 */}
                 {Array.isArray(order.items) && order.items.length > 0 && (

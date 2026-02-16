@@ -10,8 +10,7 @@ export function getOrderStatusLabel(status: string): string {
     processing: '処理中',
     shipped: '発送済み',
     delivered: '配達済み',
-    cancelled: 'キャンセル済み',
-    refunded: '返金済み',
+    cancelled: 'キャンセル',
   };
   return statusMap[status] || status;
 }
@@ -24,7 +23,6 @@ export function getOrderStatusBadgeClass(status: string): string {
     shipped: 'bg-indigo-100 text-indigo-800',
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
-    refunded: 'bg-gray-100 text-gray-800',
   };
   return colorMap[status] || 'bg-gray-100 text-gray-800';
 }

@@ -12,7 +12,14 @@ impl ApiProxy {
 
     /// Proxy a request to the backend API
     pub async fn proxy(&self, mut req: Request, path: &str) -> std::result::Result<Response, BffError> {
-        let url = format!("{}{}", self.api_base_url, path);
+        // クエリパラメータを保持するために元のURLから取得
+        let original_url = req.url().map_err(BffError::from)?;
+        let query_string = original_url.query().unwrap_or("");
+        let url = if query_string.is_empty() {
+            format!("{}{}", self.api_base_url, path)
+        } else {
+            format!("{}{}?{}", self.api_base_url, path, query_string)
+        };
         let method = req.method();
 
         let mut init = RequestInit::new();

@@ -373,9 +373,9 @@ pub async fn handle_webhook(
                 return Ok(StatusCode::OK);
             }
 
-            // 決済成功（RPC関数で更新）
+            // 決済成功（payment_statusのみ更新、statusはadminが手動で更新）
             order_repo
-                .update_order_from_webhook_rpc(order_id, Some(&event.payment_id), Some("paid"), Some("\"paid\""))
+                .update_order_from_webhook_rpc(order_id, Some(&event.payment_id), None, Some("\"paid\""))
                 .await?;
         }
         WebhookEventType::PaymentFailed => {

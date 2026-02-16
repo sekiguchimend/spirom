@@ -498,8 +498,8 @@ pub async fn create_guest_order(
         .map(|s| s.to_string())
         .unwrap_or_else(generate_session_id);
 
-    // ゲスト注文は anon key で作成（RLSポリシー orders_insert_guest で許可）
-    // 在庫操作のみ service_role を使用
+    // ゲスト注文はRPC関数（SECURITY DEFINER）で作成
+    // RPC関数がRLSをバイパスし、かつanon keyで呼び出せる
     let db_anon = state.db.anonymous();
     let db_service = state.db.service();
     let cart_repo = CartRepository::new(db_service.clone());
@@ -626,11 +626,14 @@ pub async fn create_guest_order(
         return Err(AppError::BadRequest("在庫が不足しています".to_string()));
     }
 
-    // 注文作成（失敗したら在庫を戻す）
-    if let Err(e) = order_repo.create(&order).await {
-        let _ = product_repo.release_stock_bulk(&stock_reserve_items).await;
-        return Err(e);
-    }
+    // 注文とアイテムを同時作成（RPC関数を使用、失敗したら在庫を戻す）
+    let created_order = match order_repo.create_guest_order_rpc(&order).await {
+        Ok(o) => o,
+        Err(e) => {
+            let _ = product_repo.release_stock_bulk(&stock_reserve_items).await;
+            return Err(e);
+        }
+    };
 
     // カートから注文した場合のみクリア
     if req.items.is_none() {
@@ -638,7 +641,7 @@ pub async fn create_guest_order(
     }
 
     Ok(Json(DataResponse::new(CreateGuestOrderResponse {
-        order,
+        order: created_order,
         guest_access_token,
     })))
 }

@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { fetchAddresses, createOrderAction, createPaymentIntentAction } from '@/lib/actions';
-import type { Address, CreateOrderItemRequest } from '@/types';
+import { fetchAddresses, createOrderAction, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
+import type { Address, CreateOrderItemRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROUTES } from '@/lib/routes';
 import { PAYMENT_MESSAGES } from '@/lib/messages';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
+import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
 import { formatPrice } from '@/lib/utils';
 
 interface Product {
@@ -36,7 +38,7 @@ export default function ProductCheckout({
 }: ProductCheckoutProps) {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'no-auth' | 'no-address'>('loading');
+  const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'address-input' | 'no-address' | 'no-auth'>('loading');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
@@ -46,12 +48,21 @@ export default function ProductCheckout({
   const [total, setTotal] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [shippingAddress, setShippingAddress] = useState<Address | null>(null);
+  const [isGuest, setIsGuest] = useState<boolean>(false);
+  const [guestAddress, setGuestAddress] = useState<GuestShippingAddress | null>(null);
+  const [guestToken, setGuestToken] = useState<string | null>(null);
+  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
-  // 認証チェック
+  // 重複実行防止用のref
+  const isCheckoutInProgressRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+
+  // 認証チェック - ゲストの場合は住所入力画面へ
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        setStep('no-auth');
+        setIsGuest(true);
+        setStep('address-input');
         return;
       }
     }
@@ -85,7 +96,16 @@ export default function ProductCheckout({
   }, [user]);
 
   const initializeCheckout = async () => {
+    // 重複実行防止
+    if (isCheckoutInProgressRef.current) {
+      console.log('[ProductCheckout] Already in progress, skipping');
+      return;
+    }
+    isCheckoutInProgressRef.current = true;
+    console.log('[ProductCheckout] Starting checkout');
+
     if (!shippingAddress) {
+      isCheckoutInProgressRef.current = false;
       return;
     }
 
@@ -110,6 +130,7 @@ export default function ProductCheckout({
       if (!orderResult.success || !orderResult.data) {
         setError(orderResult.error || '注文の作成に失敗しました');
         setStep('error');
+        isCheckoutInProgressRef.current = false;
         return;
       }
 
@@ -121,31 +142,128 @@ export default function ProductCheckout({
       setTax(order.tax ?? 0);
       setTotal(order.total);
 
+      console.log('[ProductCheckout] Order created:', order.id);
+
       // 2) PaymentIntent作成（注文IDに紐付け）
       const paymentResult = await createPaymentIntentAction(order.id);
 
       if (!paymentResult.success || !paymentResult.data) {
         setError(paymentResult.error || '決済の準備中にエラーが発生しました');
         setStep('error');
+        isCheckoutInProgressRef.current = false;
         return;
       }
 
       setClientSecret(paymentResult.data.client_secret);
+      console.log('[ProductCheckout] Payment intent created');
 
       setStep('ready');
     } catch (err) {
+      console.error('[ProductCheckout] Error:', err);
       setError(err instanceof Error ? err.message : PAYMENT_MESSAGES.FAILED);
       setStep('error');
+      isCheckoutInProgressRef.current = false;
     }
   };
 
-  // 住所が取得できたら決済準備を開始
+  // 住所が取得できたら決済準備を開始（認証済みユーザーのみ）
   useEffect(() => {
-    if (shippingAddress) {
+    if (shippingAddress && !isGuest && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
       initializeCheckout();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shippingAddress]);
+  }, [shippingAddress, isGuest]);
+
+  // ゲスト用のチェックアウト（住所入力後）
+  const initializeGuestCheckout = async (address: GuestShippingAddress, email?: string) => {
+    // 重複実行防止
+    if (isCheckoutInProgressRef.current) {
+      console.log('[ProductCheckout] Already in progress, skipping');
+      return;
+    }
+    isCheckoutInProgressRef.current = true;
+    setIsGuestSubmitting(true);
+    console.log('[ProductCheckout] Starting guest checkout');
+
+    try {
+      setError(null);
+      setStep('loading');
+      setGuestAddress(address);
+
+      const items: CreateOrderItemRequest[] = [
+        {
+          product_id: product.id,
+          quantity: quantity,
+          variant_id: variantId,
+        },
+      ];
+
+      const request: CreateGuestOrderRequest = {
+        items,
+        shipping_address: address,
+        payment_method: 'credit_card',
+        email,
+      };
+
+      const orderResult = await createGuestOrderAction(request);
+      if (!orderResult.success || !orderResult.data) {
+        setError(orderResult.error || '注文の作成に失敗しました');
+        setStep('error');
+        isCheckoutInProgressRef.current = false;
+        setIsGuestSubmitting(false);
+        return;
+      }
+
+      const { order, guest_access_token } = orderResult.data;
+      setOrderId(order.id);
+      setOrderNumber(order.order_number);
+      setSubtotal(order.subtotal ?? 0);
+      setShippingFee(order.shipping_fee ?? 0);
+      setTax(order.tax ?? 0);
+      setTotal(order.total);
+      setGuestToken(guest_access_token);
+
+      console.log('[ProductCheckout] Guest order created:', order.id);
+
+      // sessionStorageにゲストトークンを保存
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`guest_order_${order.id}`, guest_access_token);
+      }
+
+      const paymentResult = await createGuestPaymentIntentAction(order.id, guest_access_token);
+      if (!paymentResult.success || !paymentResult.data) {
+        setError(paymentResult.error || '決済の準備中にエラーが発生しました');
+        setStep('error');
+        isCheckoutInProgressRef.current = false;
+        setIsGuestSubmitting(false);
+        return;
+      }
+
+      setClientSecret(paymentResult.data.client_secret);
+      console.log('[ProductCheckout] Payment intent created');
+      setStep('ready');
+      setIsGuestSubmitting(false);
+    } catch (e) {
+      console.error('[ProductCheckout] Error:', e);
+      setError(e instanceof Error ? e.message : PAYMENT_MESSAGES.FAILED);
+      setStep('error');
+      isCheckoutInProgressRef.current = false;
+      setIsGuestSubmitting(false);
+    }
+  };
+
+  // 再試行ハンドラ
+  const handleRetry = () => {
+    isCheckoutInProgressRef.current = false;
+    if (isGuest) {
+      setStep('address-input');
+    } else {
+      initializeCheckout();
+    }
+  };
+
+  const displayAddress = isGuest ? guestAddress : shippingAddress;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto py-8">
@@ -180,6 +298,11 @@ export default function ProductCheckout({
               </p>
             </div>
             <h2 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>お支払い</h2>
+            {isGuest && (
+              <p className="text-sm text-gray-600 mt-2">
+                ゲスト購入
+              </p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-5 gap-6">
@@ -214,39 +337,42 @@ export default function ProductCheckout({
                 <dl className="space-y-2.5 mb-5">
                   <div className="flex justify-between text-xs text-gray-600">
                     <dt>小計</dt>
-                    <dd className="font-bold text-text-dark">{formatPrice(subtotal)}</dd>
+                    <dd className="font-bold text-text-dark">{formatPrice(subtotal || product.price * quantity)}</dd>
                   </div>
                   <div className="flex justify-between text-xs text-gray-600">
                     <dt>送料</dt>
-                    <dd className="font-bold text-text-dark">{formatPrice(shippingFee)}</dd>
+                    <dd className="font-bold text-text-dark">{formatPrice(shippingFee || 750)}</dd>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <dt>消費税（10%）</dt>
+                    <dd className="font-bold text-text-dark">{formatPrice(tax || Math.round((product.price * quantity) * 0.1))}</dd>
                   </div>
                   <div className="pt-2.5 border-t-2 border-gray-100 flex justify-between items-baseline">
                     <dt className="font-bold text-text-dark text-sm">合計</dt>
-                    <dd className="text-xl font-black text-primary">{formatPrice(total)}</dd>
+                    <dd className="text-xl font-black text-primary">{formatPrice(total || (product.price * quantity + 750 + Math.round((product.price * quantity) * 0.1)))}</dd>
                   </div>
-                  <p className="text-xs text-gray-500 text-right">（税込）</p>
                 </dl>
 
                 {/* 配送先 */}
-                {shippingAddress && (
+                {displayAddress && step !== 'address-input' && (
                   <div className="bg-primary/5 rounded-lg p-3">
                     <p className="text-xs font-bold text-primary mb-1.5 uppercase tracking-wider">
                       配送先
                     </p>
-                    {shippingAddress.name && (
-                      <p className="text-xs font-bold text-text-dark mb-1">{shippingAddress.name}</p>
+                    {displayAddress.name && (
+                      <p className="text-xs font-bold text-text-dark mb-1">{displayAddress.name}</p>
                     )}
-                    <p className="text-xs text-gray-600">〒{shippingAddress.postal_code}</p>
+                    <p className="text-xs text-gray-600">〒{displayAddress.postal_code}</p>
                     <p className="text-xs text-gray-600">
-                      {shippingAddress.prefecture}
-                      {shippingAddress.city}
-                      {shippingAddress.address_line1}
+                      {displayAddress.prefecture}
+                      {displayAddress.city}
+                      {displayAddress.address_line1}
                     </p>
-                    {shippingAddress.address_line2 && (
-                      <p className="text-xs text-gray-600">{shippingAddress.address_line2}</p>
+                    {displayAddress.address_line2 && (
+                      <p className="text-xs text-gray-600">{displayAddress.address_line2}</p>
                     )}
-                    {shippingAddress.phone && (
-                      <p className="text-xs text-gray-600 mt-1">{shippingAddress.phone}</p>
+                    {('phone' in displayAddress) && displayAddress.phone && (
+                      <p className="text-xs text-gray-600 mt-1">{displayAddress.phone}</p>
                     )}
                   </div>
                 )}
@@ -264,49 +390,21 @@ export default function ProductCheckout({
                 </div>
               )}
 
-              {step === 'no-auth' && (
+              {step === 'address-input' && isGuest && (
                 <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <div className="flex flex-col items-center justify-center py-10">
-                    <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                      </svg>
-                    </div>
-                    <p className="font-bold text-lg text-text-dark mb-3">ログインが必要です</p>
-                    <p className="text-gray-600 text-center text-sm mb-5">
-                      購入するにはログインまたは新規登録が必要です
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-base font-black text-text-dark">配送先情報</h3>
+                    <p className="text-xs text-gray-500">
+                      <Link href={ROUTES.AUTH.LOGIN} className="text-primary hover:underline">
+                        ログインはこちら
+                      </Link>
                     </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          router.push(ROUTES.AUTH.LOGIN);
-                          onClose();
-                        }}
-                        className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
-                      >
-                        ログイン
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push(ROUTES.AUTH.REGISTER);
-                          onClose();
-                        }}
-                        className="px-5 py-2.5 font-bold bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all text-sm"
-                      >
-                        新規登録
-                      </button>
-                    </div>
                   </div>
+                  <GuestAddressForm
+                    onSubmit={initializeGuestCheckout}
+                    isSubmitting={isGuestSubmitting}
+                    error={error}
+                  />
                 </div>
               )}
 
@@ -363,7 +461,7 @@ export default function ProductCheckout({
                     <p className="font-bold text-lg text-red-500 mb-3">エラーが発生しました</p>
                     <p className="text-gray-600 text-center text-sm mb-5">{error}</p>
                     <button
-                      onClick={initializeCheckout}
+                      onClick={handleRetry}
                       className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                     >
                       再試行
@@ -396,6 +494,8 @@ export default function ProductCheckout({
                       orderId={orderId}
                       orderNumber={orderNumber}
                       total={total}
+                      isGuest={isGuest}
+                      guestToken={guestToken || undefined}
                     />
                   </Elements>
                 </div>
@@ -407,4 +507,3 @@ export default function ProductCheckout({
     </div>
   );
 }
-

@@ -377,6 +377,65 @@ impl OrderRepository {
         self.client.rpc("update_order_from_webhook", &params).await
     }
 
+    /// ゲスト注文作成（RPC関数版 - SECURITY DEFINER、注文とアイテムを同時作成）
+    pub async fn create_guest_order_rpc(&self, order: &Order) -> Result<Order> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_order_id: Uuid,
+            p_order_number: String,
+            p_status: String,
+            p_items: serde_json::Value,
+            p_subtotal: i64,
+            p_shipping_fee: i64,
+            p_tax: i64,
+            p_total: i64,
+            p_currency: String,
+            p_shipping_address: serde_json::Value,
+            p_billing_address: Option<serde_json::Value>,
+            p_payment_method: String,
+            p_payment_status: String,
+            p_notes: Option<String>,
+            p_guest_email: Option<String>,
+            p_guest_name: Option<String>,
+            p_guest_phone: Option<String>,
+            p_guest_access_token_hash: Option<String>,
+            p_guest_token_expires_at: Option<DateTime<Utc>>,
+        }
+
+        let params = RpcParams {
+            p_order_id: order.id,
+            p_order_number: order.order_number.clone(),
+            p_status: order.status.to_string(),
+            p_items: serde_json::to_value(&order.items).unwrap_or_default(),
+            p_subtotal: order.subtotal,
+            p_shipping_fee: order.shipping_fee,
+            p_tax: order.tax,
+            p_total: order.total,
+            p_currency: order.currency.clone(),
+            p_shipping_address: serde_json::to_value(&order.shipping_address).unwrap_or_default(),
+            p_billing_address: order.billing_address.as_ref().and_then(|a| serde_json::to_value(a).ok()),
+            p_payment_method: order.payment_method.to_string(),
+            p_payment_status: serde_json::to_string(&order.payment_status).unwrap_or_default(),
+            p_notes: order.notes.clone(),
+            p_guest_email: order.guest_email.clone(),
+            p_guest_name: order.guest_name.clone(),
+            p_guest_phone: order.guest_phone.clone(),
+            p_guest_access_token_hash: order.guest_access_token_hash.clone(),
+            p_guest_token_expires_at: order.guest_token_expires_at,
+        };
+
+        // 注文とアイテムを同時作成するRPC関数を呼び出し
+        let result: serde_json::Value = self.client.rpc("create_guest_order_with_items", &params).await?;
+
+        // RPC関数から返されたJSONBをOrderに変換
+        let order_row: OrderRow = serde_json::from_value(result)
+            .map_err(|e| crate::error::AppError::Database(format!("Parse error: {}", e)))?;
+
+        let mut created_order = order_row.into_order();
+        created_order.items = order.items.clone();
+        Ok(created_order)
+    }
+
     /// Webhook用の注文取得（RPC関数版）
     pub async fn find_by_id_for_webhook(&self, order_id: Uuid) -> Result<Option<Order>> {
         #[derive(serde::Serialize)]

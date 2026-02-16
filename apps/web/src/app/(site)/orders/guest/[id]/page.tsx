@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { ROUTES } from '@/lib/routes';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getGuestOrderAction } from '@/lib/actions';
-import { OrderProgress } from '@/components/orders/OrderProgress';
 import { getOrderStatusBadgeClass, getOrderStatusLabel } from '@/lib/orderStatus';
 
 export const dynamic = 'force-dynamic';
@@ -118,9 +117,6 @@ export default async function GuestOrderPage({
                   </div>
                 </div>
               </div>
-
-              {/* 進捗 */}
-              <OrderProgress order={order} />
 
               {/* 商品明細 */}
               {Array.isArray(order.items) && order.items.length > 0 && (
