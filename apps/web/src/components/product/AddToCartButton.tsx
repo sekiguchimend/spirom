@@ -38,7 +38,12 @@ export function AddToCartButton({
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  // デフォルトで最初の在庫ありサイズを選択、なければ最初のサイズ
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(() => {
+    if (variants.length === 0) return null;
+    const available = variants.find(v => v.stock > 0);
+    return available || variants[0];
+  });
   const [sizeError, setSizeError] = useState(false);
 
   const hasVariants = variants.length > 0;
@@ -129,7 +134,7 @@ export function AddToCartButton({
 
       {/* 数量 */}
       <div className="mb-6">
-        <p className="text-xs tracking-[0.15em] text-white/70 uppercase mb-3 font-bold">Quantity</p>
+        <p className="text-xs tracking-[0.15em] text-white/70 uppercase mb-3 font-bold">数量</p>
         <div className="inline-flex items-center bg-white/15 rounded-full">
           <button
             type="button"
@@ -164,7 +169,7 @@ export function AddToCartButton({
           className="flex-1 py-3 bg-white/15 text-white font-bold text-sm tracking-wider rounded-full hover:bg-white/25 transition-all duration-300 disabled:bg-white/10 disabled:text-white/50 border border-white/30"
           disabled={!canPurchase || isAdding}
         >
-          {isAdding ? '追加中...' : isAdded ? '追加しました!' : 'ADD TO BAG'}
+          {isAdding ? '追加中...' : isAdded ? '追加しました!' : 'カートに追加'}
         </button>
         <button
           type="button"
@@ -187,7 +192,7 @@ export function AddToCartButton({
             <line x1="3" y1="6" x2="21" y2="6" />
             <path d="M16 10a4 4 0 0 1-8 0" />
           </svg>
-          BUY NOW
+          今すぐ購入
         </button>
       </div>
 
