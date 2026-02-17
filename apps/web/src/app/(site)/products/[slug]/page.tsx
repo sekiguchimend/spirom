@@ -164,39 +164,39 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
         </article>
 
-        {/* 関連商品 */}
-        {filteredRelated.length > 0 && (
-          <section className="px-6 py-20 lg:px-16 bg-bg-light">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-xs tracking-[0.2em] text-primary uppercase mb-2 font-bold">You may also like</p>
-                  <h2 className="text-3xl md:text-4xl font-black text-text-dark">More to explore</h2>
-                </div>
-                <Link href={ROUTES.PRODUCTS.INDEX} className="text-sm font-bold text-primary hover:underline underline-offset-4">
-                  View all →
-                </Link>
+      {/* 関連商品 */}
+      {filteredRelated.length > 0 && (
+        <section className="relative z-10 px-6 py-16 lg:py-20 lg:px-16 bg-bg-light">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-end justify-between mb-8 lg:mb-12">
+              <div>
+                <p className="text-xs tracking-[0.2em] text-primary uppercase mb-2 font-bold">こちらもおすすめ</p>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-dark">他の商品を見る</h2>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {filteredRelated.map((item) => (
-                  <Link key={item.id} href={ROUTES.PRODUCTS.DETAIL(item.slug)} className="group">
-                    <div className="aspect-square relative bg-white rounded-2xl overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-shadow duration-300">
-                      <Image
-                        src={item.images[0] || '/placeholder-product.jpg'}
-                        alt={item.name}
-                        fill
-                        className="object-contain p-6 group-hover:scale-110 transition-transform duration-500"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                      />
-                    </div>
-                    <h3 className="font-bold mb-1 text-text-dark group-hover:text-primary transition-colors">{item.name}</h3>
-                    <p className="text-text-dark font-bold">¥{item.price.toLocaleString()}</p>
-                  </Link>
-                ))}
-              </div>
+              <Link href={ROUTES.PRODUCTS.INDEX} className="text-sm font-bold text-primary hover:underline underline-offset-4">
+                すべて見る →
+              </Link>
             </div>
-          </section>
-        )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
+              {filteredRelated.map((item) => (
+                <Link key={item.id} href={ROUTES.PRODUCTS.DETAIL(item.slug)} className="group">
+                  <div className="aspect-square relative bg-white rounded-2xl overflow-hidden mb-3 lg:mb-4 shadow-sm group-hover:shadow-xl transition-shadow duration-300">
+                    <Image
+                      src={item.images[0] || '/placeholder-product.jpg'}
+                      alt={item.name}
+                      fill
+                      className="object-contain p-4 lg:p-6 group-hover:scale-110 transition-transform duration-500"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  </div>
+                  <h3 className="font-bold mb-1 text-sm lg:text-base text-text-dark group-hover:text-primary transition-colors line-clamp-2">{item.name}</h3>
+                  <p className="text-text-dark font-bold text-sm lg:text-base">¥{item.price.toLocaleString()}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       </div>
     </>
   );
