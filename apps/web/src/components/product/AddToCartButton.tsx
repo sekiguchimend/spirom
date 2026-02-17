@@ -19,6 +19,8 @@ interface AddToCartButtonProps {
   image: string;
   stock: number;
   variants?: ProductVariant[];
+  material?: string | null;
+  materialDetail?: string | null;
 }
 
 export function AddToCartButton({
@@ -29,6 +31,8 @@ export function AddToCartButton({
   image,
   stock,
   variants = [],
+  material,
+  materialDetail,
 }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
@@ -114,6 +118,8 @@ export function AddToCartButton({
             variants={variants}
             selectedSize={selectedVariant?.size || null}
             onSelect={handleSizeSelect}
+            material={material || undefined}
+            materialDetail={materialDetail || undefined}
           />
           {sizeError && (
             <p className="text-red-300 text-sm font-bold mb-4">サイズを選択してください</p>

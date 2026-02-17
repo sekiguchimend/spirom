@@ -22,6 +22,22 @@ export interface Category {
   updated_at: string;
 }
 
+// 商品バリアント（サイズ）の型定義
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  size: string;
+  sku?: string;
+  stock: number;
+  price_adjustment: number;
+  sort_order: number;
+  is_active: boolean;
+  body_length?: number;
+  body_width?: number;
+  shoulder_width?: number;
+  sleeve_length?: number;
+}
+
 // 商品情報の型定義
 export interface Product {
   id: string;
@@ -42,6 +58,9 @@ export interface Product {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  variants?: ProductVariant[];
+  material?: string | null;
+  material_detail?: string | null;
 }
 
 // ===========================================
@@ -112,7 +131,23 @@ async function fetchProductsByCategory(categorySlug: string): Promise<Product[]>
 async function fetchProductBySlug(slug: string): Promise<Product | null> {
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select(`
+      *,
+      product_variants (
+        id,
+        product_id,
+        size,
+        sku,
+        stock,
+        price_adjustment,
+        sort_order,
+        is_active,
+        body_length,
+        body_width,
+        shoulder_width,
+        sleeve_length
+      )
+    `)
     .eq('slug', slug)
     .eq('is_active', true)
     .single();
@@ -120,6 +155,18 @@ async function fetchProductBySlug(slug: string): Promise<Product | null> {
   if (error) {
     console.error('Error fetching product by slug:', error);
     return null;
+  }
+
+  // product_variantsをvariantsにマッピング（アクティブなもののみ、sort_order順）
+  if (data && data.product_variants) {
+    const activeVariants = (data.product_variants as ProductVariant[])
+      .filter(v => v.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    return {
+      ...data,
+      variants: activeVariants,
+      product_variants: undefined,
+    } as Product;
   }
 
   return data;

@@ -127,7 +127,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <p className="text-white/85 leading-relaxed mb-10 text-lg font-medium">{product.description}</p>
               )}
 
-              {/* 数量とカートボタン */}
+              {/* サイズ選択・数量とカートボタン */}
               <AddToCartButton
                 productId={product.id}
                 slug={product.slug}
@@ -135,6 +135,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 price={product.price}
                 image={product.images[0] || '/placeholder-product.jpg'}
                 stock={product.stock}
+                variants={product.variants}
+                material={product.material}
+                materialDetail={product.material_detail}
               />
 
               {/* 特典 */}

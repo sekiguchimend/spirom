@@ -111,12 +111,12 @@ export function SizeSelector({ variants, selectedSize, onSelect, material, mater
 
       {/* 素材情報 */}
       {(material || materialDetail) && (
-        <div className="mt-4 p-3 bg-white/10 rounded-lg text-sm">
+        <div className="mt-4 text-sm">
           {material && (
-            <p className="text-white font-bold mb-1">素材: {material}</p>
+            <p className="text-white font-bold mb-2">素材: {material}</p>
           )}
           {materialDetail && (
-            <p className="text-white/70 whitespace-pre-line text-xs">{materialDetail}</p>
+            <p className="text-white/70 whitespace-pre-line text-xs leading-relaxed">{materialDetail}</p>
           )}
         </div>
       )}
