@@ -24,7 +24,7 @@ export default async function Home() {
         Hero Section - Juice Agency Clone
         背景色: brand-green (globals.cssで定義)
       */}
-      <section className="relative w-full h-[100svh] overflow-hidden flex flex-col" aria-label="ヒーローセクション">
+      <section className="relative w-full h-[78svh] sm:h-[100svh] overflow-hidden flex flex-col" aria-label="ヒーローセクション">
 
         {/* モバイル用サブテキスト - HTMLで表示（階段形式） */}
         <div className="absolute top-[48%] left-4 right-4 z-10 sm:hidden">
@@ -113,7 +113,7 @@ export default async function Home() {
 
         {/* 中央のメインビジュアル（ユーザー差し替え用） */}
         <div className="absolute inset-0 z-10 flex items-center sm:items-end justify-center pointer-events-none pb-0">
-          <div className="relative w-[70vw] h-[70vw] sm:w-[45vh] sm:h-[45vh] md:w-[80vh] md:h-[80vh] flex items-center justify-center translate-y-[5%] sm:translate-y-[20%]">
+          <div className="relative w-[85vw] h-[85vw] sm:w-[45vh] sm:h-[45vh] md:w-[80vh] md:h-[80vh] flex items-center justify-center translate-y-[18%] sm:translate-y-[20%]">
              <Image
                src="/s.png"
                alt="Spirom カートゥーンファッション メインビジュアル"
@@ -139,7 +139,7 @@ export default async function Home() {
       </section>
 
       {/* EC Section - ここから下は白背景のECサイト */}
-      <section id="products" className="w-full py-12 sm:py-20 px-3 sm:px-4 bg-[#FFFFF5] text-black relative z-30 rounded-t-[2rem] sm:rounded-t-[3rem] mt-4 sm:mt-8 shadow-2xl" aria-labelledby="selected-items-heading">
+      <section id="products" className="w-full py-12 sm:py-20 px-3 sm:px-4 bg-[#FFFFF5] text-black relative z-30 rounded-t-[2rem] sm:rounded-t-[3rem] -mt-20 sm:mt-8 shadow-2xl" aria-labelledby="selected-items-heading">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 sm:mb-12 pb-6 sm:pb-8 border-b border-gray-200">
             <div>
