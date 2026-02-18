@@ -420,4 +420,9 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ path
   return proxy(req, 'DELETE', path);
 }
 
+export async function PATCH(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const { path } = await context.params;
+  return proxy(req, 'PATCH', path);
+}
+
 
