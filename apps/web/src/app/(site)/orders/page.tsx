@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, getServerOrders } from '@/lib/server-api';
 import { formatPrice, formatDate } from '@/lib/utils';
-import { getOrderStatusBadgeClass, getOrderStatusLabel } from '@/lib/orderStatus';
 import { OrderProgress } from '@/components/orders/OrderProgress';
 import { ROUTES } from '@/lib/routes';
 
@@ -58,16 +57,9 @@ export default async function OrdersPage() {
                         注文日: {formatDate(order.created_at)}
                       </p>
                     </div>
-                    <div className="flex flex-col sm:items-end gap-2">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getOrderStatusBadgeClass(order.status)}`}
-                      >
-                        {getOrderStatusLabel(order.status)}
-                      </span>
-                      <p className="text-xl font-bold text-text-dark">
-                        {formatPrice(order.total)}
-                      </p>
-                    </div>
+                    <p className="text-xl font-bold text-text-dark">
+                      {formatPrice(order.total)}
+                    </p>
                   </div>
 
                   {/* 進捗状況 */}

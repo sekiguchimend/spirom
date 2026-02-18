@@ -95,7 +95,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {/* メインコンテンツ */}
         <article className="grid grid-cols-1 lg:grid-cols-2">
           {/* 左: メディアエリア - フル高さ、スティッキー */}
-          <div className="lg:sticky lg:top-0 lg:h-screen bg-bg-light flex items-center justify-center p-8 lg:p-16">
+          <div className="lg:sticky lg:top-0 lg:h-screen bg-bg-light flex items-center justify-center p-8 pt-20 lg:p-16">
             <MediaGallery
               media={product.images}
               productName={product.name}
