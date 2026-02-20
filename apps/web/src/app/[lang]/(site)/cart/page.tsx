@@ -10,7 +10,7 @@ import { createLocalizedRoutes } from '@/lib/routes';
 import { type Locale, defaultLocale } from '@/lib/i18n/config';
 
 export default function CartPage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const langFromPath = pathname.split('/')[1] as Locale;
   const locale = langFromPath || defaultLocale;
   const routes = createLocalizedRoutes(locale);

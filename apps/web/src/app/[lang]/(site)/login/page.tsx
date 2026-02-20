@@ -16,7 +16,7 @@ interface FieldErrors {
 }
 
 export default function LoginPage() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const langFromPath = pathname.split('/')[1] as Locale;
   const locale = langFromPath || defaultLocale;
   const routes = createLocalizedRoutes(locale);
