@@ -2,19 +2,27 @@ import { Metadata } from "next";
 import { ContentCard, CategoryPill } from "@/components/ui";
 import { getPosts, getCategories, urlFor, formatDate } from "@/lib/sanity";
 import { createLocalizedRoutes } from "@/lib/routes";
-import { type Locale, defaultLocale } from "@/lib/i18n/config";
+import { type Locale, locales, defaultLocale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
-export const metadata: Metadata = {
-  title: "ブログ",
-  description: "Spiromのブログ。カートゥーンファッションの最新トレンド、コーディネート術、新商品情報をお届けします。",
-  alternates: {
-    canonical: "/blog",
-  },
-  openGraph: {
-    title: "ブログ | Spirom",
-    description: "カートゥーンファッションの最新情報をお届けします。",
-  },
-};
+interface BlogPageProps {
+  params: Promise<{ lang: string }>;
+}
+
+export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = (locales.includes(lang as Locale) ? lang : defaultLocale) as Locale;
+  const dict = await getDictionary(locale, 'blog');
+  const meta = dict.meta as { title?: string; description?: string } || {};
+
+  return {
+    title: meta.title || 'Blog',
+    description: meta.description || '',
+    alternates: {
+      canonical: `/${locale}/blog`,
+    },
+  };
+}
 
 export default async function BlogPage({
   params,

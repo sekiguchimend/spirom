@@ -73,6 +73,9 @@ export const dictionaryPages = [
   'contact',
   'faq',
   'legal',
+  'privacy',
+  'terms',
+  'about',
   'blog',
   'errors',
 ] as const;

@@ -1,8 +1,5 @@
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'カート',
-  description: 'ショッピングカート。Spiromのカートゥーンファッションアイテムをまとめてご確認いただけます。',
+// robots設定のみ（タイトルは親レイアウトから継承）
+export const metadata = {
   robots: {
     index: false,
     follow: true,

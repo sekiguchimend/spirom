@@ -1,13 +1,4 @@
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'よくある質問',
-  description: 'Spiromのよくある質問。ご注文方法・配送・お支払い・返品についてのQ&Aをまとめています。',
-  alternates: {
-    canonical: '/faq',
-  },
-};
-
+// メタデータは親レイアウトから継承
 export default function FAQLayout({
   children,
 }: {

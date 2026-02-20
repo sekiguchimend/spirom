@@ -1,8 +1,5 @@
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: '検索',
-  description: 'Spiromの商品検索。大人もきれるカートゥーンファッションアイテムをキーワードで探せます。',
+// robots設定のみ（タイトルは親レイアウトから継承）
+export const metadata = {
   robots: {
     index: false,
     follow: true,

@@ -3,44 +3,105 @@
  * ページ単位で翻訳JSONをダイナミックインポート
  */
 
+import { cache } from 'react';
 import { type Locale, type DictionaryPage, defaultLocale, isValidLocale } from './config';
 
-// 辞書のキャッシュ（サーバーサイドで有効）
-const dictionaryCache = new Map<string, Record<string, unknown>>();
+// 静的インポートで全辞書を事前読み込み（ビルド時に最適化される）
+const dictionaries: Record<Locale, Record<DictionaryPage, () => Promise<Record<string, unknown>>>> = {
+  ja: {
+    common: () => import('@/locales/ja/common.json').then(m => m.default),
+    home: () => import('@/locales/ja/home.json').then(m => m.default),
+    products: () => import('@/locales/ja/products.json').then(m => m.default),
+    cart: () => import('@/locales/ja/cart.json').then(m => m.default),
+    checkout: () => import('@/locales/ja/checkout.json').then(m => m.default),
+    auth: () => import('@/locales/ja/auth.json').then(m => m.default),
+    account: () => import('@/locales/ja/account.json').then(m => m.default),
+    orders: () => import('@/locales/ja/orders.json').then(m => m.default),
+    contact: () => import('@/locales/ja/contact.json').then(m => m.default),
+    faq: () => import('@/locales/ja/faq.json').then(m => m.default),
+    legal: () => import('@/locales/ja/legal.json').then(m => m.default),
+    privacy: () => import('@/locales/ja/privacy.json').then(m => m.default),
+    terms: () => import('@/locales/ja/terms.json').then(m => m.default),
+    about: () => import('@/locales/ja/about.json').then(m => m.default),
+    blog: () => import('@/locales/ja/blog.json').then(m => m.default),
+    errors: () => import('@/locales/ja/errors.json').then(m => m.default),
+  },
+  en: {
+    common: () => import('@/locales/en/common.json').then(m => m.default),
+    home: () => import('@/locales/en/home.json').then(m => m.default),
+    products: () => import('@/locales/en/products.json').then(m => m.default),
+    cart: () => import('@/locales/en/cart.json').then(m => m.default),
+    checkout: () => import('@/locales/en/checkout.json').then(m => m.default),
+    auth: () => import('@/locales/en/auth.json').then(m => m.default),
+    account: () => import('@/locales/en/account.json').then(m => m.default),
+    orders: () => import('@/locales/en/orders.json').then(m => m.default),
+    contact: () => import('@/locales/en/contact.json').then(m => m.default),
+    faq: () => import('@/locales/en/faq.json').then(m => m.default),
+    legal: () => import('@/locales/en/legal.json').then(m => m.default),
+    privacy: () => import('@/locales/en/privacy.json').then(m => m.default),
+    terms: () => import('@/locales/en/terms.json').then(m => m.default),
+    about: () => import('@/locales/en/about.json').then(m => m.default),
+    blog: () => import('@/locales/en/blog.json').then(m => m.default),
+    errors: () => import('@/locales/en/errors.json').then(m => m.default),
+  },
+  zh: {
+    common: () => import('@/locales/zh/common.json').then(m => m.default),
+    home: () => import('@/locales/zh/home.json').then(m => m.default),
+    products: () => import('@/locales/zh/products.json').then(m => m.default),
+    cart: () => import('@/locales/zh/cart.json').then(m => m.default),
+    checkout: () => import('@/locales/ja/checkout.json').then(m => m.default), // fallback
+    auth: () => import('@/locales/zh/auth.json').then(m => m.default),
+    account: () => import('@/locales/zh/account.json').then(m => m.default),
+    orders: () => import('@/locales/ja/orders.json').then(m => m.default), // fallback
+    contact: () => import('@/locales/zh/contact.json').then(m => m.default),
+    faq: () => import('@/locales/zh/faq.json').then(m => m.default),
+    legal: () => import('@/locales/zh/legal.json').then(m => m.default),
+    privacy: () => import('@/locales/zh/privacy.json').then(m => m.default),
+    terms: () => import('@/locales/zh/terms.json').then(m => m.default),
+    about: () => import('@/locales/zh/about.json').then(m => m.default),
+    blog: () => import('@/locales/zh/blog.json').then(m => m.default),
+    errors: () => import('@/locales/ja/errors.json').then(m => m.default), // fallback
+  },
+  ko: {
+    common: () => import('@/locales/ko/common.json').then(m => m.default),
+    home: () => import('@/locales/ko/home.json').then(m => m.default),
+    products: () => import('@/locales/ko/products.json').then(m => m.default),
+    cart: () => import('@/locales/ko/cart.json').then(m => m.default),
+    checkout: () => import('@/locales/ja/checkout.json').then(m => m.default), // fallback
+    auth: () => import('@/locales/ko/auth.json').then(m => m.default),
+    account: () => import('@/locales/ko/account.json').then(m => m.default),
+    orders: () => import('@/locales/ja/orders.json').then(m => m.default), // fallback
+    contact: () => import('@/locales/ko/contact.json').then(m => m.default),
+    faq: () => import('@/locales/ko/faq.json').then(m => m.default),
+    legal: () => import('@/locales/ko/legal.json').then(m => m.default),
+    privacy: () => import('@/locales/ko/privacy.json').then(m => m.default),
+    terms: () => import('@/locales/ko/terms.json').then(m => m.default),
+    about: () => import('@/locales/ko/about.json').then(m => m.default),
+    blog: () => import('@/locales/ko/blog.json').then(m => m.default),
+    errors: () => import('@/locales/ja/errors.json').then(m => m.default), // fallback
+  },
+};
 
 /**
- * 指定したページの辞書を取得
+ * 指定したページの辞書を取得（リクエスト単位でキャッシュ）
  * Server Componentで使用
  */
-export async function getDictionary(
+export const getDictionary = cache(async (
   locale: Locale,
   page: DictionaryPage
-): Promise<Record<string, unknown>> {
-  const cacheKey = `${locale}:${page}`;
-
-  // キャッシュチェック
-  if (dictionaryCache.has(cacheKey)) {
-    return dictionaryCache.get(cacheKey)!;
-  }
-
+): Promise<Record<string, unknown>> => {
   try {
-    // ダイナミックインポート
-    const dictionary = await import(`@/locales/${locale}/${page}.json`)
-      .then((module) => module.default);
-
-    dictionaryCache.set(cacheKey, dictionary);
-    return dictionary;
-  } catch {
-    // フォールバック: デフォルト言語の辞書を返す
-    if (locale !== defaultLocale) {
-      console.warn(`Dictionary not found: ${locale}/${page}, falling back to ${defaultLocale}`);
-      return getDictionary(defaultLocale, page);
+    const loader = dictionaries[locale]?.[page];
+    if (loader) {
+      return await loader();
     }
-    // デフォルト言語でも見つからない場合は空オブジェクト
+    // フォールバック
+    return await dictionaries[defaultLocale][page]();
+  } catch {
     console.error(`Dictionary not found: ${locale}/${page}`);
     return {};
   }
-}
+});
 
 /**
  * 複数ページの辞書を一括取得

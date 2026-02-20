@@ -4,12 +4,24 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getFeaturedProducts, getTopLevelCategories } from '@/lib/supabase';
 import { createLocalizedRoutes } from '@/lib/routes';
-import { type Locale, defaultLocale } from '@/lib/i18n/config';
+import { type Locale, locales, defaultLocale } from '@/lib/i18n/config';
+import { getDictionary } from '@/lib/i18n/get-dictionary';
 
-export const metadata: Metadata = {
-  title: 'Spirom - 大人もきれるカートゥーン',
-  description: '遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。',
-};
+interface PageProps {
+  params: Promise<{ lang: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = (locales.includes(lang as Locale) ? lang : defaultLocale) as Locale;
+  const dict = await getDictionary(locale, 'home');
+  const meta = dict.meta as { title?: string; description?: string } || {};
+
+  return {
+    title: meta.title || 'Spirom',
+    description: meta.description || '',
+  };
+}
 
 export default async function Home({
   params,

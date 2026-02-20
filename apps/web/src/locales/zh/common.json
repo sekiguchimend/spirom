@@ -3,6 +3,14 @@
     "name": "Spirom",
     "tagline": "成人也能穿的卡通风格"
   },
+  "meta": {
+    "title": "Spirom - 成人也能穿的卡通风格",
+    "description": "融合趣味与精致的成人卡通风格时尚品牌。流行而优雅，独一无二的风格。",
+    "keywords": "时尚,卡通,服装,成人,流行,设计师",
+    "ogDescription": "融合趣味与精致的成人卡通风格时尚品牌。",
+    "ogImageAlt": "Spirom - 成人也能穿的卡通风格时尚",
+    "locale": "zh_CN"
+  },
   "nav": {
     "home": "首页",
     "shop": "商店",

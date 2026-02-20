@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "博客",
+    "description": "Spirom最新资讯"
+  },
+  "title": "Blog",
+  "readMore": "阅读更多",
+  "published": "发布日期",
+  "author": "作者",
+  "share": "分享",
+  "relatedPosts": "相关文章",
+  "empty": "没有找到文章"
+}

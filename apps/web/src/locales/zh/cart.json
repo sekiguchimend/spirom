@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "title": "购物车",
+    "description": "查看购物车"
+  },
+  "title": "购物车",
+  "empty": "购物车是空的",
+  "emptyMessage": "请添加商品到购物车",
+  "continueShopping": "继续购物",
+  "item": {
+    "remove": "删除",
+    "quantity": "数量",
+    "size": "尺寸"
+  },
+  "summary": {
+    "title": "订单摘要",
+    "subtotal": "小计",
+    "shipping": "运费",
+    "shippingCalculated": "结账时计算",
+    "tax": "税费",
+    "total": "总计",
+    "checkout": "去结账"
+  },
+  "actions": {
+    "clear": "清空购物车",
+    "update": "更新购物车"
+  }
+}

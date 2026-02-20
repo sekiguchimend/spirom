@@ -1,8 +1,5 @@
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'ログイン',
-  description: 'Spiromアカウントにログイン。会員限定の特典やお気に入り機能をご利用いただけます。',
+// robots設定のみ（タイトルは親レイアウトから継承）
+export const metadata = {
   robots: {
     index: false,
     follow: true,

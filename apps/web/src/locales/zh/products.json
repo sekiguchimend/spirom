@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "商品列表",
+    "description": "浏览我们的卡通风格时尚系列"
+  },
+  "list": {
+    "title": "Products",
+    "empty": "没有找到商品",
+    "filter": "筛选",
+    "sort": "排序",
+    "sortOptions": {
+      "newest": "最新",
+      "priceAsc": "价格从低到高",
+      "priceDesc": "价格从高到低",
+      "popular": "最受欢迎"
+    }
+  },
+  "detail": {
+    "addToCart": "加入购物车",
+    "outOfStock": "缺货",
+    "size": "尺寸",
+    "color": "颜色",
+    "quantity": "数量",
+    "description": "商品描述",
+    "details": "详细信息",
+    "shipping": "配送",
+    "reviews": "评价",
+    "relatedProducts": "相关商品"
+  },
+  "size": {
+    "selectSize": "选择尺寸",
+    "sizeGuide": "尺寸指南"
+  }
+}

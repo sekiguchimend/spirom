@@ -34,14 +34,9 @@ export const viewport: Viewport = {
   themeColor: "#1a1a2e",
 };
 
+// ベースメタデータ（子レイアウトでロケール別にオーバーライドされる）
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: {
-    default: `${SITE_NAME} - 大人もきれるカートゥーン`,
-    template: `%s | ${SITE_NAME}`,
-  },
-  description: "遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。ポップでありながら上品な、他にはないスタイルを。",
-  keywords: ["ファッション", "カートゥーン", "アパレル", "大人", "ポップ", "デザイナーズ"],
   authors: [{ name: "Spirom Inc." }],
   creator: "Spirom Inc.",
   publisher: "Spirom Inc.",
@@ -49,21 +44,6 @@ export const metadata: Metadata = {
     email: false,
     address: false,
     telephone: false,
-  },
-  openGraph: {
-    type: "website",
-    locale: "ja_JP",
-    siteName: SITE_NAME,
-    title: `${SITE_NAME} - 大人もきれるカートゥーン`,
-    description: "遊び心と洗練を融合した、大人のためのカートゥーンファッションブランド。",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Spirom - 大人もきれるカートゥーンファッション",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -80,9 +60,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
-  },
-  alternates: {
-    canonical: "/",
   },
 };
 
@@ -157,8 +134,8 @@ export default function RootLayout({
   return (
     <html lang="ja" dir="ltr">
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
-        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
 
         <script

@@ -3,21 +3,27 @@ import { ProductCard, CategoryPill } from '@/components/ui';
 import { getAllProducts, getProductsByCategory, getTopLevelCategories } from '@/lib/supabase';
 import { safeJsonLd } from '@/lib/safeJsonLd';
 import { SITE_URL, SITE_NAME } from '@/lib/config';
-
-export const metadata: Metadata = {
-  title: "Products",
-  description: "Spiromの商品一覧。大人もきれるカートゥーンをコンセプトにした、遊び心と洗練を融合したファッションアイテム。",
-  alternates: {
-    canonical: "/products",
-  },
-  openGraph: {
-    title: "Products | Spirom",
-    description: "大人もきれるカートゥーンファッションアイテムを多数取り揃えています。",
-  },
-};
+import { getDictionary } from '@/lib/i18n/get-dictionary';
+import { type Locale, locales, defaultLocale } from '@/lib/i18n/config';
 
 interface ProductsPageProps {
+  params: Promise<{ lang: string }>;
   searchParams: Promise<{ category?: string; sort?: string; page?: string }>;
+}
+
+export async function generateMetadata({ params }: ProductsPageProps): Promise<Metadata> {
+  const { lang } = await params;
+  const locale = (locales.includes(lang as Locale) ? lang : defaultLocale) as Locale;
+  const dict = await getDictionary(locale, 'products');
+  const meta = dict.meta as { title?: string; description?: string } || {};
+
+  return {
+    title: meta.title || 'Products',
+    description: meta.description || '',
+    alternates: {
+      canonical: `/${locale}/products`,
+    },
+  };
 }
 
 // タグを判定するヘルパー関数

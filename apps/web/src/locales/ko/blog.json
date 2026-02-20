@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "블로그",
+    "description": "Spirom 최신 소식"
+  },
+  "title": "Blog",
+  "readMore": "더 읽기",
+  "published": "게시일",
+  "author": "작성자",
+  "share": "공유",
+  "relatedPosts": "관련 게시물",
+  "empty": "게시물이 없습니다"
+}

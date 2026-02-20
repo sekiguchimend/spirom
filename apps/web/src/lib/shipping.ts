@@ -24,6 +24,8 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
 export const LOCALE_CURRENCY: Record<Locale, string> = {
   ja: 'JPY',
   en: 'USD',
+  zh: 'JPY', // 中国からの注文もJPY（日本円）で決済
+  ko: 'JPY', // 韓国からの注文もJPY（日本円）で決済
 };
 
 // 送料設定（JPY基準）

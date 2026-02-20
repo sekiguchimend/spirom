@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "상품 목록",
+    "description": "카툰 스타일 패션 컬렉션 보기"
+  },
+  "list": {
+    "title": "Products",
+    "empty": "상품이 없습니다",
+    "filter": "필터",
+    "sort": "정렬",
+    "sortOptions": {
+      "newest": "최신순",
+      "priceAsc": "가격 낮은 순",
+      "priceDesc": "가격 높은 순",
+      "popular": "인기순"
+    }
+  },
+  "detail": {
+    "addToCart": "장바구니에 담기",
+    "outOfStock": "품절",
+    "size": "사이즈",
+    "color": "색상",
+    "quantity": "수량",
+    "description": "상품 설명",
+    "details": "상세정보",
+    "shipping": "배송",
+    "reviews": "리뷰",
+    "relatedProducts": "관련 상품"
+  },
+  "size": {
+    "selectSize": "사이즈 선택",
+    "sizeGuide": "사이즈 가이드"
+  }
+}
