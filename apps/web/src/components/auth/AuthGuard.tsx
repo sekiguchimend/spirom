@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/ui';
-import { ROUTES } from '@/lib/routes';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -12,14 +13,18 @@ interface AuthGuardProps {
   requireAddress?: boolean;
 }
 
-export function AuthGuard({ children, redirectTo = ROUTES.AUTH.LOGIN, requireAddress = false }: AuthGuardProps) {
+export function AuthGuard({ children, redirectTo, requireAddress = false }: AuthGuardProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
+  const routes = createLocalizedRoutes(locale);
+  const finalRedirectTo = redirectTo || routes.AUTH.LOGIN;
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        router.push(redirectTo);
+        router.push(finalRedirectTo);
         return;
       }
 
@@ -28,7 +33,7 @@ export function AuthGuard({ children, redirectTo = ROUTES.AUTH.LOGIN, requireAdd
         // ここでは認証のみチェック
       }
     }
-  }, [user, isLoading, router, redirectTo, requireAddress]);
+  }, [user, isLoading, router, finalRedirectTo, requireAddress]);
 
   if (isLoading) {
     return (

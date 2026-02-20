@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "Blog",
+    "description": "Latest news from Spirom"
+  },
+  "title": "Blog",
+  "readMore": "Read More",
+  "published": "Published",
+  "author": "Author",
+  "share": "Share",
+  "relatedPosts": "Related Posts",
+  "empty": "No posts found"
+}

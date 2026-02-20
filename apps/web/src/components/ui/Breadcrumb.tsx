@@ -1,6 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { safeJsonLd } from '@/lib/safeJsonLd';
 import { SITE_URL } from '@/lib/config';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 
 export interface BreadcrumbItem {
   label: string;
@@ -12,6 +17,9 @@ interface BreadcrumbProps {
 }
 
 export function Breadcrumb({ items }: BreadcrumbProps) {
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
+  const routes = createLocalizedRoutes(locale);
   // BreadcrumbList 構造化データを生成
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -45,7 +53,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
                   </span>
                 ) : (
                   <Link
-                    href={item.href || '/'}
+                    href={item.href || routes.HOME}
                     className="font-bold hover:text-gray-600 transition-colors"
                   >
                     {item.label}

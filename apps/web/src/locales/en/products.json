@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "Products",
+    "description": "Browse our collection of cartoon-inspired fashion"
+  },
+  "list": {
+    "title": "Products",
+    "empty": "No products found",
+    "filter": "Filter",
+    "sort": "Sort",
+    "sortOptions": {
+      "newest": "Newest",
+      "priceAsc": "Price: Low to High",
+      "priceDesc": "Price: High to Low",
+      "popular": "Most Popular"
+    }
+  },
+  "detail": {
+    "addToCart": "Add to Cart",
+    "outOfStock": "Out of Stock",
+    "size": "Size",
+    "color": "Color",
+    "quantity": "Quantity",
+    "description": "Description",
+    "details": "Details",
+    "shipping": "Shipping",
+    "reviews": "Reviews",
+    "relatedProducts": "Related Products"
+  },
+  "size": {
+    "selectSize": "Select Size",
+    "sizeGuide": "Size Guide"
+  }
+}

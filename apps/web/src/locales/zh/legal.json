@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "特定商业交易法标识",
+    "description": "Spirom的特定商业交易法标识。包含销售商信息、支付方式、配送、退货等相关信息。"
+  },
+  "header": {
+    "title": "LEGAL",
+    "subtitle": "特定商业交易法标识",
+    "lastUpdated": "2025年2月12日"
+  },
+  "sections": {
+    "seller": {
+      "label": "销售商",
+      "value": "SPIROM INC."
+    },
+    "manager": {
+      "label": "运营负责人",
+      "value": "关口峻矢"
+    },
+    "email": {
+      "label": "电子邮箱",
+      "value": "sekiguchishunya0619@gmail.com"
+    },
+    "price": {
+      "label": "销售价格",
+      "value": "各商品页面显示的价格（含税）"
+    },
+    "additionalFees": {
+      "label": "商品价格以外的费用",
+      "value": "运费：全国统一750日元（含税）",
+      "note": "※银行转账手续费由顾客承担"
+    },
+    "payment": {
+      "label": "支付方式",
+      "value": "信用卡支付（VISA、Mastercard、American Express、JCB）"
+    },
+    "paymentTiming": {
+      "label": "支付时间",
+      "value": "信用卡支付：下单时结算"
+    },
+    "delivery": {
+      "label": "商品交付时间",
+      "value": "订单确认后约2周内送达。",
+      "note": "※根据库存情况和配送地区，送达时间可能有所不同。"
+    },
+    "returns": {
+      "label": "退货・换货",
+      "value": "仅限商品到达后7日内，且未使用、未开封的商品可退换。",
+      "items": [
+        "不良品・错发商品：由我方承担运费进行换货",
+        "顾客原因退货：运费由顾客承担",
+        "促销商品・定制商品不可退换"
+      ]
+    },
+    "returnContact": {
+      "label": "退货联系方式",
+      "value": "sekiguchishunya0619@gmail.com"
+    }
+  }
+}

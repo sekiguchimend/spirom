@@ -1,14 +1,31 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import {
+  locales,
+  defaultLocale,
+  isValidLocale,
+  type Locale,
+} from '@/lib/i18n/config';
+import { detectLocaleFromRequest } from '@/lib/i18n/geo';
+import { extractLocaleFromPath } from '@/lib/i18n/get-dictionary';
 
 // 管理者アクセスを許可するIPアドレス（CIDR表記可）
-// 環境変数 ADMIN_ALLOWED_IPS で設定可能（カンマ区切り）
 const ADMIN_ALLOWED_IPS = process.env.ADMIN_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || [];
+
+// 言語リダイレクトをスキップするパス
+const SKIP_LOCALE_PATHS = [
+  '/api',
+  '/admin',
+  '/_next',
+  '/favicon',
+  '/manifest',
+  '/robots',
+  '/sitemap',
+];
 
 // IPアドレスがCIDR範囲内かチェック
 function isIpInCidr(ip: string, cidr: string): boolean {
-  // IPv6の場合はシンプルな完全一致チェック
   if (ip.includes(':') || cidr.includes(':')) {
     return ip === cidr || cidr === ip.split(':').slice(0, -1).join(':') + '::';
   }
@@ -30,19 +47,15 @@ function isIpInCidr(ip: string, cidr: string): boolean {
 function isIpAllowed(ip: string): boolean {
   const isProduction = process.env.NODE_ENV === 'production';
 
-  // localhost は常に許可（開発環境のみ）
   if (!isProduction && (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost')) {
     return true;
   }
 
-  // 許可リストが空の場合
   if (ADMIN_ALLOWED_IPS.length === 0) {
     if (isProduction) {
-      // 本番環境では許可リストが必須 - 空の場合は全て拒否
-      console.error('[Security] ADMIN_ALLOWED_IPS is not configured in production - denying all admin access');
+      console.error('[Security] ADMIN_ALLOWED_IPS is not configured in production');
       return false;
     }
-    // 開発環境では全て許可（警告付き）
     console.warn('[Security] ADMIN_ALLOWED_IPS is empty - allowing all IPs in development');
     return true;
   }
@@ -57,47 +70,78 @@ function isIpAllowed(ip: string): boolean {
 
 // クライアントIPを取得
 function getClientIp(request: NextRequest): string {
-  // Vercelの場合
   const vercelIp = request.headers.get('x-vercel-forwarded-for');
-  if (vercelIp) {
-    return vercelIp.split(',')[0].trim();
-  }
+  if (vercelIp) return vercelIp.split(',')[0].trim();
 
-  // Cloudflareの場合
   const cfIp = request.headers.get('cf-connecting-ip');
-  if (cfIp) {
-    return cfIp;
-  }
+  if (cfIp) return cfIp;
 
-  // 一般的なX-Forwarded-For
   const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    return xff.split(',')[0].trim();
-  }
+  if (xff) return xff.split(',')[0].trim();
 
-  // X-Real-IP
   const realIp = request.headers.get('x-real-ip');
-  if (realIp) {
-    return realIp;
-  }
+  if (realIp) return realIp;
 
   return '127.0.0.1';
+}
+
+// 言語リダイレクトをスキップすべきか判定
+function shouldSkipLocaleRedirect(pathname: string): boolean {
+  // 静的ファイル
+  if (pathname.includes('.')) return true;
+
+  // 特定のパス
+  return SKIP_LOCALE_PATHS.some(path => pathname.startsWith(path));
+}
+
+// 言語リダイレクト処理
+function handleLocaleRedirect(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+
+  // スキップ対象のパス
+  if (shouldSkipLocaleRedirect(pathname)) {
+    return null;
+  }
+
+  // 既に言語プレフィックスがある場合
+  const existingLocale = extractLocaleFromPath(pathname);
+  if (existingLocale) {
+    // レスポンスヘッダーに言語情報を追加（後続処理用）
+    const response = NextResponse.next();
+    response.headers.set('x-locale', existingLocale);
+    response.headers.set('x-country', request.headers.get('x-vercel-ip-country') || '');
+    return response;
+  }
+
+  // IPから言語を判定
+  const detectedLocale = detectLocaleFromRequest(request);
+
+  // 言語プレフィックス付きURLにリダイレクト
+  const url = request.nextUrl.clone();
+  url.pathname = `/${detectedLocale}${pathname === '/' ? '' : pathname}`;
+
+  const response = NextResponse.redirect(url);
+  response.headers.set('x-locale', detectedLocale);
+  response.headers.set('x-country', request.headers.get('x-vercel-ip-country') || '');
+
+  return response;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 管理者画面へのアクセス
+  // デバッグログ
+  console.log('[Middleware]', pathname);
+
+  // 管理者画面へのアクセス（言語プレフィックスなし）
   if (pathname.startsWith('/admin')) {
     const clientIp = getClientIp(request);
 
-    // IP制限チェック
     if (!isIpAllowed(clientIp)) {
       console.warn(`[Admin Access Denied] IP: ${clientIp}, Path: ${pathname}`);
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    // Supabaseセッションチェック（サーバーサイド）
     const response = NextResponse.next();
 
     const supabase = createServerClient(
@@ -120,13 +164,11 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      // 未ログインの場合はログインページへリダイレクト
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    // ユーザーのロールをチェック（usersテーブルから取得）
     const { data: userData } = await supabase
       .from('users')
       .select('role')
@@ -135,7 +177,6 @@ export async function middleware(request: NextRequest) {
 
     if (!userData || userData.role !== 'admin') {
       console.warn(`[Admin Access Denied] User: ${user.email}, Role: ${userData?.role || 'unknown'}, IP: ${clientIp}`);
-      // 管理者でない場合はホームへリダイレクト
       return NextResponse.redirect(new URL('/', request.url));
     }
 
@@ -143,15 +184,15 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // 言語リダイレクト処理
+  const localeResponse = handleLocaleRedirect(request);
+  if (localeResponse) {
+    return localeResponse;
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/admin/:path*',
-    // /checkout は認証不要（ゲスト購入対応）
-    '/account/:path*',
-    '/login',
-    '/register',
-  ],
+  matcher: ['/((?!api|_next|favicon.ico).*)'],
 };

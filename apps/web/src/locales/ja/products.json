@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "title": "商品一覧",
+    "description": "Spiromの商品一覧ページ"
+  },
+  "list": {
+    "title": "Products",
+    "empty": "商品がありません",
+    "filter": "フィルター",
+    "sort": "並び替え",
+    "sortOptions": {
+      "newest": "新着順",
+      "priceAsc": "価格が安い順",
+      "priceDesc": "価格が高い順",
+      "popular": "人気順"
+    }
+  },
+  "detail": {
+    "addToCart": "カートに追加",
+    "outOfStock": "在庫切れ",
+    "size": "サイズ",
+    "color": "カラー",
+    "quantity": "数量",
+    "description": "商品説明",
+    "details": "詳細",
+    "shipping": "配送について",
+    "reviews": "レビュー",
+    "relatedProducts": "関連商品"
+  },
+  "size": {
+    "selectSize": "サイズを選択",
+    "sizeGuide": "サイズガイド"
+  }
+}

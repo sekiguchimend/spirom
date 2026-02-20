@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "title": "Privacy Policy",
+    "description": "Spirom's Privacy Policy. We explain our policies on collecting, using, and protecting your personal information."
+  },
+  "header": {
+    "title": "PRIVACY",
+    "subtitle": "Privacy Policy",
+    "lastUpdated": "February 12, 2025"
+  },
+  "sections": [
+    {
+      "title": "1. Collection of Personal Information",
+      "content": "When you place an order or make an inquiry on our site, we may collect personal information such as your name, email address, address, and phone number. This information is used for processing orders, shipping products, and responding to inquiries."
+    },
+    {
+      "title": "2. Purpose of Use",
+      "items": [
+        "Shipping ordered products",
+        "Responding to inquiries",
+        "Sending important service notifications",
+        "Service improvement and new service development"
+      ]
+    },
+    {
+      "title": "3. Disclosure to Third Parties",
+      "content": "We will not provide your personal information to third parties without your consent, except in the following cases:",
+      "items": [
+        "When required by law",
+        "When necessary to protect life, body, or property",
+        "When outsourcing delivery services"
+      ]
+    },
+    {
+      "title": "4. Use of Cookies",
+      "content": "We use cookies to improve our services. Cookies are small data files stored in your browser and are used to analyze site usage and improve user experience."
+    },
+    {
+      "title": "5. Security",
+      "content": "We properly manage your personal information and take reasonable security measures, such as using SSL encryption, to prevent unauthorized access, loss, destruction, alteration, and leakage."
+    },
+    {
+      "title": "6. Contact Us",
+      "content": "For inquiries regarding this Privacy Policy, please contact us through our Contact page."
+    }
+  ]
+}

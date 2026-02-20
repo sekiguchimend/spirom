@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "title": "マイページ",
+    "description": "アカウント情報の管理"
+  },
+  "title": "マイアカウント",
+  "sectionLabel": "Account",
+  "notSet": "未設定",
+  "menu": "メニュー",
+  "logout": "ログアウト",
+  "loggingOut": "ログアウト中...",
+  "nav": {
+    "profile": "プロフィール",
+    "addresses": "住所管理",
+    "orders": "注文履歴",
+    "settings": "設定"
+  },
+  "profile": {
+    "title": "プロフィール",
+    "name": "お名前",
+    "email": "メールアドレス",
+    "phone": "電話番号",
+    "update": "更新"
+  },
+  "menuItems": {
+    "addresses": {
+      "title": "配送先住所",
+      "description": "住所の登録・編集"
+    },
+    "orders": {
+      "title": "注文履歴",
+      "description": "過去の注文を確認"
+    }
+  },
+  "addresses": {
+    "title": "住所管理",
+    "sectionLabel": "Address",
+    "pageTitle": "配送先住所",
+    "pageDescription": "住所の登録・編集・削除ができます。",
+    "addTitle": "配送先住所を追加",
+    "editTitle": "配送先住所を編集",
+    "add": "新しい住所を追加",
+    "register": "住所を登録する",
+    "edit": "編集",
+    "delete": "削除",
+    "setDefault": "デフォルトに設定",
+    "default": "デフォルト",
+    "defaultLabel": "住所",
+    "empty": "住所が登録されていません",
+    "backToAccount": "マイアカウントへ戻る",
+    "form": {
+      "label": "ラベル（任意）",
+      "labelPlaceholder": "例: 自宅、会社など",
+      "postalCode": "郵便番号",
+      "postalCodePlaceholder": "1234567 または 123-4567",
+      "prefecture": "都道府県",
+      "prefectureSelect": "選択してください",
+      "city": "市区町村",
+      "cityPlaceholder": "例: 渋谷区",
+      "addressLine1": "番地・建物名",
+      "addressLine1Placeholder": "例: 1-2-3",
+      "addressLine2": "建物名・部屋番号（任意）",
+      "addressLine2Placeholder": "例: サンプルマンション101",
+      "phone": "電話番号（任意）",
+      "phonePlaceholder": "例: 03-1234-5678",
+      "isDefault": "この住所をデフォルトに設定する",
+      "cancel": "キャンセル",
+      "submit": "住所を登録",
+      "submitEdit": "変更を保存",
+      "submitting": "登録中...",
+      "submittingEdit": "保存中...",
+      "required": "必須"
+    },
+    "deleteConfirm": {
+      "title": "この住所を削除しますか？",
+      "message": "この操作は取り消せません。",
+      "cancel": "キャンセル",
+      "confirm": "削除する",
+      "deleting": "削除中..."
+    }
+  },
+  "settings": {
+    "title": "アカウント設定",
+    "changePassword": "パスワード変更",
+    "notifications": "通知設定",
+    "deleteAccount": "アカウント削除"
+  }
+}

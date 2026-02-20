@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "title": "ブログ",
+    "description": "Spiromの最新情報"
+  },
+  "title": "Blog",
+  "readMore": "続きを読む",
+  "published": "公開日",
+  "author": "著者",
+  "share": "シェア",
+  "relatedPosts": "関連記事",
+  "empty": "記事がありません"
+}

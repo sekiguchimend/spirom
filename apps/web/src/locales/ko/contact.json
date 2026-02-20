@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "title": "문의하기",
+    "description": "Spirom에 문의하기"
+  },
+  "hero": {
+    "title": "CONTACT",
+    "tagline": "DROP US A LINE!"
+  },
+  "form": {
+    "loggedInAs": "LOGGED IN AS",
+    "nameNotSet": "이름 미설정",
+    "whatsUp": "WHAT'S UP?",
+    "required": "（필수）",
+    "orderNumber": "ORDER #",
+    "optional": "(선택)",
+    "orderPlaceholder": "SP-XXXX-XXXX",
+    "message": "MESSAGE",
+    "messagePlaceholder": "문의 내용을 입력해 주세요...",
+    "sendMessage": "SEND MESSAGE",
+    "sending": "SENDING..."
+  },
+  "inquiryTypes": {
+    "order": "ORDER",
+    "product": "PRODUCT",
+    "shipping": "SHIPPING",
+    "return": "RETURNS",
+    "other": "OTHER"
+  },
+  "sidebar": {
+    "hours": {
+      "title": "HOURS",
+      "weekdays": "MON - FRI",
+      "weekdaysTime": "10:00 - 18:00",
+      "weekend": "SAT - SUN",
+      "closed": "CLOSED"
+    },
+    "fastReply": {
+      "title": "FAST REPLY",
+      "text": "보통",
+      "days": "2-3",
+      "unit": "영업일 이내 답변"
+    },
+    "faq": {
+      "title": "FAQ",
+      "text": "자주 묻는 질문 보기",
+      "link": "READ NOW"
+    },
+    "social": {
+      "title": "FOLLOW US",
+      "comingSoon": "Coming soon..."
+    }
+  },
+  "success": {
+    "title": "SENT!",
+    "message": "문의가 접수되었습니다.",
+    "replyTime": "2-3영업일",
+    "replyText": "이내에 답변드리겠습니다.",
+    "backToHome": "BACK TO HOME"
+  },
+  "errors": {
+    "rateLimited": "문의 발송 횟수가 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.",
+    "default": "전송에 실패했습니다. 잠시 후 다시 시도해 주세요."
+  },
+  "loading": "Loading..."
+}

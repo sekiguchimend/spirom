@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "title": "常见问题",
+    "description": "关于Spirom的常见问题"
+  },
+  "hero": {
+    "title": "FAQ",
+    "tagline": "GOT QUESTIONS? WE GOT ANSWERS!"
+  },
+  "categories": [
+    {
+      "category": "ORDER",
+      "color": "#7dff3a",
+      "items": [
+        {
+          "question": "下单后可以取消吗？",
+          "answer": "在发货准备前可以取消。请通过账户的订单历史进行取消，或通过咨询表格联系我们。"
+        },
+        {
+          "question": "可以修改订单内容吗？",
+          "answer": "在发货准备前，可以更改数量或增减商品。请通过咨询表格告知我们订单号和变更内容。"
+        },
+        {
+          "question": "可以开具发票吗？",
+          "answer": "可以。请在下单时在备注栏中注明，或通过咨询表格联系我们。"
+        }
+      ]
+    },
+    {
+      "category": "SHIPPING",
+      "color": "#00d4ff",
+      "items": [
+        {
+          "question": "运费是多少？",
+          "answer": "全国统一750日元（含税）。"
+        },
+        {
+          "question": "需要多长时间送达？",
+          "answer": "订单确认后约2周内送达。"
+        },
+        {
+          "question": "可以指定配送日期和时间吗？",
+          "answer": "抱歉，目前不支持指定配送日期和时间。"
+        },
+        {
+          "question": "支持国际配送吗？",
+          "answer": "目前仅限日本国内配送。国际配送计划在未来支持。"
+        }
+      ]
+    },
+    {
+      "category": "PAYMENT",
+      "color": "#ff2d78",
+      "items": [
+        {
+          "question": "可以使用哪些支付方式？",
+          "answer": "可使用信用卡（VISA、Mastercard、JCB、American Express）。"
+        },
+        {
+          "question": "可以分期付款吗？",
+          "answer": "仅支持一次性付款。如需分期，请咨询您的信用卡公司是否支持事后分期。"
+        }
+      ]
+    },
+    {
+      "category": "RETURNS",
+      "color": "#ffd93d",
+      "items": [
+        {
+          "question": "可以退货或换货吗？",
+          "answer": "收货后7日内，未使用、未开封的商品可以退换。因客户原因退货的，运费由客户承担。"
+        },
+        {
+          "question": "收到不良品怎么办？",
+          "answer": "非常抱歉。请在收货后7日内通过咨询表格联系我们。我们将承担运费进行换货或退款。"
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "STILL CONFUSED?",
+    "description": "找不到您需要的答案？请随时联系我们！",
+    "button": "CONTACT US"
+  },
+  "qna": "Q&A"
+}

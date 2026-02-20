@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "Legal Notice",
+    "description": "Legal notice for Spirom. Information about seller, payment methods, shipping, and returns."
+  },
+  "header": {
+    "title": "LEGAL",
+    "subtitle": "Legal Notice",
+    "lastUpdated": "February 12, 2025"
+  },
+  "sections": {
+    "seller": {
+      "label": "Seller",
+      "value": "SPIROM INC."
+    },
+    "manager": {
+      "label": "Operations Manager",
+      "value": "Shunya Sekiguchi"
+    },
+    "email": {
+      "label": "Email Address",
+      "value": "sekiguchishunya0619@gmail.com"
+    },
+    "price": {
+      "label": "Selling Price",
+      "value": "Price displayed on each product page (tax included)"
+    },
+    "additionalFees": {
+      "label": "Additional Fees",
+      "value": "Shipping: Flat rate ¥750 (tax included)",
+      "note": "*Bank transfer fees are borne by the customer"
+    },
+    "payment": {
+      "label": "Payment Methods",
+      "value": "Credit card (VISA, Mastercard, American Express, JCB)"
+    },
+    "paymentTiming": {
+      "label": "Payment Timing",
+      "value": "Credit card: Charged at time of order"
+    },
+    "delivery": {
+      "label": "Delivery Time",
+      "value": "Approximately 2 weeks after order confirmation.",
+      "note": "*Delivery time may vary depending on stock availability and shipping destination."
+    },
+    "returns": {
+      "label": "Returns & Exchanges",
+      "value": "Returns and exchanges accepted within 7 days of delivery for unused, unopened items only.",
+      "items": [
+        "Defective/incorrect items: We will exchange at our shipping expense",
+        "Customer convenience: Shipping costs borne by customer",
+        "Sale items and made-to-order items are not eligible for returns"
+      ]
+    },
+    "returnContact": {
+      "label": "Return Contact",
+      "value": "sekiguchishunya0619@gmail.com"
+    }
+  }
+}

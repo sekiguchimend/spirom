@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import type { Address, CartItem, CreateOrderRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
 import { getStripe } from '@/lib/stripe';
 import { formatPrice } from '@/lib/utils';
 import { createOrderAction, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
 import { getCart, refreshCart } from '@/lib/cart';
-import { ROUTES } from '@/lib/routes';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
 import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
 
@@ -71,6 +72,9 @@ interface CheckoutPageClientProps {
 
 export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
+  const routes = createLocalizedRoutes(locale);
   const [step, setStep] = useState<'loading' | 'address-input' | 'ready' | 'error' | 'empty-cart'>('loading');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -128,7 +132,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
 
     if (!defaultAddress) {
       isCheckoutInProgressRef.current = false;
-      router.push(`${ROUTES.ACCOUNT.NEW_ADDRESS}?redirect=${encodeURIComponent(ROUTES.CHECKOUT.INDEX)}`);
+      router.push(`${routes.ACCOUNT.NEW_ADDRESS}?redirect=${encodeURIComponent(routes.CHECKOUT.INDEX)}`);
       return;
     }
 
@@ -388,7 +392,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
           {isGuest && (
             <p className="text-center text-sm text-gray-600 mt-2">
               ゲスト購入 ・{' '}
-              <Link href={ROUTES.AUTH.LOGIN} className="text-primary hover:underline">
+              <Link href={routes.AUTH.LOGIN} className="text-primary hover:underline">
                 ログインはこちら
               </Link>
             </p>
@@ -457,7 +461,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
                 <div className="mt-5">
                   <button
                     type="button"
-                    onClick={() => router.push(ROUTES.ACCOUNT.ADDRESSES)}
+                    onClick={() => router.push(routes.ACCOUNT.ADDRESSES)}
                     className="w-full px-4 py-3 text-sm font-bold border-2 border-gray-200 text-text-dark rounded-xl hover:bg-gray-50 transition-colors"
                   >
                     住所を変更する
@@ -498,7 +502,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
                   </p>
                   <button
                     type="button"
-                    onClick={() => router.push(ROUTES.PRODUCTS.INDEX)}
+                    onClick={() => router.push(routes.PRODUCTS.INDEX)}
                     className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                   >
                     商品一覧へ

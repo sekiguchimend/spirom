@@ -1,0 +1,64 @@
+{
+  "site": {
+    "name": "Spirom",
+    "tagline": "어른도 입을 수 있는 카툰 스타일"
+  },
+  "nav": {
+    "home": "홈",
+    "shop": "쇼핑",
+    "blog": "블로그",
+    "about": "소개",
+    "contact": "문의",
+    "search": "검색",
+    "cart": "장바구니",
+    "account": "계정",
+    "login": "로그인",
+    "register": "회원가입",
+    "logout": "로그아웃"
+  },
+  "footer": {
+    "shop": "쇼핑",
+    "support": "지원",
+    "company": "회사",
+    "legal": "법적 고지",
+    "products": "제품",
+    "faq": "자주 묻는 질문",
+    "aboutUs": "회사 소개",
+    "terms": "이용약관",
+    "privacy": "개인정보처리방침",
+    "tokushoho": "특정상거래법 표기",
+    "copyright": "All Rights Reserved."
+  },
+  "actions": {
+    "submit": "제출",
+    "cancel": "취소",
+    "save": "저장",
+    "edit": "편집",
+    "delete": "삭제",
+    "confirm": "확인",
+    "back": "뒤로",
+    "next": "다음",
+    "close": "닫기",
+    "loading": "로딩 중...",
+    "shopNow": "지금 쇼핑하기"
+  },
+  "currency": {
+    "symbol": "₩",
+    "code": "KRW"
+  },
+  "validation": {
+    "required": "필수 입력 항목입니다",
+    "invalidEmail": "유효한 이메일 주소를 입력해주세요",
+    "passwordMin": "비밀번호는 8자 이상이어야 합니다",
+    "passwordMatch": "비밀번호가 일치하지 않습니다",
+    "invalidPhone": "유효한 전화번호를 입력해주세요",
+    "invalidPostalCode": "유효한 우편번호를 입력해주세요"
+  },
+  "errors": {
+    "generic": "오류가 발생했습니다",
+    "network": "네트워크 오류가 발생했습니다",
+    "notFound": "페이지를 찾을 수 없습니다",
+    "unauthorized": "로그인이 필요합니다",
+    "forbidden": "접근 권한이 없습니다"
+  }
+}

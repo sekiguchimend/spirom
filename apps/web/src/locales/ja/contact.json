@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "title": "お問い合わせ",
+    "description": "Spiromへのお問い合わせ"
+  },
+  "hero": {
+    "title": "CONTACT",
+    "tagline": "DROP US A LINE!"
+  },
+  "form": {
+    "loggedInAs": "LOGGED IN AS",
+    "nameNotSet": "名前未設定",
+    "whatsUp": "WHAT'S UP?",
+    "required": "（必須）",
+    "orderNumber": "ORDER #",
+    "optional": "(optional)",
+    "orderPlaceholder": "SP-XXXX-XXXX",
+    "message": "MESSAGE",
+    "messagePlaceholder": "お問い合わせ内容をお書きください...",
+    "sendMessage": "SEND MESSAGE",
+    "sending": "SENDING..."
+  },
+  "inquiryTypes": {
+    "order": "ORDER",
+    "product": "PRODUCT",
+    "shipping": "SHIPPING",
+    "return": "RETURNS",
+    "other": "OTHER"
+  },
+  "sidebar": {
+    "hours": {
+      "title": "HOURS",
+      "weekdays": "MON - FRI",
+      "weekdaysTime": "10:00 - 18:00",
+      "weekend": "SAT - SUN",
+      "closed": "CLOSED"
+    },
+    "fastReply": {
+      "title": "FAST REPLY",
+      "text": "通常",
+      "days": "2-3",
+      "unit": "営業日以内"
+    },
+    "faq": {
+      "title": "FAQ",
+      "text": "よくある質問はこちら",
+      "link": "READ NOW"
+    },
+    "social": {
+      "title": "FOLLOW US",
+      "comingSoon": "Coming soon..."
+    }
+  },
+  "success": {
+    "title": "SENT!",
+    "message": "お問い合わせを受け付けました。",
+    "replyTime": "2〜3営業日以内",
+    "replyText": "にご返信いたします。",
+    "backToHome": "BACK TO HOME"
+  },
+  "errors": {
+    "rateLimited": "お問い合わせの送信回数が上限に達しました。しばらくしてから再度お試しください。",
+    "default": "送信に失敗しました。しばらくしてから再度お試しください。"
+  },
+  "loading": "Loading..."
+}

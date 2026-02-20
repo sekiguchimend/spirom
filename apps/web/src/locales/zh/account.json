@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "title": "我的账户",
+    "description": "管理您的账户信息"
+  },
+  "title": "我的账户",
+  "sectionLabel": "Account",
+  "notSet": "未设置",
+  "menu": "菜单",
+  "logout": "退出登录",
+  "loggingOut": "退出中...",
+  "nav": {
+    "profile": "个人资料",
+    "addresses": "地址管理",
+    "orders": "订单历史",
+    "settings": "设置"
+  },
+  "profile": {
+    "title": "个人资料",
+    "name": "姓名",
+    "email": "电子邮箱",
+    "phone": "电话号码",
+    "update": "更新"
+  },
+  "menuItems": {
+    "addresses": {
+      "title": "收货地址",
+      "description": "添加或编辑地址"
+    },
+    "orders": {
+      "title": "订单历史",
+      "description": "查看历史订单"
+    }
+  },
+  "addresses": {
+    "title": "地址管理",
+    "sectionLabel": "Address",
+    "pageTitle": "收货地址",
+    "pageDescription": "添加、编辑或删除您的地址。",
+    "addTitle": "添加收货地址",
+    "editTitle": "编辑收货地址",
+    "add": "添加新地址",
+    "register": "添加地址",
+    "edit": "编辑",
+    "delete": "删除",
+    "setDefault": "设为默认",
+    "default": "默认",
+    "defaultLabel": "地址",
+    "empty": "暂无保存的地址",
+    "backToAccount": "返回我的账户",
+    "form": {
+      "label": "标签（可选）",
+      "labelPlaceholder": "例如：家、公司",
+      "postalCode": "邮政编码",
+      "postalCodePlaceholder": "123456",
+      "prefecture": "省/市",
+      "prefectureSelect": "请选择",
+      "city": "城市/区",
+      "cityPlaceholder": "例如：朝阳区",
+      "addressLine1": "详细地址",
+      "addressLine1Placeholder": "例如：XX路XX号",
+      "addressLine2": "门牌号等（可选）",
+      "addressLine2Placeholder": "例如：XX小区XX单元XX室",
+      "phone": "电话（可选）",
+      "phonePlaceholder": "例如：138-1234-5678",
+      "isDefault": "设为默认地址",
+      "cancel": "取消",
+      "submit": "保存地址",
+      "submitEdit": "保存更改",
+      "submitting": "保存中...",
+      "submittingEdit": "保存中...",
+      "required": "必填"
+    },
+    "deleteConfirm": {
+      "title": "确定要删除此地址吗？",
+      "message": "此操作无法撤销。",
+      "cancel": "取消",
+      "confirm": "删除",
+      "deleting": "删除中..."
+    }
+  },
+  "settings": {
+    "title": "账户设置",
+    "changePassword": "修改密码",
+    "notifications": "通知设置",
+    "deleteAccount": "删除账户"
+  }
+}

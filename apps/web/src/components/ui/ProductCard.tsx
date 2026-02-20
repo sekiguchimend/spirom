@@ -1,5 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 
 interface ProductCardProps {
   slug: string;
@@ -16,9 +21,13 @@ const tagStyles = {
 };
 
 export function ProductCard({ slug, name, price, image, tag }: ProductCardProps) {
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
+  const routes = createLocalizedRoutes(locale);
+
   return (
     <article itemScope itemType="https://schema.org/Product" className="group">
-      <Link href={`/products/${slug}`} className="block">
+      <Link href={routes.PRODUCTS.DETAIL(slug)} className="block">
         <div className="relative bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200">
           <figure className="relative aspect-square bg-gray-50 border-b-4 border-black overflow-hidden">
             <Image

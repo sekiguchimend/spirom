@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "특정상거래법에 근거한 표기",
+    "description": "Spirom의 특정상거래법에 근거한 표기. 판매업체 정보, 결제 방법, 배송, 반품 등에 관한 정보를 게재하고 있습니다."
+  },
+  "header": {
+    "title": "LEGAL",
+    "subtitle": "특정상거래법에 근거한 표기",
+    "lastUpdated": "2025년 2월 12일"
+  },
+  "sections": {
+    "seller": {
+      "label": "판매업체",
+      "value": "SPIROM INC."
+    },
+    "manager": {
+      "label": "운영총괄책임자",
+      "value": "세키구치 슌야"
+    },
+    "email": {
+      "label": "이메일 주소",
+      "value": "sekiguchishunya0619@gmail.com"
+    },
+    "price": {
+      "label": "판매가격",
+      "value": "각 상품 페이지에 표시된 가격 (세금 포함)"
+    },
+    "additionalFees": {
+      "label": "상품 대금 외 필요 비용",
+      "value": "배송비: 전국 일률 750엔 (세금 포함)",
+      "note": "※송금 수수료는 고객 부담입니다"
+    },
+    "payment": {
+      "label": "결제 방법",
+      "value": "신용카드 결제 (VISA, Mastercard, American Express, JCB)"
+    },
+    "paymentTiming": {
+      "label": "결제 시기",
+      "value": "신용카드 결제: 주문 시 결제"
+    },
+    "delivery": {
+      "label": "상품 배송 시기",
+      "value": "주문 확인 후 약 2주 내 배송됩니다.",
+      "note": "※재고 상황이나 배송 지역에 따라 배송 기간이 다를 수 있습니다."
+    },
+    "returns": {
+      "label": "반품・교환 안내",
+      "value": "상품 도착 후 7일 이내, 미사용・미개봉 상품에 한해 반품・교환이 가능합니다.",
+      "items": [
+        "불량품・오배송의 경우: 당사 부담으로 교환해 드립니다",
+        "고객 사정의 경우: 배송비는 고객 부담입니다",
+        "세일 상품・주문 제작 상품은 반품・교환 불가"
+      ]
+    },
+    "returnContact": {
+      "label": "반품 연락처",
+      "value": "sekiguchishunya0619@gmail.com"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "Checkout",
+    "description": "Complete your order"
+  },
+  "title": "Checkout",
+  "steps": {
+    "shipping": "Shipping",
+    "payment": "Payment",
+    "confirm": "Confirm",
+    "complete": "Complete"
+  },
+  "shipping": {
+    "title": "Shipping Address",
+    "selectAddress": "Select shipping address",
+    "newAddress": "Enter a new address",
+    "savedAddresses": "Saved addresses"
+  },
+  "address": {
+    "name": "Full Name",
+    "namePlaceholder": "John Doe",
+    "postalCode": "Postal Code",
+    "postalCodePlaceholder": "12345",
+    "prefecture": "State/Province",
+    "city": "City",
+    "address1": "Street Address",
+    "address2": "Apt, Suite, etc. (optional)",
+    "phone": "Phone Number",
+    "phonePlaceholder": "+1 234 567 8900"
+  },
+  "payment": {
+    "title": "Payment Method",
+    "card": "Credit Card",
+    "cardNumber": "Card Number",
+    "expiry": "Expiry Date",
+    "cvc": "CVC"
+  },
+  "summary": {
+    "title": "Order Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "tax": "Tax",
+    "total": "Total",
+    "placeOrder": "Place Order"
+  },
+  "guest": {
+    "title": "Guest Checkout",
+    "email": "Email Address",
+    "emailDesc": "We'll send your order confirmation here"
+  },
+  "complete": {
+    "title": "Thank you for your order!",
+    "orderNumber": "Order Number",
+    "emailSent": "Confirmation email has been sent",
+    "continueShopping": "Continue Shopping",
+    "viewOrder": "View Order"
+  }
+}

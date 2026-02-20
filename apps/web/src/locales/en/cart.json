@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "title": "Shopping Cart",
+    "description": "Review your cart"
+  },
+  "title": "Cart",
+  "empty": "Your cart is empty",
+  "emptyMessage": "Add some products to your cart",
+  "continueShopping": "Continue Shopping",
+  "item": {
+    "remove": "Remove",
+    "quantity": "Quantity",
+    "size": "Size"
+  },
+  "summary": {
+    "title": "Order Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "shippingCalculated": "Calculated at checkout",
+    "tax": "Tax",
+    "total": "Total",
+    "checkout": "Proceed to Checkout"
+  },
+  "actions": {
+    "clear": "Clear Cart",
+    "update": "Update Cart"
+  }
+}

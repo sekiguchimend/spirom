@@ -1,0 +1,64 @@
+{
+  "site": {
+    "name": "Spirom",
+    "tagline": "大人もきれるカートゥーン"
+  },
+  "nav": {
+    "home": "Home",
+    "shop": "Shop",
+    "blog": "Blog",
+    "about": "About",
+    "contact": "Contact",
+    "search": "Search",
+    "cart": "Cart",
+    "account": "Account",
+    "login": "ログイン",
+    "register": "新規登録",
+    "logout": "ログアウト"
+  },
+  "footer": {
+    "shop": "Shop",
+    "support": "Support",
+    "company": "Company",
+    "legal": "Legal",
+    "products": "Products",
+    "faq": "FAQ",
+    "aboutUs": "About",
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "tokushoho": "特商法表記",
+    "copyright": "All Rights Reserved."
+  },
+  "actions": {
+    "submit": "送信",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "edit": "編集",
+    "delete": "削除",
+    "confirm": "確認",
+    "back": "戻る",
+    "next": "次へ",
+    "close": "閉じる",
+    "loading": "読み込み中...",
+    "shopNow": "SHOP NOW"
+  },
+  "currency": {
+    "symbol": "¥",
+    "code": "JPY"
+  },
+  "validation": {
+    "required": "必須項目です",
+    "invalidEmail": "正しいメールアドレスを入力してください",
+    "passwordMin": "パスワードは8文字以上で入力してください",
+    "passwordMatch": "パスワードが一致しません",
+    "invalidPhone": "正しい電話番号を入力してください",
+    "invalidPostalCode": "正しい郵便番号を入力してください"
+  },
+  "errors": {
+    "generic": "エラーが発生しました",
+    "network": "ネットワークエラーが発生しました",
+    "notFound": "ページが見つかりません",
+    "unauthorized": "ログインが必要です",
+    "forbidden": "アクセス権限がありません"
+  }
+}

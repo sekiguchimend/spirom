@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "title": "FAQ",
+    "description": "Frequently asked questions about Spirom"
+  },
+  "hero": {
+    "title": "FAQ",
+    "tagline": "GOT QUESTIONS? WE GOT ANSWERS!"
+  },
+  "categories": [
+    {
+      "category": "ORDER",
+      "color": "#7dff3a",
+      "items": [
+        {
+          "question": "Can I cancel my order?",
+          "answer": "You can cancel your order before it's shipped. Please use the order history in your account or contact us through the inquiry form."
+        },
+        {
+          "question": "Can I change my order?",
+          "answer": "Before shipping, you can change quantities or add/remove items. Please contact us with your order number and requested changes."
+        },
+        {
+          "question": "Can I get a receipt?",
+          "answer": "Yes, we can issue receipts. Please note this in the remarks field when ordering, or contact us through the inquiry form."
+        }
+      ]
+    },
+    {
+      "category": "SHIPPING",
+      "color": "#00d4ff",
+      "items": [
+        {
+          "question": "How much is shipping?",
+          "answer": "Flat rate of ¥750 (tax included) nationwide."
+        },
+        {
+          "question": "How long does delivery take?",
+          "answer": "Orders are delivered approximately 2 weeks after confirmation."
+        },
+        {
+          "question": "Can I specify a delivery date and time?",
+          "answer": "We apologize, but we currently do not support delivery date/time specification."
+        },
+        {
+          "question": "Do you ship internationally?",
+          "answer": "Currently, we only ship within Japan. International shipping is planned for the future."
+        }
+      ]
+    },
+    {
+      "category": "PAYMENT",
+      "color": "#ff2d78",
+      "items": [
+        {
+          "question": "What payment methods are available?",
+          "answer": "We accept credit cards (VISA, Mastercard, JCB, American Express)."
+        },
+        {
+          "question": "Can I pay in installments?",
+          "answer": "We only offer one-time payments. For installment plans, please check with your card company if they offer post-purchase conversion."
+        }
+      ]
+    },
+    {
+      "category": "RETURNS",
+      "color": "#ffd93d",
+      "items": [
+        {
+          "question": "Can I return or exchange items?",
+          "answer": "Returns and exchanges are accepted within 7 days of delivery for unused, unopened items. Shipping costs for customer-initiated returns are borne by the customer."
+        },
+        {
+          "question": "What if I receive a defective item?",
+          "answer": "We sincerely apologize. Please contact us within 7 days of receiving the item. We will exchange or refund at our shipping expense."
+        }
+      ]
+    }
+  ],
+  "cta": {
+    "title": "STILL CONFUSED?",
+    "description": "Can't find what you're looking for? Feel free to reach out!",
+    "button": "CONTACT US"
+  },
+  "qna": "Q&A"
+}

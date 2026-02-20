@@ -1,0 +1,64 @@
+{
+  "site": {
+    "name": "Spirom",
+    "tagline": "成人也能穿的卡通风格"
+  },
+  "nav": {
+    "home": "首页",
+    "shop": "商店",
+    "blog": "博客",
+    "about": "关于",
+    "contact": "联系",
+    "search": "搜索",
+    "cart": "购物车",
+    "account": "账户",
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录"
+  },
+  "footer": {
+    "shop": "商店",
+    "support": "支持",
+    "company": "公司",
+    "legal": "法律",
+    "products": "产品",
+    "faq": "常见问题",
+    "aboutUs": "关于我们",
+    "terms": "服务条款",
+    "privacy": "隐私政策",
+    "tokushoho": "特定商业交易法",
+    "copyright": "版权所有。"
+  },
+  "actions": {
+    "submit": "提交",
+    "cancel": "取消",
+    "save": "保存",
+    "edit": "编辑",
+    "delete": "删除",
+    "confirm": "确认",
+    "back": "返回",
+    "next": "下一步",
+    "close": "关闭",
+    "loading": "加载中...",
+    "shopNow": "立即购买"
+  },
+  "currency": {
+    "symbol": "¥",
+    "code": "CNY"
+  },
+  "validation": {
+    "required": "此项为必填项",
+    "invalidEmail": "请输入有效的电子邮箱地址",
+    "passwordMin": "密码至少需要8个字符",
+    "passwordMatch": "密码不匹配",
+    "invalidPhone": "请输入有效的电话号码",
+    "invalidPostalCode": "请输入有效的邮政编码"
+  },
+  "errors": {
+    "generic": "发生错误",
+    "network": "网络错误",
+    "notFound": "页面未找到",
+    "unauthorized": "请先登录",
+    "forbidden": "没有访问权限"
+  }
+}

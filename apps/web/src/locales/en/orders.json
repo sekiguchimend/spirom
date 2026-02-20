@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "title": "Order History",
+    "description": "View your orders"
+  },
+  "list": {
+    "title": "Order History",
+    "empty": "No orders found",
+    "orderNumber": "Order Number",
+    "date": "Order Date",
+    "status": "Status",
+    "total": "Total",
+    "viewDetails": "View Details"
+  },
+  "detail": {
+    "title": "Order Details",
+    "orderInfo": "Order Information",
+    "shippingAddress": "Shipping Address",
+    "paymentMethod": "Payment Method",
+    "items": "Order Items",
+    "tracking": "Tracking"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  }
+}

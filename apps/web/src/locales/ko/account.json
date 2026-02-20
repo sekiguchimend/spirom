@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "title": "마이페이지",
+    "description": "계정 정보 관리"
+  },
+  "title": "마이페이지",
+  "sectionLabel": "Account",
+  "notSet": "미설정",
+  "menu": "메뉴",
+  "logout": "로그아웃",
+  "loggingOut": "로그아웃 중...",
+  "nav": {
+    "profile": "프로필",
+    "addresses": "주소 관리",
+    "orders": "주문 내역",
+    "settings": "설정"
+  },
+  "profile": {
+    "title": "프로필",
+    "name": "이름",
+    "email": "이메일 주소",
+    "phone": "전화번호",
+    "update": "업데이트"
+  },
+  "menuItems": {
+    "addresses": {
+      "title": "배송지 주소",
+      "description": "주소 추가 및 편집"
+    },
+    "orders": {
+      "title": "주문 내역",
+      "description": "과거 주문 확인"
+    }
+  },
+  "addresses": {
+    "title": "주소 관리",
+    "sectionLabel": "Address",
+    "pageTitle": "배송지 주소",
+    "pageDescription": "주소를 추가, 편집 또는 삭제할 수 있습니다.",
+    "addTitle": "배송지 추가",
+    "editTitle": "배송지 편집",
+    "add": "새 주소 추가",
+    "register": "주소 추가",
+    "edit": "편집",
+    "delete": "삭제",
+    "setDefault": "기본으로 설정",
+    "default": "기본",
+    "defaultLabel": "주소",
+    "empty": "저장된 주소가 없습니다",
+    "backToAccount": "마이페이지로 돌아가기",
+    "form": {
+      "label": "라벨 (선택)",
+      "labelPlaceholder": "예: 집, 회사",
+      "postalCode": "우편번호",
+      "postalCodePlaceholder": "12345",
+      "prefecture": "시/도",
+      "prefectureSelect": "선택해주세요",
+      "city": "시/군/구",
+      "cityPlaceholder": "예: 강남구",
+      "addressLine1": "상세 주소",
+      "addressLine1Placeholder": "예: XX로 XX길 XX",
+      "addressLine2": "동/호수 (선택)",
+      "addressLine2Placeholder": "예: XX아파트 XX동 XX호",
+      "phone": "전화번호 (선택)",
+      "phonePlaceholder": "예: 010-1234-5678",
+      "isDefault": "기본 배송지로 설정",
+      "cancel": "취소",
+      "submit": "주소 저장",
+      "submitEdit": "변경 저장",
+      "submitting": "저장 중...",
+      "submittingEdit": "저장 중...",
+      "required": "필수"
+    },
+    "deleteConfirm": {
+      "title": "이 주소를 삭제하시겠습니까?",
+      "message": "이 작업은 취소할 수 없습니다.",
+      "cancel": "취소",
+      "confirm": "삭제",
+      "deleting": "삭제 중..."
+    }
+  },
+  "settings": {
+    "title": "계정 설정",
+    "changePassword": "비밀번호 변경",
+    "notifications": "알림 설정",
+    "deleteAccount": "계정 삭제"
+  }
+}

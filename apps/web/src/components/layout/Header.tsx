@@ -3,19 +3,27 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getCartCount, refreshCart } from '@/lib/cart';
+import { usePathname } from 'next/navigation';
+import { getCartCount } from '@/lib/cart';
 import { useAuth } from '@/contexts/AuthContext';
+import { extractLocaleFromPath } from '@/lib/i18n';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { LanguageSwitcher, LanguageSwitcherMenu } from '@/components/i18n/LanguageSwitcher';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 
 export default function Header() {
   const { user, isLoading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const pathname = usePathname() ?? '/';
+
+  // 現在の言語を取得
+  const locale: Locale = extractLocaleFromPath(pathname) ?? defaultLocale;
+  const routes = createLocalizedRoutes(locale);
 
   useEffect(() => {
-    // 初回はlocalStorageから即座に読み込み（高速）
     setCartCount(getCartCount());
 
-    // カート更新イベントをリッスン
     const handleCartUpdate = () => {
       setCartCount(getCartCount());
     };
@@ -26,10 +34,9 @@ export default function Header() {
 
   return (
     <>
-      {/* 固定ヘッダーではなく、絶対配置でオーバーレイさせるスタイルに変更 */}
       <header className="absolute top-0 left-0 w-full z-50 p-3 md:p-4 flex justify-between items-start mix-blend-normal pointer-events-none">
         {/* 左上: ロゴ */}
-        <Link href="/" className="block relative w-20 h-20 md:w-28 md:h-28 pointer-events-auto" aria-label="Spirom Home">
+        <Link href={routes.HOME} className="block relative w-20 h-20 md:w-28 md:h-28 pointer-events-auto" aria-label="Spirom Home">
           <Image
             src="/spirom.png"
             alt="Spirom Logo"
@@ -43,7 +50,7 @@ export default function Header() {
         {/* 中央上: 通知バー（PCのみ表示） */}
         <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-4 pointer-events-auto">
           <Link
-            href="/about"
+            href={routes.ABOUT}
             className="inline-flex text-black items-center gap-2 bg-brand-cream/90 backdrop-blur px-4 py-2 rounded text-xs font-bold uppercase tracking-widest border border-black/10 hover:bg-white transition-colors"
           >
             We rebranded with purpose. Read the story
@@ -51,17 +58,19 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* 右上: 認証アイコン + カートアイコン + ハンバーガーメニュー */}
+        {/* 右上: 言語切替 + 認証アイコン + カートアイコン + ハンバーガーメニュー */}
         <div className="flex items-center gap-2 pointer-events-auto">
+          {/* 言語切り替え */}
+          <LanguageSwitcher className="hidden md:flex" />
+
           {/* 認証状態に応じたアイコン */}
           {!isLoading && (
             <>
               {user ? (
-                // ログイン済み: プロフィールアイコン
                 <Link
-                  href="/account"
+                  href={routes.ACCOUNT.INDEX}
                   className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex items-center justify-center rounded hover:bg-gray-900 transition-colors duration-200"
-                  aria-label="アカウント"
+                  aria-label={locale === 'ja' ? 'アカウント' : 'Account'}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -79,12 +88,11 @@ export default function Header() {
                   </svg>
                 </Link>
               ) : (
-                // 未登録: 登録アイコン（キーアイコン）
                 <Link
-                  href="/register"
+                  href={routes.AUTH.REGISTER}
                   className="w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex items-center justify-center rounded hover:bg-gray-900 transition-colors duration-200 relative group"
-                  aria-label="新規登録・ログイン"
-                  title="新規登録・ログイン"
+                  aria-label={locale === 'ja' ? '新規登録・ログイン' : 'Sign Up / Login'}
+                  title={locale === 'ja' ? '新規登録・ログイン' : 'Sign Up / Login'}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -99,9 +107,8 @@ export default function Header() {
                   >
                     <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
                   </svg>
-                  {/* ツールチップ */}
                   <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    登録・ログイン
+                    {locale === 'ja' ? '登録・ログイン' : 'Sign Up / Login'}
                   </span>
                 </Link>
               )}
@@ -110,9 +117,9 @@ export default function Header() {
 
           {/* カートアイコン */}
           <Link
-            href="/cart"
+            href={routes.CART}
             className="relative w-12 h-12 md:w-14 md:h-14 bg-black text-brand-cream flex items-center justify-center rounded hover:bg-gray-900 transition-colors duration-200"
-            aria-label="カートを見る"
+            aria-label={locale === 'ja' ? 'カートを見る' : 'View Cart'}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -152,15 +159,11 @@ export default function Header() {
       {/* メニューオーバーレイ */}
       {isMenuOpen && (
         <>
-          {/* スマホ: フルスクリーン / PC: サイドバー + 背景オーバーレイ */}
-
-          {/* 背景オーバーレイ（PCのみ表示） */}
           <div
             className="hidden md:block fixed inset-0 z-[99] bg-black/60 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsMenuOpen(false)}
           />
 
-          {/* メニュー本体 */}
           <div className={`
             fixed z-[100] bg-black text-white flex flex-col
             inset-0
@@ -182,11 +185,14 @@ export default function Header() {
 
             <nav className="flex-1 flex flex-col justify-center items-center md:items-start md:px-10">
               <ul className="space-y-5 text-center md:text-left" style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif" }}>
-                <li><Link href="/" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Home</Link></li>
-                <li><Link href="/products" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Shop</Link></li>
-                <li><Link href="/blog" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Blog</Link></li>
-                <li><Link href="/about" className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>About</Link></li>
-                <li><Link href="/account/addresses" className="block text-2xl md:text-2xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Address</Link></li>
+                <li><Link href={routes.HOME} className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Home</Link></li>
+                <li><Link href={routes.PRODUCTS.INDEX} className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Shop</Link></li>
+                <li><Link href={routes.BLOG.INDEX} className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Blog</Link></li>
+                <li><Link href={routes.ABOUT} className="block text-4xl md:text-4xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>About</Link></li>
+                <li><Link href={routes.ACCOUNT.ADDRESSES} className="block text-2xl md:text-2xl uppercase tracking-tight hover:text-white/60 transition-colors duration-200" style={{ fontWeight: 900 }} onClick={() => setIsMenuOpen(false)}>Address</Link></li>
+                <li className="pt-4 border-t border-white/20">
+                  <LanguageSwitcherMenu />
+                </li>
               </ul>
             </nav>
           </div>

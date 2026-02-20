@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "회사 소개",
+    "description": "Spirom은 '어른도 입을 수 있는 카툰'을 콘셉트로, 재미와 세련된 디자인을 융합한 라이프스타일 브랜드입니다."
+  },
+  "hero": {
+    "title": "ABOUT US",
+    "tagline": "CARTOON LIFESTYLE FOR GROWN-UPS"
+  },
+  "mission": {
+    "title": "OUR MISSION",
+    "text1": "Spirom은 '어른도 카툰을 즐기고 싶다'는 생각에서 시작되었습니다. 카툰과 애니메이션의 팝한 에센스를 어른의 라이프스타일에 담았습니다.",
+    "text2": "우리가 디자인하는 모든 것은 재미와 세련됨을 동시에 추구합니다. 의류에서 시작하여 다양한 카테고리로 확장하며 일상에 설렘을 전합니다."
+  },
+  "values": {
+    "title": "OUR VALUES",
+    "items": [
+      {
+        "title": "PLAYFUL",
+        "description": "카툰의 재미를 어른의 라이프스타일에. 매일을 더 즐겁게."
+      },
+      {
+        "title": "SOPHISTICATED",
+        "description": "팝하면서도 세련된 디자인. 어른이 자신 있게 선택할 수 있는 퀄리티."
+      },
+      {
+        "title": "ORIGINAL",
+        "description": "어디에도 없는 독자적인 아트워크. 당신의 개성을 돋보이게 하는 유니크한 제품."
+      }
+    ]
+  },
+  "team": {
+    "title": "OUR TEAM",
+    "members": [
+      {
+        "name": "세키구치 슌야",
+        "role": "ENGINEER",
+        "bio": "기술로 브랜드의 가능성을 넓힙니다. 사이트 개발 및 시스템 구축 담당."
+      },
+      {
+        "name": "세키구치 토키마사",
+        "role": "DESIGNER",
+        "bio": "카툰의 세계관을 어른용 제품에 녹여내는 디자인을 담당."
+      },
+      {
+        "name": "잔마르코",
+        "role": "PR & MODEL",
+        "bio": "브랜드의 얼굴로서 홍보 활동과 모델을 겸임. Spirom의 매력을 세계에 전파."
+      }
+    ]
+  },
+  "commitments": {
+    "title": "WHY SPIROM",
+    "items": [
+      {
+        "title": "UNIQUE DESIGN",
+        "description": "어디에도 없는 오리지널 카툰 아트로 당신만의 스타일을."
+      },
+      {
+        "title": "QUALITY FIRST",
+        "description": "세부 사항까지 꼼꼼하게. 어른이 납득할 수 있는 퀄리티를 추구합니다."
+      },
+      {
+        "title": "MADE WITH LOVE",
+        "description": "하나하나에 마음을 담아. 손에 쥐는 분의 미소를 상상하며 만듭니다."
+      }
+    ]
+  },
+  "cta": {
+    "title": "JOIN OUR JOURNEY",
+    "description": "Spirom 제품으로 당신의 매일에 설렘을 더해보세요!",
+    "shopNow": "지금 쇼핑하기",
+    "contactUs": "문의하기"
+  }
+}

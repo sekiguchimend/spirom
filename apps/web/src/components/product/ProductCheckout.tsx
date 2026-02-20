@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
 import { fetchAddresses, createOrderAction, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
 import type { Address, CreateOrderItemRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { ROUTES } from '@/lib/routes';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 import { PAYMENT_MESSAGES } from '@/lib/messages';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
 import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
@@ -38,6 +39,9 @@ export default function ProductCheckout({
 }: ProductCheckoutProps) {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
+  const routes = createLocalizedRoutes(locale);
   const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'address-input' | 'no-address' | 'no-auth'>('loading');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -395,7 +399,7 @@ export default function ProductCheckout({
                   <div className="flex items-center justify-between mb-5">
                     <h3 className="text-base font-black text-text-dark">配送先情報</h3>
                     <p className="text-xs text-gray-500">
-                      <Link href={ROUTES.AUTH.LOGIN} className="text-primary hover:underline">
+                      <Link href={routes.AUTH.LOGIN} className="text-primary hover:underline">
                         ログインはこちら
                       </Link>
                     </p>
@@ -431,7 +435,7 @@ export default function ProductCheckout({
                     </p>
                     <button
                       onClick={() => {
-                          router.push(`${ROUTES.ACCOUNT.NEW_ADDRESS}?redirect=${encodeURIComponent(ROUTES.CHECKOUT.INDEX)}`);
+                          router.push(`${routes.ACCOUNT.NEW_ADDRESS}?redirect=${encodeURIComponent(routes.CHECKOUT.INDEX)}`);
                         onClose();
                       }}
                       className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"

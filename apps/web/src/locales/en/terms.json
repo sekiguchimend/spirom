@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "title": "Terms of Service",
+    "description": "Spirom's Terms of Service. Please review our terms and conditions regarding purchases, shipping, and returns."
+  },
+  "header": {
+    "title": "TERMS",
+    "subtitle": "Terms of Service",
+    "lastUpdated": "February 12, 2025"
+  },
+  "sections": [
+    {
+      "title": "Article 1 (Application)",
+      "content": "These Terms of Service define the conditions for using this website (hereinafter referred to as \"the Service\"). By using the Service, users agree to these Terms."
+    },
+    {
+      "title": "Article 2 (Purchases)",
+      "content": "A purchase contract for products on this Service is established when the customer places an order and we send an order confirmation email."
+    },
+    {
+      "title": "Article 3 (Payment)",
+      "content": "Payment for products shall be made by credit card or other methods specified by this site. Please check the checkout page for payment details."
+    },
+    {
+      "title": "Article 4 (Shipping)",
+      "content": "Product shipping is limited to Japan. Orders will be delivered approximately 2 weeks after order confirmation. Shipping is a flat rate of ¥750 (tax included)."
+    },
+    {
+      "title": "Article 5 (Returns & Exchanges)",
+      "content": "Returns and exchanges are accepted within 7 days of product arrival, only for unused and unopened items. For returns due to customer convenience, shipping costs will be borne by the customer."
+    },
+    {
+      "title": "Article 6 (Prohibited Activities)",
+      "content": "The following activities are prohibited when using this Service:",
+      "items": [
+        "Activities that violate laws or public morals",
+        "Activities related to criminal acts",
+        "Activities that interfere with the operation of this Service",
+        "Activities that cause inconvenience to other users",
+        "Attempting unauthorized access"
+      ]
+    },
+    {
+      "title": "Article 7 (Disclaimer)",
+      "content": "This site makes no guarantees regarding the completeness, accuracy, reliability, or usefulness of this Service. This site assumes no responsibility for any damages arising from the use of this Service."
+    },
+    {
+      "title": "Article 8 (Changes to Terms)",
+      "content": "This site may change these Terms without notice to users when deemed necessary. The revised Terms shall take effect upon posting on this site."
+    }
+  ]
+}

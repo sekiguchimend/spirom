@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "title": "My Account",
+    "description": "Manage your account"
+  },
+  "title": "My Account",
+  "sectionLabel": "Account",
+  "notSet": "Not set",
+  "menu": "Menu",
+  "logout": "Log Out",
+  "loggingOut": "Logging out...",
+  "nav": {
+    "profile": "Profile",
+    "addresses": "Addresses",
+    "orders": "Order History",
+    "settings": "Settings"
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Full Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "update": "Update"
+  },
+  "menuItems": {
+    "addresses": {
+      "title": "Shipping Addresses",
+      "description": "Add or edit addresses"
+    },
+    "orders": {
+      "title": "Order History",
+      "description": "View past orders"
+    }
+  },
+  "addresses": {
+    "title": "Manage Addresses",
+    "sectionLabel": "Address",
+    "pageTitle": "Shipping Addresses",
+    "pageDescription": "Add, edit, or delete your addresses.",
+    "addTitle": "Add Shipping Address",
+    "editTitle": "Edit Shipping Address",
+    "add": "Add New Address",
+    "register": "Add Address",
+    "edit": "Edit",
+    "delete": "Delete",
+    "setDefault": "Set as Default",
+    "default": "Default",
+    "defaultLabel": "Address",
+    "empty": "No addresses saved",
+    "backToAccount": "Back to My Account",
+    "form": {
+      "label": "Label (Optional)",
+      "labelPlaceholder": "e.g. Home, Office",
+      "postalCode": "Postal Code",
+      "postalCodePlaceholder": "12345 or 123-4567",
+      "prefecture": "State / Prefecture",
+      "prefectureSelect": "Select",
+      "city": "City",
+      "cityPlaceholder": "e.g. Shibuya",
+      "addressLine1": "Street Address",
+      "addressLine1Placeholder": "e.g. 1-2-3 Main Street",
+      "addressLine2": "Apt, Suite, etc. (Optional)",
+      "addressLine2Placeholder": "e.g. Apt 101",
+      "phone": "Phone (Optional)",
+      "phonePlaceholder": "e.g. 03-1234-5678",
+      "isDefault": "Set as default address",
+      "cancel": "Cancel",
+      "submit": "Save Address",
+      "submitEdit": "Save Changes",
+      "submitting": "Saving...",
+      "submittingEdit": "Saving...",
+      "required": "Required"
+    },
+    "deleteConfirm": {
+      "title": "Delete this address?",
+      "message": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting..."
+    }
+  },
+  "settings": {
+    "title": "Account Settings",
+    "changePassword": "Change Password",
+    "notifications": "Notification Settings",
+    "deleteAccount": "Delete Account"
+  }
+}

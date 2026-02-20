@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "title": "Spirom - 大人もきれるカートゥーン",
+    "description": "遊び心と洗練を融合したファッションブランド"
+  },
+  "hero": {
+    "tagline1": "Playful yet refined,",
+    "tagline2": "cartoon-inspired fashion",
+    "tagline3": "designed for grown-ups who",
+    "tagline4": "dare to stand out."
+  },
+  "sections": {
+    "selectedItems": "SELECTED ITEMS",
+    "selectedItemsDesc": "Curated products for your lifestyle.",
+    "newArrivals": "NEW ARRIVALS",
+    "featured": "FEATURED"
+  }
+}

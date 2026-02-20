@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "About Us",
+    "description": "Spirom is a lifestyle brand that fuses playfulness and sophisticated design under the concept of 'Cartoon for Grown-ups'."
+  },
+  "hero": {
+    "title": "ABOUT US",
+    "tagline": "CARTOON LIFESTYLE FOR GROWN-UPS"
+  },
+  "mission": {
+    "title": "OUR MISSION",
+    "text1": "Spirom was born from a simple idea: adults deserve to enjoy cartoons too. We bring the pop essence of cartoons and anime into adult lifestyles.",
+    "text2": "Everything we design balances playfulness with sophistication. Starting with apparel, we're expanding across categories to bring excitement to your everyday life."
+  },
+  "values": {
+    "title": "OUR VALUES",
+    "items": [
+      {
+        "title": "PLAYFUL",
+        "description": "Bringing cartoon fun to adult lifestyles. Making every day more enjoyable."
+      },
+      {
+        "title": "SOPHISTICATED",
+        "description": "Pop yet refined design. Quality that adults can wear with confidence."
+      },
+      {
+        "title": "ORIGINAL",
+        "description": "One-of-a-kind artwork. Unique products that highlight your individuality."
+      }
+    ]
+  },
+  "team": {
+    "title": "OUR TEAM",
+    "members": [
+      {
+        "name": "Shunya Sekiguchi",
+        "role": "ENGINEER",
+        "bio": "Expanding brand possibilities through technology. Responsible for site development and system architecture."
+      },
+      {
+        "name": "Tokimasa Sekiguchi",
+        "role": "DESIGNER",
+        "bio": "Translating cartoon aesthetics into products for adults."
+      },
+      {
+        "name": "Gianmarco",
+        "role": "PR & MODEL",
+        "bio": "The face of the brand, handling PR and modeling. Spreading Spirom's appeal worldwide."
+      }
+    ]
+  },
+  "commitments": {
+    "title": "WHY SPIROM",
+    "items": [
+      {
+        "title": "UNIQUE DESIGN",
+        "description": "Original cartoon art like no other, for a style that's uniquely yours."
+      },
+      {
+        "title": "QUALITY FIRST",
+        "description": "Meticulous attention to detail. Pursuing quality that adults can appreciate."
+      },
+      {
+        "title": "MADE WITH LOVE",
+        "description": "Every piece crafted with care. Created with the joy of our customers in mind."
+      }
+    ]
+  },
+  "cta": {
+    "title": "JOIN OUR JOURNEY",
+    "description": "Add some excitement to your everyday life with Spirom products.",
+    "shopNow": "SHOP NOW",
+    "contactUs": "CONTACT US"
+  }
+}

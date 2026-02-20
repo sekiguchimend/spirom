@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "关于我们",
+    "description": "Spirom是一个以「成人也能穿的卡通风格」为理念，融合趣味与精致设计的生活方式品牌。"
+  },
+  "hero": {
+    "title": "ABOUT US",
+    "tagline": "CARTOON LIFESTYLE FOR GROWN-UPS"
+  },
+  "mission": {
+    "title": "OUR MISSION",
+    "text1": "Spirom源于一个简单的想法：成年人也想享受卡通的乐趣。我们将卡通和动漫的流行元素融入成人的生活方式。",
+    "text2": "我们设计的每一件产品都兼具趣味与精致。从服装开始，我们正在拓展到各个品类，为您的日常生活带来惊喜。"
+  },
+  "values": {
+    "title": "OUR VALUES",
+    "items": [
+      {
+        "title": "PLAYFUL",
+        "description": "将卡通的趣味融入成人生活方式。让每一天都更加快乐。"
+      },
+      {
+        "title": "SOPHISTICATED",
+        "description": "流行却不失精致的设计。成年人可以自信选择的品质。"
+      },
+      {
+        "title": "ORIGINAL",
+        "description": "独一无二的原创艺术作品。彰显您个性的独特产品。"
+      }
+    ]
+  },
+  "team": {
+    "title": "OUR TEAM",
+    "members": [
+      {
+        "name": "关口 �的矢",
+        "role": "ENGINEER",
+        "bio": "用技术拓展品牌的可能性。负责网站开发和系统构建。"
+      },
+      {
+        "name": "关口 时正",
+        "role": "DESIGNER",
+        "bio": "将卡通世界观融入成人产品的设计师。"
+      },
+      {
+        "name": "Gianmarco",
+        "role": "PR & MODEL",
+        "bio": "作为品牌形象代言人，兼任公关和模特。向世界传播Spirom的魅力。"
+      }
+    ]
+  },
+  "commitments": {
+    "title": "WHY SPIROM",
+    "items": [
+      {
+        "title": "UNIQUE DESIGN",
+        "description": "独一无二的原创卡通艺术，打造专属于您的风格。"
+      },
+      {
+        "title": "QUALITY FIRST",
+        "description": "精益求精，追求成年人认可的品质。"
+      },
+      {
+        "title": "MADE WITH LOVE",
+        "description": "每一件产品都倾注心血。想象着顾客的笑容而制作。"
+      }
+    ]
+  },
+  "cta": {
+    "title": "JOIN OUR JOURNEY",
+    "description": "用Spirom的产品，为您的每一天增添惊喜吧！",
+    "shopNow": "立即购买",
+    "contactUs": "联系我们"
+  }
+}

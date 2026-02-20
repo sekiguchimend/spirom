@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "title": "Spirom - Cartoon-Inspired Fashion for Grown-Ups",
+    "description": "A fashion brand that blends playfulness with sophistication"
+  },
+  "hero": {
+    "tagline1": "Playful yet refined,",
+    "tagline2": "cartoon-inspired fashion",
+    "tagline3": "designed for grown-ups who",
+    "tagline4": "dare to stand out."
+  },
+  "sections": {
+    "selectedItems": "SELECTED ITEMS",
+    "selectedItemsDesc": "Curated products for your lifestyle.",
+    "newArrivals": "NEW ARRIVALS",
+    "featured": "FEATURED"
+  }
+}

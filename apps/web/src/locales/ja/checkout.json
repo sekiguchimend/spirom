@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "title": "チェックアウト",
+    "description": "ご注文手続き"
+  },
+  "title": "チェックアウト",
+  "steps": {
+    "shipping": "配送先",
+    "payment": "お支払い",
+    "confirm": "確認",
+    "complete": "完了"
+  },
+  "shipping": {
+    "title": "配送先住所",
+    "selectAddress": "配送先を選択",
+    "newAddress": "新しい住所を入力",
+    "savedAddresses": "保存済みの住所"
+  },
+  "address": {
+    "name": "氏名",
+    "namePlaceholder": "山田 太郎",
+    "postalCode": "郵便番号",
+    "postalCodePlaceholder": "123-4567",
+    "prefecture": "都道府県",
+    "city": "市区町村",
+    "address1": "番地",
+    "address2": "建物名・部屋番号（任意）",
+    "phone": "電話番号",
+    "phonePlaceholder": "090-1234-5678"
+  },
+  "payment": {
+    "title": "お支払い方法",
+    "card": "クレジットカード",
+    "cardNumber": "カード番号",
+    "expiry": "有効期限",
+    "cvc": "セキュリティコード"
+  },
+  "summary": {
+    "title": "ご注文内容",
+    "subtotal": "小計",
+    "shipping": "送料",
+    "tax": "消費税（内税）",
+    "total": "合計",
+    "placeOrder": "注文を確定する"
+  },
+  "guest": {
+    "title": "ゲスト購入",
+    "email": "メールアドレス",
+    "emailDesc": "注文確認メールをお送りします"
+  },
+  "complete": {
+    "title": "ご注文ありがとうございます",
+    "orderNumber": "注文番号",
+    "emailSent": "確認メールをお送りしました",
+    "continueShopping": "買い物を続ける",
+    "viewOrder": "注文を確認する"
+  }
+}

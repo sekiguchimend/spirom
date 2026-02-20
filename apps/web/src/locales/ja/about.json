@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "title": "About Us",
+    "description": "Spiromは「大人もきれるカートゥーン」をコンセプトに、遊び心と洗練されたデザインを融合したライフスタイルブランドです。"
+  },
+  "hero": {
+    "title": "ABOUT US",
+    "tagline": "CARTOON LIFESTYLE FOR GROWN-UPS"
+  },
+  "mission": {
+    "title": "OUR MISSION",
+    "text1": "Spiromは「大人だってカートゥーンを楽しみたい」という想いから始まりました。カートゥーンやアニメのポップなエッセンスを、大人のライフスタイルに。",
+    "text2": "私たちがデザインするのは、遊び心と洗練を両立させたプロダクトばかり。アパレルから始まり、あらゆるカテゴリーであなたの日常にワクワクを届けます。"
+  },
+  "values": {
+    "title": "OUR VALUES",
+    "items": [
+      {
+        "title": "PLAYFUL",
+        "description": "カートゥーンの遊び心を大人のライフスタイルに。毎日をもっと楽しく。"
+      },
+      {
+        "title": "SOPHISTICATED",
+        "description": "ポップでありながら洗練されたデザイン。大人が自信を持てるクオリティ。"
+      },
+      {
+        "title": "ORIGINAL",
+        "description": "他にはない独自のアートワーク。あなたの個性を引き立てるユニークなプロダクト。"
+      }
+    ]
+  },
+  "team": {
+    "title": "OUR TEAM",
+    "members": [
+      {
+        "name": "関口 峻矢",
+        "role": "ENGINEER",
+        "bio": "テクノロジーでブランドの可能性を広げる。サイト開発・システム構築を担当。"
+      },
+      {
+        "name": "関口 時正",
+        "role": "DESIGNER",
+        "bio": "カートゥーンの世界観を大人向けプロダクトに落とし込むデザインを手がける。"
+      },
+      {
+        "name": "ジャンマルコ",
+        "role": "PR & MODEL",
+        "bio": "ブランドの顔として広報活動とモデルを兼任。Spiromの魅力を世界に発信。"
+      }
+    ]
+  },
+  "commitments": {
+    "title": "WHY SPIROM",
+    "items": [
+      {
+        "title": "UNIQUE DESIGN",
+        "description": "他にはないオリジナルのカートゥーンアートで、あなただけのスタイルを。"
+      },
+      {
+        "title": "QUALITY FIRST",
+        "description": "細部までこだわり抜いた、大人が納得できるクオリティを追求します。"
+      },
+      {
+        "title": "MADE WITH LOVE",
+        "description": "ひとつひとつに想いを込めて。手に取る人の笑顔を想像しながら作っています。"
+      }
+    ]
+  },
+  "cta": {
+    "title": "JOIN OUR JOURNEY",
+    "description": "Spiromのプロダクトで、あなたの毎日にワクワクをプラスしませんか？",
+    "shopNow": "SHOP NOW",
+    "contactUs": "CONTACT US"
+  }
+}

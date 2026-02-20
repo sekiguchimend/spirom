@@ -3,21 +3,29 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteAddressAction } from '@/lib/actions';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import type { Locale } from '@/lib/i18n/config';
 
-export function DeleteAddressButton({ addressId }: { addressId: string }) {
+interface DeleteAddressButtonProps {
+  addressId: string;
+  locale?: Locale;
+}
+
+export function DeleteAddressButton({ addressId }: DeleteAddressButtonProps) {
   const router = useRouter();
+  const { t } = useTranslation('account');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDelete = async () => {
     setError(null);
-    const ok = window.confirm('この住所を削除しますか？');
+    const ok = window.confirm(t('addresses.deleteConfirm.title'));
     if (!ok) return;
 
     setIsDeleting(true);
     const res = await deleteAddressAction(addressId);
     if (!res.success) {
-      setError(res.error || '削除に失敗しました');
+      setError(res.error || t('addresses.delete'));
       setIsDeleting(false);
       return;
     }
@@ -32,7 +40,7 @@ export function DeleteAddressButton({ addressId }: { addressId: string }) {
         disabled={isDeleting}
         className="text-xs text-red-500 hover:text-red-600 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {isDeleting ? '削除中...' : '削除'}
+        {isDeleting ? t('addresses.deleteConfirm.deleting') : t('addresses.delete')}
       </button>
       {error && (
         <p className="text-xs text-red-500 font-medium">{error}</p>

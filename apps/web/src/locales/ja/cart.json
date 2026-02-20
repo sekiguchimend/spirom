@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "title": "ショッピングカート",
+    "description": "カートの中身を確認"
+  },
+  "title": "カート",
+  "empty": "カートは空です",
+  "emptyMessage": "商品をカートに追加してください",
+  "continueShopping": "買い物を続ける",
+  "item": {
+    "remove": "削除",
+    "quantity": "数量",
+    "size": "サイズ"
+  },
+  "summary": {
+    "title": "注文サマリー",
+    "subtotal": "小計",
+    "shipping": "送料",
+    "shippingCalculated": "チェックアウト時に計算",
+    "tax": "消費税",
+    "total": "合計",
+    "checkout": "チェックアウトに進む"
+  },
+  "actions": {
+    "clear": "カートを空にする",
+    "update": "カートを更新"
+  }
+}

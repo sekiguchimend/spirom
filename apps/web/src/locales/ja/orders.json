@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "title": "注文履歴",
+    "description": "ご注文の確認"
+  },
+  "list": {
+    "title": "注文履歴",
+    "empty": "注文履歴がありません",
+    "orderNumber": "注文番号",
+    "date": "注文日",
+    "status": "ステータス",
+    "total": "合計",
+    "viewDetails": "詳細を見る"
+  },
+  "detail": {
+    "title": "注文詳細",
+    "orderInfo": "注文情報",
+    "shippingAddress": "配送先",
+    "paymentMethod": "お支払い方法",
+    "items": "注文商品",
+    "tracking": "配送状況"
+  },
+  "status": {
+    "pending": "処理中",
+    "confirmed": "確認済み",
+    "processing": "準備中",
+    "shipped": "発送済み",
+    "delivered": "配達完了",
+    "cancelled": "キャンセル"
+  }
+}

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabaseAuth } from '@/lib/supabase-auth';
 import { mergeLocalCartToServer } from '@/lib/cart';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { User } from '@/types';
-import { ROUTES } from '@/lib/routes';
+import { createLocalizedRoutes } from '@/lib/routes';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 
 interface AuthContextType {
   user: User | null;
@@ -40,6 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
+  const routes = createLocalizedRoutes(locale);
 
   // プロファイル情報を取得（APIプロキシ経由）
   const fetchProfile = useCallback(async (userId: string, accessToken: string) => {
@@ -182,8 +186,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabaseAuth.auth.signOut();
     setUser(null);
     setSession(null);
-    router.push(ROUTES.AUTH.LOGIN);
-  }, [router]);
+    router.push(routes.AUTH.LOGIN);
+  }, [router, routes.AUTH.LOGIN]);
 
   // ユーザー情報を更新
   const refreshUser = useCallback(async () => {
