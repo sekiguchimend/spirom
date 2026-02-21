@@ -61,7 +61,7 @@ export default function Header() {
         {/* 右上: 言語切替 + 認証アイコン + カートアイコン + ハンバーガーメニュー */}
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* 言語切り替え */}
-          <LanguageSwitcher className="hidden md:flex" />
+          <LanguageSwitcher />
 
           {/* 認証状態に応じたアイコン */}
           {!isLoading && (
