@@ -216,7 +216,7 @@ impl SeoHandlers {
 
     pub async fn security_txt(&self) -> std::result::Result<Response, BffError> {
         let content = format!(
-            r#"Contact: mailto:security@spirom.com
+            r#"Contact: mailto:info@spirom.shop
 Expires: {}
 Preferred-Languages: ja, en
 Canonical: {}/.well-known/security.txt

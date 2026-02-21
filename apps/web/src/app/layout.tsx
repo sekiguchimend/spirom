@@ -83,7 +83,7 @@ const organizationJsonLd = {
     "@type": "ContactPoint",
     contactType: "customer service",
     availableLanguage: ["Japanese"],
-    email: "support@spirom.com",
+    email: "info@spirom.shop",
   },
 };
 
