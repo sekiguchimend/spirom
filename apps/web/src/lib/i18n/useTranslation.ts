@@ -17,29 +17,37 @@ import jaCommon from '@/locales/ja/common.json';
 import enCommon from '@/locales/en/common.json';
 import zhCommon from '@/locales/zh/common.json';
 import koCommon from '@/locales/ko/common.json';
+import jaProducts from '@/locales/ja/products.json';
+import enProducts from '@/locales/en/products.json';
+import zhProducts from '@/locales/zh/products.json';
+import koProducts from '@/locales/ko/products.json';
 
-type DictionaryType = 'auth' | 'account' | 'common';
+type DictionaryType = 'auth' | 'account' | 'common' | 'products';
 
 const dictionaries: Record<Locale, Record<DictionaryType, Record<string, unknown>>> = {
   ja: {
     auth: jaAuth,
     account: jaAccount,
     common: jaCommon,
+    products: jaProducts,
   },
   en: {
     auth: enAuth,
     account: enAccount,
     common: enCommon,
+    products: enProducts,
   },
   zh: {
     auth: zhAuth,
     account: zhAccount,
     common: zhCommon,
+    products: zhProducts,
   },
   ko: {
     auth: koAuth,
     account: koAccount,
     common: koCommon,
+    products: koProducts,
   },
 };
 

@@ -1,7 +1,8 @@
 {
   "meta": {
     "title": "商品列表",
-    "description": "浏览我们的卡通风格时尚系列"
+    "description": "浏览我们的卡通风格时尚系列",
+    "notFound": "找不到商品"
   },
   "list": {
     "title": "Products",
@@ -13,11 +14,16 @@
       "priceAsc": "价格从低到高",
       "priceDesc": "价格从高到低",
       "popular": "最受欢迎"
-    }
+    },
+    "viewAll": "VIEW ALL PRODUCTS"
   },
   "detail": {
     "addToCart": "加入购物车",
+    "adding": "添加中...",
+    "added": "已添加!",
+    "buyNow": "立即购买",
     "outOfStock": "缺货",
+    "inStock": "有货",
     "size": "尺寸",
     "color": "颜色",
     "quantity": "数量",
@@ -25,10 +31,31 @@
     "details": "详细信息",
     "shipping": "配送",
     "reviews": "评价",
-    "relatedProducts": "相关商品"
+    "relatedProducts": "相关商品",
+    "shippingInfo": "全国统一运费 ¥750",
+    "returnPolicy": "14天退货保证",
+    "recommended": "您可能还喜欢",
+    "viewOthers": "查看更多商品",
+    "viewAll": "查看全部 →",
+    "selectSizeError": "请选择尺寸"
   },
   "size": {
     "selectSize": "选择尺寸",
-    "sizeGuide": "尺寸指南"
+    "sizeGuide": "尺寸指南",
+    "sizeChart": "查看尺寸表",
+    "close": "关闭",
+    "bodyLength": "身长",
+    "bodyWidth": "胸围",
+    "shoulderWidth": "肩宽",
+    "sleeveLength": "袖长",
+    "unit": "* 单位：cm",
+    "material": "材质"
+  },
+  "media": {
+    "video": "视频",
+    "image": "图片",
+    "previousMedia": "上一个媒体",
+    "nextMedia": "下一个媒体",
+    "noMedia": "无媒体"
   }
 }

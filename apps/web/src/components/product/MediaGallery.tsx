@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface MediaItem {
   url: string;
@@ -44,6 +45,7 @@ function getVimeoId(url: string): string | null {
 }
 
 export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
+  const { t } = useTranslation('products');
   const [activeIndex, setActiveIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -58,7 +60,7 @@ export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
     if (!activeItem) {
       return (
         <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg">
-          No Media
+          {t('media.noMedia')}
         </div>
       );
     }
@@ -135,7 +137,7 @@ export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
           {youtubeId ? (
             <Image
               src={`https://img.youtube.com/vi/${youtubeId}/default.jpg`}
-              alt={`${productName} - 動画 ${index + 1}`}
+              alt={`${productName} - ${t('media.video')} ${index + 1}`}
               fill
               className="object-cover"
               sizes="56px"
@@ -180,7 +182,7 @@ export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
       >
         <Image
           src={item.url}
-          alt={`${productName} - 画像 ${index + 1}`}
+          alt={`${productName} - ${t('media.image')} ${index + 1}`}
           fill
           className="object-contain p-1"
           sizes="56px"
@@ -211,7 +213,7 @@ export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
             type="button"
             onClick={() => setActiveIndex((prev) => (prev === 0 ? mediaItems.length - 1 : prev - 1))}
             className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
-            aria-label="前のメディア"
+            aria-label={t('media.previousMedia')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="15 18 9 12 15 6" />
@@ -221,7 +223,7 @@ export function MediaGallery({ media, productName, isNew }: MediaGalleryProps) {
             type="button"
             onClick={() => setActiveIndex((prev) => (prev === mediaItems.length - 1 ? 0 : prev + 1))}
             className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
-            aria-label="次のメディア"
+            aria-label={t('media.nextMedia')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="9 18 15 12 9 6" />

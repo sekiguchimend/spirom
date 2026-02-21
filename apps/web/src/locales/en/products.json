@@ -1,7 +1,8 @@
 {
   "meta": {
     "title": "Products",
-    "description": "Browse our collection of cartoon-inspired fashion"
+    "description": "Browse our collection of cartoon-inspired fashion",
+    "notFound": "Product not found"
   },
   "list": {
     "title": "Products",
@@ -13,11 +14,16 @@
       "priceAsc": "Price: Low to High",
       "priceDesc": "Price: High to Low",
       "popular": "Most Popular"
-    }
+    },
+    "viewAll": "VIEW ALL PRODUCTS"
   },
   "detail": {
     "addToCart": "Add to Cart",
+    "adding": "Adding...",
+    "added": "Added!",
+    "buyNow": "Buy Now",
     "outOfStock": "Out of Stock",
+    "inStock": "in stock",
     "size": "Size",
     "color": "Color",
     "quantity": "Quantity",
@@ -25,10 +31,31 @@
     "details": "Details",
     "shipping": "Shipping",
     "reviews": "Reviews",
-    "relatedProducts": "Related Products"
+    "relatedProducts": "Related Products",
+    "shippingInfo": "Flat rate shipping ¥750",
+    "returnPolicy": "14-day return policy",
+    "recommended": "You may also like",
+    "viewOthers": "More Products",
+    "viewAll": "View all →",
+    "selectSizeError": "Please select a size"
   },
   "size": {
     "selectSize": "Select Size",
-    "sizeGuide": "Size Guide"
+    "sizeGuide": "Size Guide",
+    "sizeChart": "View Size Chart",
+    "close": "Close",
+    "bodyLength": "Body Length",
+    "bodyWidth": "Body Width",
+    "shoulderWidth": "Shoulder",
+    "sleeveLength": "Sleeve",
+    "unit": "* Unit: cm",
+    "material": "Material"
+  },
+  "media": {
+    "video": "Video",
+    "image": "Image",
+    "previousMedia": "Previous media",
+    "nextMedia": "Next media",
+    "noMedia": "No Media"
   }
 }

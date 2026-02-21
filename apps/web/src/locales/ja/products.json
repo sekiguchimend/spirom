@@ -1,7 +1,8 @@
 {
   "meta": {
     "title": "商品一覧",
-    "description": "Spiromの商品一覧ページ"
+    "description": "Spiromの商品一覧ページ",
+    "notFound": "商品が見つかりません"
   },
   "list": {
     "title": "Products",
@@ -13,11 +14,16 @@
       "priceAsc": "価格が安い順",
       "priceDesc": "価格が高い順",
       "popular": "人気順"
-    }
+    },
+    "viewAll": "VIEW ALL PRODUCTS"
   },
   "detail": {
     "addToCart": "カートに追加",
+    "adding": "追加中...",
+    "added": "追加しました!",
+    "buyNow": "今すぐ購入",
     "outOfStock": "在庫切れ",
+    "inStock": "在庫あり",
     "size": "サイズ",
     "color": "カラー",
     "quantity": "数量",
@@ -25,10 +31,31 @@
     "details": "詳細",
     "shipping": "配送について",
     "reviews": "レビュー",
-    "relatedProducts": "関連商品"
+    "relatedProducts": "関連商品",
+    "shippingInfo": "送料 全国一律750円",
+    "returnPolicy": "14日間返品可能",
+    "recommended": "こちらもおすすめ",
+    "viewOthers": "他の商品を見る",
+    "viewAll": "すべて見る →",
+    "selectSizeError": "サイズを選択してください"
   },
   "size": {
     "selectSize": "サイズを選択",
-    "sizeGuide": "サイズガイド"
+    "sizeGuide": "サイズガイド",
+    "sizeChart": "サイズ表を見る",
+    "close": "閉じる",
+    "bodyLength": "身丈",
+    "bodyWidth": "身幅",
+    "shoulderWidth": "肩幅",
+    "sleeveLength": "袖丈",
+    "unit": "※単位：cm",
+    "material": "素材"
+  },
+  "media": {
+    "video": "動画",
+    "image": "画像",
+    "previousMedia": "前のメディア",
+    "nextMedia": "次のメディア",
+    "noMedia": "メディアなし"
   }
 }

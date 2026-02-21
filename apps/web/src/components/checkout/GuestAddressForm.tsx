@@ -14,6 +14,7 @@ import {
   validateEmail,
   sanitizeAddressInput,
 } from '@/lib/validation';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface GuestAddressFormProps {
   onSubmit: (address: GuestShippingAddress, email?: string) => void;
@@ -22,6 +23,7 @@ interface GuestAddressFormProps {
 }
 
 export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError }: GuestAddressFormProps) {
+  const { t } = useTranslation('common');
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<GuestShippingAddress & { email?: string }>({
     name: '',
@@ -141,14 +143,13 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="mb-4 p-3 bg-primary/5 rounded-xl">
         <p className="text-xs text-gray-600">
-          アカウント登録なしでご購入いただけます。
-          メールアドレスを入力すると、注文確認リンクをお送りします（任意）。
+          {t('checkout.guestCheckoutDesc')}
         </p>
       </div>
 
       <div>
         <label htmlFor="name" className="block text-xs font-bold text-text-dark mb-2">
-          お名前 <span className="text-red-500">*</span>
+          {t('form.name')} <span className="text-red-500">{t('form.required')}</span>
         </label>
         <input
           type="text"
@@ -156,7 +157,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="name"
           value={formData.name}
           onChange={handleChange}
-          placeholder="例: 山田 太郎"
+          placeholder={t('form.placeholderName')}
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
@@ -164,7 +165,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div>
         <label htmlFor="postal_code" className="block text-xs font-bold text-text-dark mb-2">
-          郵便番号 <span className="text-red-500">*</span>
+          {t('form.postalCode')} <span className="text-red-500">{t('form.required')}</span>
         </label>
         <input
           type="text"
@@ -172,7 +173,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="postal_code"
           value={formData.postal_code}
           onChange={handleChange}
-          placeholder="1234567 または 123-4567"
+          placeholder={t('form.placeholderPostalCode')}
           maxLength={8}
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
@@ -181,7 +182,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div>
         <label htmlFor="prefecture" className="block text-xs font-bold text-text-dark mb-2">
-          都道府県 <span className="text-red-500">*</span>
+          {t('form.prefecture')} <span className="text-red-500">{t('form.required')}</span>
         </label>
         <select
           id="prefecture"
@@ -191,7 +192,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark"
         >
-          <option value="">選択してください</option>
+          <option value="">{t('form.selectPrefecture')}</option>
           {PREFECTURES.map((pref) => (
             <option key={pref} value={pref}>{pref}</option>
           ))}
@@ -200,7 +201,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div>
         <label htmlFor="city" className="block text-xs font-bold text-text-dark mb-2">
-          市区町村 <span className="text-red-500">*</span>
+          {t('form.city')} <span className="text-red-500">{t('form.required')}</span>
         </label>
         <input
           type="text"
@@ -208,7 +209,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="city"
           value={formData.city}
           onChange={handleChange}
-          placeholder="例: 渋谷区"
+          placeholder={t('form.placeholderCity')}
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
@@ -216,7 +217,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div>
         <label htmlFor="address_line1" className="block text-xs font-bold text-text-dark mb-2">
-          番地 <span className="text-red-500">*</span>
+          {t('form.addressLine1')} <span className="text-red-500">{t('form.required')}</span>
         </label>
         <input
           type="text"
@@ -224,7 +225,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="address_line1"
           value={formData.address_line1}
           onChange={handleChange}
-          placeholder="例: 1-2-3"
+          placeholder={t('form.placeholderAddress1')}
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
@@ -232,7 +233,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div>
         <label htmlFor="address_line2" className="block text-xs font-bold text-text-dark mb-2">
-          建物名・部屋番号（任意）
+          {t('form.addressLine2')}
         </label>
         <input
           type="text"
@@ -240,14 +241,14 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="address_line2"
           value={formData.address_line2}
           onChange={handleChange}
-          placeholder="例: サンプルマンション101"
+          placeholder={t('form.placeholderAddress2')}
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
       </div>
 
       <div>
         <label htmlFor="phone" className="block text-xs font-bold text-text-dark mb-2">
-          電話番号 <span className="text-red-500">*</span>
+          {t('form.phone')} <span className="text-red-500">{t('form.required')}</span>
         </label>
         <input
           type="tel"
@@ -255,7 +256,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="phone"
           value={formData.phone}
           onChange={handleChange}
-          placeholder="例: 03-1234-5678"
+          placeholder={t('form.placeholderPhone')}
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
@@ -263,7 +264,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div className="border-t border-gray-100 pt-4 mt-4">
         <label htmlFor="email" className="block text-xs font-bold text-text-dark mb-2">
-          メールアドレス（任意）
+          {t('form.email')}
         </label>
         <input
           type="email"
@@ -271,11 +272,11 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="email"
           value={formData.email || ''}
           onChange={handleChange}
-          placeholder="例: example@email.com"
+          placeholder={t('form.placeholderEmail')}
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
         <p className="text-xs text-gray-500 mt-1">
-          入力すると注文確認リンクをメールでお送りします
+          {t('checkout.emailConfirmNote')}
         </p>
       </div>
 
@@ -290,7 +291,7 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
         disabled={isSubmitting}
         className="w-full px-6 py-3 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
       >
-        {isSubmitting ? '処理中...' : '住所を確認して決済へ進む'}
+        {isSubmitting ? t('checkout.processing') : t('checkout.confirmAddressAndProceed')}
       </button>
     </form>
   );

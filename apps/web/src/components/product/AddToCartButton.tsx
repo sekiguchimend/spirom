@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { addToCart } from '@/lib/cart';
 import { CART_ANIMATION_DELAY_MS, SUCCESS_MESSAGE_DURATION_MS } from '@/lib/config';
 import { SizeSelector } from './SizeSelector';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 import dynamic from 'next/dynamic';
 import type { ProductVariant } from '@/types';
 
@@ -34,6 +35,7 @@ export function AddToCartButton({
   material,
   materialDetail,
 }: AddToCartButtonProps) {
+  const { t } = useTranslation('products');
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -127,14 +129,14 @@ export function AddToCartButton({
             materialDetail={materialDetail || undefined}
           />
           {sizeError && (
-            <p className="text-red-300 text-sm font-bold mb-4">サイズを選択してください</p>
+            <p className="text-red-300 text-sm font-bold mb-4">{t('detail.selectSizeError')}</p>
           )}
         </>
       )}
 
       {/* 数量 */}
       <div className="mb-6">
-        <p className="text-xs tracking-[0.15em] text-white/70 uppercase mb-3 font-bold">数量</p>
+        <p className="text-xs tracking-[0.15em] text-white/70 uppercase mb-3 font-bold">{t('detail.quantity')}</p>
         <div className="inline-flex items-center bg-white/15 rounded-full">
           <button
             type="button"
@@ -156,7 +158,7 @@ export function AddToCartButton({
         </div>
         {!hasVariants && (
           <span className="ml-4 text-sm text-white/70 font-bold">
-            {inStock ? `${stock} in stock` : 'Out of stock'}
+            {inStock ? `${stock} ${t('detail.inStock')}` : t('detail.outOfStock')}
           </span>
         )}
       </div>
@@ -169,7 +171,7 @@ export function AddToCartButton({
           className="flex-1 py-3 bg-white/15 text-white font-bold text-sm tracking-wider rounded-full hover:bg-white/25 transition-all duration-300 disabled:bg-white/10 disabled:text-white/50 border border-white/30"
           disabled={!canPurchase || isAdding}
         >
-          {isAdding ? '追加中...' : isAdded ? '追加しました!' : 'カートに追加'}
+          {isAdding ? t('detail.adding') : isAdded ? t('detail.added') : t('detail.addToCart')}
         </button>
         <button
           type="button"
@@ -192,7 +194,7 @@ export function AddToCartButton({
             <line x1="3" y1="6" x2="21" y2="6" />
             <path d="M16 10a4 4 0 0 1-8 0" />
           </svg>
-          今すぐ購入
+          {t('detail.buyNow')}
         </button>
       </div>
 

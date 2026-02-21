@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ProductVariant } from '@/types';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface SizeSelectorProps {
   variants: ProductVariant[];
@@ -12,6 +13,7 @@ interface SizeSelectorProps {
 }
 
 export function SizeSelector({ variants, selectedSize, onSelect, material, materialDetail }: SizeSelectorProps) {
+  const { t } = useTranslation('products');
   const [showSizeChart, setShowSizeChart] = useState(false);
   const hasSizeDetails = variants.some(v => v.body_length || v.body_width);
 
@@ -24,14 +26,14 @@ export function SizeSelector({ variants, selectedSize, onSelect, material, mater
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs tracking-[0.15em] text-white/70 uppercase font-bold">Size</p>
+        <p className="text-xs tracking-[0.15em] text-white/70 uppercase font-bold">{t('detail.size')}</p>
         {hasSizeDetails && (
           <button
             type="button"
             onClick={() => setShowSizeChart(!showSizeChart)}
             className="text-xs text-white/70 hover:text-white underline"
           >
-            {showSizeChart ? '閉じる' : 'サイズ表を見る'}
+            {showSizeChart ? t('size.close') : t('size.sizeChart')}
           </button>
         )}
       </div>
@@ -65,15 +67,15 @@ export function SizeSelector({ variants, selectedSize, onSelect, material, mater
 
       {selectedSize && (
         <p className="mt-2 text-sm text-white/70 font-medium">
-          {selectedVariant?.stock || 0} in stock
+          {selectedVariant?.stock || 0} {t('detail.inStock')}
         </p>
       )}
 
       {/* 選択中サイズの寸法 */}
       {selectedVariant && selectedVariant.body_length && (
         <div className="mt-3 p-3 bg-white/10 rounded-lg text-sm text-white/80">
-          <p className="font-bold mb-1">{selectedVariant.size}サイズ</p>
-          <p>身丈 {selectedVariant.body_length}cm / 身幅 {selectedVariant.body_width}cm / 肩幅 {selectedVariant.shoulder_width}cm / 袖丈 {selectedVariant.sleeve_length}cm</p>
+          <p className="font-bold mb-1">{selectedVariant.size}</p>
+          <p>{t('size.bodyLength')} {selectedVariant.body_length}cm / {t('size.bodyWidth')} {selectedVariant.body_width}cm / {t('size.shoulderWidth')} {selectedVariant.shoulder_width}cm / {t('size.sleeveLength')} {selectedVariant.sleeve_length}cm</p>
         </div>
       )}
 
@@ -83,11 +85,11 @@ export function SizeSelector({ variants, selectedSize, onSelect, material, mater
           <table className="w-full text-sm text-white/90">
             <thead>
               <tr className="border-b border-white/20">
-                <th className="py-2 px-2 text-left font-bold">サイズ</th>
-                <th className="py-2 px-2 text-center font-bold">身丈</th>
-                <th className="py-2 px-2 text-center font-bold">身幅</th>
-                <th className="py-2 px-2 text-center font-bold">肩幅</th>
-                <th className="py-2 px-2 text-center font-bold">袖丈</th>
+                <th className="py-2 px-2 text-left font-bold">{t('detail.size')}</th>
+                <th className="py-2 px-2 text-center font-bold">{t('size.bodyLength')}</th>
+                <th className="py-2 px-2 text-center font-bold">{t('size.bodyWidth')}</th>
+                <th className="py-2 px-2 text-center font-bold">{t('size.shoulderWidth')}</th>
+                <th className="py-2 px-2 text-center font-bold">{t('size.sleeveLength')}</th>
               </tr>
             </thead>
             <tbody>
@@ -105,7 +107,7 @@ export function SizeSelector({ variants, selectedSize, onSelect, material, mater
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-white/60">※単位：cm</p>
+          <p className="mt-2 text-xs text-white/60">{t('size.unit')}</p>
         </div>
       )}
 
@@ -113,7 +115,7 @@ export function SizeSelector({ variants, selectedSize, onSelect, material, mater
       {(material || materialDetail) && (
         <div className="mt-4 text-sm">
           {material && (
-            <p className="text-white font-bold mb-2">素材: {material}</p>
+            <p className="text-white font-bold mb-2">{t('size.material')}: {material}</p>
           )}
           {materialDetail && (
             <p className="text-white/70 whitespace-pre-line text-xs leading-relaxed">{materialDetail}</p>

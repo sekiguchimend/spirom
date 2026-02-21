@@ -1,7 +1,8 @@
 {
   "meta": {
     "title": "상품 목록",
-    "description": "카툰 스타일 패션 컬렉션 보기"
+    "description": "카툰 스타일 패션 컬렉션 보기",
+    "notFound": "상품을 찾을 수 없습니다"
   },
   "list": {
     "title": "Products",
@@ -13,11 +14,16 @@
       "priceAsc": "가격 낮은 순",
       "priceDesc": "가격 높은 순",
       "popular": "인기순"
-    }
+    },
+    "viewAll": "VIEW ALL PRODUCTS"
   },
   "detail": {
     "addToCart": "장바구니에 담기",
+    "adding": "담는 중...",
+    "added": "담았습니다!",
+    "buyNow": "바로 구매",
     "outOfStock": "품절",
+    "inStock": "재고 있음",
     "size": "사이즈",
     "color": "색상",
     "quantity": "수량",
@@ -25,10 +31,31 @@
     "details": "상세정보",
     "shipping": "배송",
     "reviews": "리뷰",
-    "relatedProducts": "관련 상품"
+    "relatedProducts": "관련 상품",
+    "shippingInfo": "전국 균일 배송비 ¥750",
+    "returnPolicy": "14일 반품 가능",
+    "recommended": "이런 상품은 어떠세요",
+    "viewOthers": "다른 상품 보기",
+    "viewAll": "전체 보기 →",
+    "selectSizeError": "사이즈를 선택해주세요"
   },
   "size": {
     "selectSize": "사이즈 선택",
-    "sizeGuide": "사이즈 가이드"
+    "sizeGuide": "사이즈 가이드",
+    "sizeChart": "사이즈 표 보기",
+    "close": "닫기",
+    "bodyLength": "총장",
+    "bodyWidth": "가슴둘레",
+    "shoulderWidth": "어깨너비",
+    "sleeveLength": "소매길이",
+    "unit": "* 단위: cm",
+    "material": "소재"
+  },
+  "media": {
+    "video": "동영상",
+    "image": "이미지",
+    "previousMedia": "이전 미디어",
+    "nextMedia": "다음 미디어",
+    "noMedia": "미디어 없음"
   }
 }

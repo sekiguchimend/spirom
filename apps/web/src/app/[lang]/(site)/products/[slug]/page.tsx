@@ -8,31 +8,44 @@ import { formatPrice } from '@/lib/utils';
 import { safeJsonLd } from '@/lib/safeJsonLd';
 import { SITE_URL, SITE_NAME } from '@/lib/config';
 import { createLocalizedRoutes } from '@/lib/routes';
-import { type Locale, defaultLocale } from '@/lib/i18n/config';
+import { type Locale, locales, defaultLocale } from '@/lib/i18n/config';
+import { getDictionary } from '@/lib/i18n/get-dictionary';
 
 interface ProductPageProps {
   params: Promise<{ slug: string; lang: string }>;
 }
 
+interface ProductsDict {
+  meta: { notFound: string };
+  detail: {
+    shippingInfo: string;
+    returnPolicy: string;
+    recommended: string;
+    viewOthers: string;
+    viewAll: string;
+  };
+}
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, lang } = await params;
+  const locale = (locales.includes(lang as Locale) ? lang : defaultLocale) as Locale;
+  const dict = await getDictionary(locale, 'products') as unknown as ProductsDict;
   const product = await getProductBySlug(slug);
 
   if (!product) {
-    return { title: '商品が見つかりません' };
+    return { title: dict.meta?.notFound || 'Product not found' };
   }
 
   return {
     title: product.name,
     description: product.description || '',
     alternates: {
-      canonical: `${SITE_URL}/products/${slug}`,
+      canonical: `${SITE_URL}/${locale}/products/${slug}`,
     },
     openGraph: {
       title: `${product.name} | ${SITE_NAME}`,
       description: product.description || '',
-      url: `${SITE_URL}/products/${slug}`,
+      url: `${SITE_URL}/${locale}/products/${slug}`,
       type: 'website',
       images: product.images[0] ? [{
         url: product.images[0].startsWith('http') ? product.images[0] : `${SITE_URL}${product.images[0]}`,
@@ -46,8 +59,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug, lang } = await params;
-  const locale = (lang as Locale) || defaultLocale;
+  const locale = (locales.includes(lang as Locale) ? lang : defaultLocale) as Locale;
   const routes = createLocalizedRoutes(locale);
+  const dict = await getDictionary(locale, 'products') as unknown as ProductsDict;
   const product = await getProductBySlug(slug);
 
   if (!product) {
@@ -151,7 +165,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                   </div>
-                  <span className="text-sm text-white font-bold">送料 全国一律750円</span>
+                  <span className="text-sm text-white font-bold">{dict.detail.shippingInfo}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center">
@@ -160,7 +174,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       <path d="M3 3v5h5"/>
                     </svg>
                   </div>
-                  <span className="text-sm text-white font-bold">14日間返品可能</span>
+                  <span className="text-sm text-white font-bold">{dict.detail.returnPolicy}</span>
                 </div>
               </div>
             </div>
@@ -173,11 +187,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end justify-between mb-8 lg:mb-12">
               <div>
-                <p className="text-xs tracking-[0.2em] text-primary uppercase mb-2 font-bold">こちらもおすすめ</p>
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-dark">他の商品を見る</h2>
+                <p className="text-xs tracking-[0.2em] text-primary uppercase mb-2 font-bold">{dict.detail.recommended}</p>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-text-dark">{dict.detail.viewOthers}</h2>
               </div>
               <Link href={routes.PRODUCTS.INDEX} className="text-sm font-bold text-primary hover:underline underline-offset-4">
-                すべて見る →
+                {dict.detail.viewAll}
               </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">

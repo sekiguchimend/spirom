@@ -15,6 +15,7 @@ import { PAYMENT_MESSAGES } from '@/lib/messages';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
 import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
 import { formatPrice } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface Product {
   id: string;
@@ -37,6 +38,7 @@ export default function ProductCheckout({
   variantId,
   onClose,
 }: ProductCheckoutProps) {
+  const { t } = useTranslation('common');
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -82,7 +84,7 @@ export default function ProductCheckout({
         if (result.error === 'Not authenticated') {
           setStep('no-auth');
         } else {
-          setError(result.error || '住所の取得に失敗しました。再度お試しください。');
+          setError(result.error || t('checkout.fetchAddressError'));
           setStep('error');
         }
         return;
@@ -132,7 +134,7 @@ export default function ProductCheckout({
       });
 
       if (!orderResult.success || !orderResult.data) {
-        setError(orderResult.error || '注文の作成に失敗しました');
+        setError(orderResult.error || t('checkout.createOrderError'));
         setStep('error');
         isCheckoutInProgressRef.current = false;
         return;
@@ -152,7 +154,7 @@ export default function ProductCheckout({
       const paymentResult = await createPaymentIntentAction(order.id);
 
       if (!paymentResult.success || !paymentResult.data) {
-        setError(paymentResult.error || '決済の準備中にエラーが発生しました');
+        setError(paymentResult.error || t('checkout.paymentPrepareError'));
         setStep('error');
         isCheckoutInProgressRef.current = false;
         return;
@@ -212,7 +214,7 @@ export default function ProductCheckout({
 
       const orderResult = await createGuestOrderAction(request);
       if (!orderResult.success || !orderResult.data) {
-        setError(orderResult.error || '注文の作成に失敗しました');
+        setError(orderResult.error || t('checkout.createOrderError'));
         setStep('error');
         isCheckoutInProgressRef.current = false;
         setIsGuestSubmitting(false);
@@ -237,7 +239,7 @@ export default function ProductCheckout({
 
       const paymentResult = await createGuestPaymentIntentAction(order.id, guest_access_token);
       if (!paymentResult.success || !paymentResult.data) {
-        setError(paymentResult.error || '決済の準備中にエラーが発生しました');
+        setError(paymentResult.error || t('checkout.paymentPrepareError'));
         setStep('error');
         isCheckoutInProgressRef.current = false;
         setIsGuestSubmitting(false);
@@ -276,7 +278,7 @@ export default function ProductCheckout({
         <button
           onClick={onClose}
           className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
-          aria-label="閉じる"
+          aria-label={t('checkout.close')}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -301,10 +303,10 @@ export default function ProductCheckout({
                 Checkout
               </p>
             </div>
-            <h2 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>お支払い</h2>
+            <h2 className="text-xl text-text-dark" style={{ fontWeight: 900, WebkitTextStroke: '0.5px currentColor' }}>{t('checkout.payment')}</h2>
             {isGuest && (
               <p className="text-sm text-gray-600 mt-2">
-                ゲスト購入
+                {t('checkout.guestPurchase')}
               </p>
             )}
           </div>
@@ -313,7 +315,7 @@ export default function ProductCheckout({
             {/* 左: 商品情報（見積書風） */}
             <div className="md:col-span-2">
               <div className="bg-white rounded-xl p-5 shadow-sm sticky top-8">
-                <h3 className="text-base font-black text-text-dark mb-5">注文内容</h3>
+                <h3 className="text-base font-black text-text-dark mb-5">{t('checkout.orderSummary')}</h3>
 
                 {/* 商品サムネイル */}
                 <div className="flex gap-3 mb-5 pb-5 border-b-2 border-gray-100">
@@ -330,7 +332,7 @@ export default function ProductCheckout({
                     <p className="font-bold text-text-dark text-xs mb-1 line-clamp-2">
                       {product.name}
                     </p>
-                    <p className="text-xs text-gray-600 mb-1.5">数量: {quantity}</p>
+                    <p className="text-xs text-gray-600 mb-1.5">{t('checkout.quantity')}: {quantity}</p>
                     <p className="font-bold text-primary text-sm">
                       {formatPrice(product.price)}
                     </p>
@@ -340,19 +342,19 @@ export default function ProductCheckout({
                 {/* 金額内訳 */}
                 <dl className="space-y-2.5 mb-5">
                   <div className="flex justify-between text-xs text-gray-600">
-                    <dt>小計</dt>
+                    <dt>{t('checkout.subtotal')}</dt>
                     <dd className="font-bold text-text-dark">{formatPrice(subtotal || product.price * quantity)}</dd>
                   </div>
                   <div className="flex justify-between text-xs text-gray-600">
-                    <dt>送料</dt>
+                    <dt>{t('checkout.shipping')}</dt>
                     <dd className="font-bold text-text-dark">{formatPrice(shippingFee || 750)}</dd>
                   </div>
                   <div className="flex justify-between text-xs text-gray-600">
-                    <dt>消費税（10%）</dt>
+                    <dt>{t('checkout.tax')}</dt>
                     <dd className="font-bold text-text-dark">{formatPrice(tax || Math.round((product.price * quantity) * 0.1))}</dd>
                   </div>
                   <div className="pt-2.5 border-t-2 border-gray-100 flex justify-between items-baseline">
-                    <dt className="font-bold text-text-dark text-sm">合計</dt>
+                    <dt className="font-bold text-text-dark text-sm">{t('checkout.total')}</dt>
                     <dd className="text-xl font-black text-primary">{formatPrice(total || (product.price * quantity + 750 + Math.round((product.price * quantity) * 0.1)))}</dd>
                   </div>
                 </dl>
@@ -361,7 +363,7 @@ export default function ProductCheckout({
                 {displayAddress && step !== 'address-input' && (
                   <div className="bg-primary/5 rounded-lg p-3">
                     <p className="text-xs font-bold text-primary mb-1.5 uppercase tracking-wider">
-                      配送先
+                      {t('checkout.shippingAddress')}
                     </p>
                     {displayAddress.name && (
                       <p className="text-xs font-bold text-text-dark mb-1">{displayAddress.name}</p>
@@ -389,7 +391,7 @@ export default function ProductCheckout({
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <div className="flex flex-col items-center justify-center py-10">
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-                    <p className="font-bold text-base text-text-dark">準備中...</p>
+                    <p className="font-bold text-base text-text-dark">{t('checkout.preparing')}</p>
                   </div>
                 </div>
               )}
@@ -397,10 +399,10 @@ export default function ProductCheckout({
               {step === 'address-input' && isGuest && (
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-base font-black text-text-dark">配送先情報</h3>
+                    <h3 className="text-base font-black text-text-dark">{t('checkout.shippingInfo')}</h3>
                     <p className="text-xs text-gray-500">
                       <Link href={routes.AUTH.LOGIN} className="text-primary hover:underline">
-                        ログインはこちら
+                        {t('checkout.loginHere')}
                       </Link>
                     </p>
                   </div>
@@ -429,9 +431,9 @@ export default function ProductCheckout({
                         <circle cx="12" cy="10" r="3" />
                       </svg>
                     </div>
-                    <p className="font-bold text-lg text-text-dark mb-3">配送先住所が登録されていません</p>
+                    <p className="font-bold text-lg text-text-dark mb-3">{t('checkout.noAddressTitle')}</p>
                     <p className="text-gray-600 text-center text-sm mb-5">
-                      購入するには配送先住所の登録が必要です
+                      {t('checkout.noAddressDesc')}
                     </p>
                     <button
                       onClick={() => {
@@ -440,7 +442,7 @@ export default function ProductCheckout({
                       }}
                       className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                     >
-                      住所を登録する
+                      {t('checkout.registerAddress')}
                     </button>
                   </div>
                 </div>
@@ -462,13 +464,13 @@ export default function ProductCheckout({
                         <path d="M18 6 6 18M6 6l12 12" />
                       </svg>
                     </div>
-                    <p className="font-bold text-lg text-red-500 mb-3">エラーが発生しました</p>
+                    <p className="font-bold text-lg text-red-500 mb-3">{t('checkout.errorOccurred')}</p>
                     <p className="text-gray-600 text-center text-sm mb-5">{error}</p>
                     <button
                       onClick={handleRetry}
                       className="px-5 py-2.5 font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all text-sm"
                     >
-                      再試行
+                      {t('checkout.retry')}
                     </button>
                   </div>
                 </div>
