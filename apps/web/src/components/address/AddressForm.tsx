@@ -9,14 +9,15 @@ import { createLocalizedRoutes } from '@/lib/routes';
 import { type Locale, defaultLocale } from '@/lib/i18n/config';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { PREFECTURES } from './prefectures';
+import { COUNTRIES } from './countries';
 import {
   validatePostalCode,
-  validatePrefecture,
   validateCity,
   validateAddressLine1,
   validateAddressLine2,
   validateLabel,
   validatePhoneStrict,
+  validateRequired,
   sanitizeAddressInput,
 } from '@/lib/validation';
 
@@ -34,6 +35,7 @@ export function AddressForm() {
 
   const [formData, setFormData] = useState<Omit<Address, 'id'>>({
     name: '',
+    country: 'JP',
     postal_code: '',
     prefecture: '',
     city: '',
@@ -60,14 +62,18 @@ export function AddressForm() {
         phone: sanitizeAddressInput(formData.phone || ''),
       };
 
-      const postalCodeError = validatePostalCode(sanitizedData.postal_code);
-      if (postalCodeError) {
-        setError(postalCodeError);
-        setIsSubmitting(false);
-        return;
+      // 日本の場合のみ郵便番号バリデーション
+      if (sanitizedData.country === 'JP') {
+        const postalCodeError = validatePostalCode(sanitizedData.postal_code);
+        if (postalCodeError) {
+          setError(postalCodeError);
+          setIsSubmitting(false);
+          return;
+        }
       }
 
-      const prefectureError = validatePrefecture(sanitizedData.prefecture, PREFECTURES);
+      // 都道府県/州のバリデーション
+      const prefectureError = validateRequired(sanitizedData.prefecture, t('addresses.form.prefecture'));
       if (prefectureError) {
         setError(prefectureError);
         setIsSubmitting(false);
@@ -115,10 +121,14 @@ export function AddressForm() {
         }
       }
 
-      const normalizedPostalCode = sanitizedData.postal_code.replace(/-/g, '');
-      const finalPostalCode = normalizedPostalCode.length === 7
-        ? `${normalizedPostalCode.slice(0, 3)}-${normalizedPostalCode.slice(3)}`
-        : sanitizedData.postal_code;
+      // 日本の場合のみ郵便番号を正規化
+      let finalPostalCode = sanitizedData.postal_code;
+      if (sanitizedData.country === 'JP') {
+        const normalizedPostalCode = sanitizedData.postal_code.replace(/-/g, '');
+        finalPostalCode = normalizedPostalCode.length === 7
+          ? `${normalizedPostalCode.slice(0, 3)}-${normalizedPostalCode.slice(3)}`
+          : sanitizedData.postal_code;
+      }
 
       const finalData = {
         ...sanitizedData,
@@ -146,11 +156,15 @@ export function AddressForm() {
     const { name, value, type } = e.target;
     const sanitizedValue = type === 'checkbox'
       ? (e.target as HTMLInputElement).checked
-      : sanitizeAddressInput(value);
+      : name === 'country'
+        ? value
+        : sanitizeAddressInput(value);
 
     setFormData(prev => ({
       ...prev,
       [name]: sanitizedValue,
+      // 国が変わったら都道府県をリセット
+      ...(name === 'country' ? { prefecture: '' } : {}),
     }));
   };
 
@@ -173,16 +187,31 @@ export function AddressForm() {
             </div>
 
             <div>
-              <label htmlFor="postal_code" className="block text-xs font-bold text-text-dark mb-2">{t('addresses.form.postalCode')} <span className="text-red-500">*</span></label>
-              <input type="text" id="postal_code" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder={t('addresses.form.postalCodePlaceholder')} maxLength={8} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
+              <label htmlFor="country" className="block text-xs font-bold text-text-dark mb-2">{t('addresses.form.country')} <span className="text-red-500">*</span></label>
+              <select id="country" name="country" value={formData.country} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark">
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name[locale as keyof typeof country.name] || country.name.en}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label htmlFor="prefecture" className="block text-xs font-bold text-text-dark mb-2">{t('addresses.form.prefecture')} <span className="text-red-500">*</span></label>
-              <select id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark">
-                <option value="">{t('addresses.form.prefectureSelect')}</option>
-                {PREFECTURES.map((pref) => (<option key={pref} value={pref}>{pref}</option>))}
-              </select>
+              <label htmlFor="postal_code" className="block text-xs font-bold text-text-dark mb-2">{t('addresses.form.postalCode')} <span className="text-red-500">*</span></label>
+              <input type="text" id="postal_code" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder={formData.country === 'JP' ? t('addresses.form.postalCodePlaceholder') : t('addresses.form.postalCodeIntlPlaceholder')} maxLength={formData.country === 'JP' ? 8 : 20} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
+            </div>
+
+            <div>
+              <label htmlFor="prefecture" className="block text-xs font-bold text-text-dark mb-2">{formData.country === 'JP' ? t('addresses.form.prefecture') : t('addresses.form.stateProvince')} <span className="text-red-500">*</span></label>
+              {formData.country === 'JP' ? (
+                <select id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark">
+                  <option value="">{t('addresses.form.prefectureSelect')}</option>
+                  {PREFECTURES.map((pref) => (<option key={pref} value={pref}>{pref}</option>))}
+                </select>
+              ) : (
+                <input type="text" id="prefecture" name="prefecture" value={formData.prefecture} onChange={handleChange} placeholder={t('addresses.form.stateProvincePlaceholder')} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark" />
+              )}
             </div>
 
             <div>

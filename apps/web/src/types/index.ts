@@ -26,6 +26,7 @@ export interface User {
 export interface Address {
   id: string;
   name?: string;
+  country: string; // ISO 3166-1 alpha-2 コード（例: JP, US, CN）
   postal_code: string;
   prefecture: string;
   city: string;
@@ -87,6 +88,7 @@ export interface CreateOrderRequest {
 
 export interface GuestShippingAddress {
   name: string;
+  country: string; // ISO 3166-1 alpha-2 コード（例: JP, US, CN）
   postal_code: string;
   prefecture: string;
   city: string;

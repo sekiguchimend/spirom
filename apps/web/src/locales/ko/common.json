@@ -109,8 +109,10 @@
   },
   "form": {
     "name": "이름",
+    "country": "국가",
     "postalCode": "우편번호",
     "prefecture": "도도부현",
+    "stateProvince": "주/지역",
     "city": "시구정촌",
     "addressLine1": "상세주소",
     "addressLine2": "건물명/호수 (선택)",
@@ -120,10 +122,12 @@
     "required": "*",
     "placeholderName": "예: 야마다 타로",
     "placeholderPostalCode": "1234567 또는 123-4567",
+    "placeholderPostalCodeIntl": "예: 10001",
     "placeholderCity": "예: 시부야구",
     "placeholderAddress1": "예: 1-2-3",
     "placeholderAddress2": "예: 샘플 맨션 101",
     "placeholderPhone": "예: 03-1234-5678",
-    "placeholderEmail": "예: example@email.com"
+    "placeholderEmail": "예: example@email.com",
+    "placeholderStateProvince": "예: California"
   }
 }

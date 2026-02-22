@@ -16,6 +16,8 @@ type LegalDict = {
   sections: {
     seller: LegalSection;
     manager: LegalSection;
+    address: LegalSection;
+    phone: LegalSection;
     email: LegalSection;
     price: LegalSection;
     additionalFees: LegalSection;
@@ -74,6 +76,19 @@ export default async function LegalNoticePage({
         </div>
 
         <div className="border-b border-gray-200 pb-4">
+          <h2 className="text-sm font-bold text-gray-500 mb-2">{sections.address.label}</h2>
+          <p className="text-base text-black font-medium">{sections.address.value}</p>
+        </div>
+
+        <div className="border-b border-gray-200 pb-4">
+          <h2 className="text-sm font-bold text-gray-500 mb-2">{sections.phone.label}</h2>
+          <p className="text-base text-black font-medium">{sections.phone.value}</p>
+          {sections.phone.note && (
+            <p className="text-sm text-gray-500 mt-1">{sections.phone.note}</p>
+          )}
+        </div>
+
+        <div className="border-b border-gray-200 pb-4">
           <h2 className="text-sm font-bold text-gray-500 mb-2">{sections.email.label}</h2>
           <p className="text-base text-black font-medium">{sections.email.value}</p>
         </div>
@@ -85,10 +100,17 @@ export default async function LegalNoticePage({
 
         <div className="border-b border-gray-200 pb-4">
           <h2 className="text-sm font-bold text-gray-500 mb-2">{sections.additionalFees.label}</h2>
-          <p className="text-base text-black font-medium">
-            {sections.additionalFees.value}<br />
-            {sections.additionalFees.note}
-          </p>
+          <p className="text-base text-black font-medium mb-2">{sections.additionalFees.value}</p>
+          {sections.additionalFees.items && (
+            <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside mb-2">
+              {sections.additionalFees.items.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          )}
+          {sections.additionalFees.note && (
+            <p className="text-sm text-gray-500">{sections.additionalFees.note}</p>
+          )}
         </div>
 
         <div className="border-b border-gray-200 pb-4">

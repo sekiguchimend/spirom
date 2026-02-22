@@ -182,6 +182,7 @@ pub async fn create_address(
         id: Uuid::new_v4(),
         user_id: auth_user.id,
         label: req.label,
+        country: req.country,
         postal_code: req.postal_code,
         prefecture: req.prefecture,
         city: req.city,
@@ -222,6 +223,9 @@ pub async fn update_address(
     // 更新
     if let Some(label) = req.label {
         address.label = Some(label);
+    }
+    if let Some(country) = req.country {
+        address.country = country;
     }
     if let Some(postal_code) = req.postal_code {
         address.postal_code = postal_code;

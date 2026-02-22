@@ -109,8 +109,10 @@
   },
   "form": {
     "name": "姓名",
+    "country": "国家",
     "postalCode": "邮政编码",
     "prefecture": "都道府县",
+    "stateProvince": "州/省",
     "city": "市区町村",
     "addressLine1": "详细地址",
     "addressLine2": "建筑名/房间号（可选）",
@@ -120,10 +122,12 @@
     "required": "*",
     "placeholderName": "例: 山田 太郎",
     "placeholderPostalCode": "1234567 或 123-4567",
-    "placeholderCity": "例: �的谷区",
+    "placeholderPostalCodeIntl": "例: 10001",
+    "placeholderCity": "例: 涩谷区",
     "placeholderAddress1": "例: 1-2-3",
     "placeholderAddress2": "例: 样本公寓101",
     "placeholderPhone": "例: 03-1234-5678",
-    "placeholderEmail": "例: example@email.com"
+    "placeholderEmail": "例: example@email.com",
+    "placeholderStateProvince": "例: California"
   }
 }

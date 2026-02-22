@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { GuestShippingAddress } from '@/types';
 import { PREFECTURES } from '@/components/address/prefectures';
+import { COUNTRIES } from '@/components/address/countries';
+import { type Locale, defaultLocale } from '@/lib/i18n/config';
 import {
   validatePostalCode,
-  validatePrefecture,
   validateCity,
   validateAddressLine1,
   validateAddressLine2,
@@ -18,15 +20,19 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface GuestAddressFormProps {
   onSubmit: (address: GuestShippingAddress, email?: string) => void;
+  onCountryChange?: (countryCode: string) => void;
   isSubmitting: boolean;
   error?: string | null;
 }
 
-export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError }: GuestAddressFormProps) {
+export function GuestAddressForm({ onSubmit, onCountryChange, isSubmitting, error: externalError }: GuestAddressFormProps) {
   const { t } = useTranslation('common');
+  const pathname = usePathname();
+  const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<GuestShippingAddress & { email?: string }>({
     name: '',
+    country: 'JP',
     postal_code: '',
     prefecture: '',
     city: '',
@@ -60,13 +66,17 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
       return;
     }
 
-    const postalCodeError = validatePostalCode(sanitizedData.postal_code);
-    if (postalCodeError) {
-      setError(postalCodeError);
-      return;
+    // 日本の場合のみ郵便番号バリデーション
+    if (sanitizedData.country === 'JP') {
+      const postalCodeError = validatePostalCode(sanitizedData.postal_code);
+      if (postalCodeError) {
+        setError(postalCodeError);
+        return;
+      }
     }
 
-    const prefectureError = validatePrefecture(sanitizedData.prefecture, PREFECTURES);
+    // 都道府県/州のバリデーション
+    const prefectureError = validateRequired(sanitizedData.prefecture, t('form.prefecture'));
     if (prefectureError) {
       setError(prefectureError);
       return;
@@ -107,14 +117,18 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
       }
     }
 
-    // 郵便番号の正規化
-    const normalizedPostalCode = sanitizedData.postal_code.replace(/-/g, '');
-    const finalPostalCode = normalizedPostalCode.length === 7
-      ? `${normalizedPostalCode.slice(0, 3)}-${normalizedPostalCode.slice(3)}`
-      : sanitizedData.postal_code;
+    // 日本の場合のみ郵便番号を正規化
+    let finalPostalCode = sanitizedData.postal_code;
+    if (sanitizedData.country === 'JP') {
+      const normalizedPostalCode = sanitizedData.postal_code.replace(/-/g, '');
+      finalPostalCode = normalizedPostalCode.length === 7
+        ? `${normalizedPostalCode.slice(0, 3)}-${normalizedPostalCode.slice(3)}`
+        : sanitizedData.postal_code;
+    }
 
     const finalAddress: GuestShippingAddress = {
       name: sanitizedData.name,
+      country: sanitizedData.country,
       postal_code: finalPostalCode,
       prefecture: sanitizedData.prefecture,
       city: sanitizedData.city,
@@ -129,12 +143,19 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     // 入力値をサニタイゼーション（リアルタイム）
-    const sanitizedValue = name === 'email' ? value : sanitizeAddressInput(value);
+    const sanitizedValue = name === 'email' || name === 'country' ? value : sanitizeAddressInput(value);
 
     setFormData(prev => ({
       ...prev,
       [name]: sanitizedValue,
+      // 国が変わったら都道府県をリセット
+      ...(name === 'country' ? { prefecture: '' } : {}),
     }));
+
+    // 国が変更された場合、親コンポーネントに通知
+    if (name === 'country' && onCountryChange) {
+      onCountryChange(value);
+    }
   };
 
   const displayError = error || externalError;
@@ -164,6 +185,26 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
       </div>
 
       <div>
+        <label htmlFor="country" className="block text-xs font-bold text-text-dark mb-2">
+          {t('form.country')} <span className="text-red-500">{t('form.required')}</span>
+        </label>
+        <select
+          id="country"
+          name="country"
+          value={formData.country}
+          onChange={handleChange}
+          required
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark"
+        >
+          {COUNTRIES.map((country) => (
+            <option key={country.code} value={country.code}>
+              {country.name[locale as keyof typeof country.name] || country.name.en}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
         <label htmlFor="postal_code" className="block text-xs font-bold text-text-dark mb-2">
           {t('form.postalCode')} <span className="text-red-500">{t('form.required')}</span>
         </label>
@@ -173,8 +214,8 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
           name="postal_code"
           value={formData.postal_code}
           onChange={handleChange}
-          placeholder={t('form.placeholderPostalCode')}
-          maxLength={8}
+          placeholder={formData.country === 'JP' ? t('form.placeholderPostalCode') : t('form.placeholderPostalCodeIntl')}
+          maxLength={formData.country === 'JP' ? 8 : 20}
           required
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
         />
@@ -182,21 +223,34 @@ export function GuestAddressForm({ onSubmit, isSubmitting, error: externalError 
 
       <div>
         <label htmlFor="prefecture" className="block text-xs font-bold text-text-dark mb-2">
-          {t('form.prefecture')} <span className="text-red-500">{t('form.required')}</span>
+          {formData.country === 'JP' ? t('form.prefecture') : t('form.stateProvince')} <span className="text-red-500">{t('form.required')}</span>
         </label>
-        <select
-          id="prefecture"
-          name="prefecture"
-          value={formData.prefecture}
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark"
-        >
-          <option value="">{t('form.selectPrefecture')}</option>
-          {PREFECTURES.map((pref) => (
-            <option key={pref} value={pref}>{pref}</option>
-          ))}
-        </select>
+        {formData.country === 'JP' ? (
+          <select
+            id="prefecture"
+            name="prefecture"
+            value={formData.prefecture}
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm bg-white text-text-dark"
+          >
+            <option value="">{t('form.selectPrefecture')}</option>
+            {PREFECTURES.map((pref) => (
+              <option key={pref} value={pref}>{pref}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type="text"
+            id="prefecture"
+            name="prefecture"
+            value={formData.prefecture}
+            onChange={handleChange}
+            placeholder={t('form.placeholderStateProvince')}
+            required
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-dark"
+          />
+        )}
       </div>
 
       <div>

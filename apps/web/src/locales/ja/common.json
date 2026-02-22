@@ -109,8 +109,10 @@
   },
   "form": {
     "name": "お名前",
+    "country": "国",
     "postalCode": "郵便番号",
     "prefecture": "都道府県",
+    "stateProvince": "州/地域",
     "city": "市区町村",
     "addressLine1": "番地",
     "addressLine2": "建物名・部屋番号（任意）",
@@ -120,10 +122,12 @@
     "required": "*",
     "placeholderName": "例: 山田 太郎",
     "placeholderPostalCode": "1234567 または 123-4567",
+    "placeholderPostalCodeIntl": "例: 10001",
     "placeholderCity": "例: 渋谷区",
     "placeholderAddress1": "例: 1-2-3",
     "placeholderAddress2": "例: サンプルマンション101",
     "placeholderPhone": "例: 03-1234-5678",
-    "placeholderEmail": "例: example@email.com"
+    "placeholderEmail": "例: example@email.com",
+    "placeholderStateProvince": "例: California"
   }
 }

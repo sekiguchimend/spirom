@@ -11,8 +11,11 @@ import { createOrderAction, createPaymentIntentAction, createGuestOrderAction, c
 import { getCart, refreshCart } from '@/lib/cart';
 import { createLocalizedRoutes } from '@/lib/routes';
 import { type Locale, defaultLocale } from '@/lib/i18n/config';
+import { calculateShipping, SHIPPING_RATES } from '@/lib/shipping';
+import { getShippingRegion } from '@/lib/i18n/geo';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
 import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
+import { getCountryName } from '@/components/address/countries';
 
 // sessionStorageのキー
 const CHECKOUT_ORDER_KEY = 'spirom_checkout_order';
@@ -81,6 +84,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
   const [error, setError] = useState<string | null>(null);
   const [guestAddress, setGuestAddress] = useState<GuestShippingAddress | null>(null);
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<string>('JP');
 
   // 注文情報のstate
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -370,10 +374,17 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
     }
   }
 
-  const shippingFeeForSummary = 750;
+  // 国に基づいて送料を計算
+  const currentCountry = isGuest ? selectedCountry : (defaultAddress?.country || 'JP');
+  const shippingFeeForSummary = calculateShipping(computedSubtotal, currentCountry);
   const taxForSummary = Math.round(computedSubtotal * 0.1);
   const totalForSummary = total || (computedSubtotal + shippingFeeForSummary + taxForSummary);
   const displayAddress = isGuest ? guestAddress : defaultAddress;
+
+  // 送料無料までの残り金額
+  const shippingRegion = getShippingRegion(currentCountry);
+  const freeShippingThreshold = SHIPPING_RATES[shippingRegion].freeThreshold;
+  const amountToFreeShipping = freeShippingThreshold - computedSubtotal;
 
   return (
     <div className="min-h-screen bg-bg-light pb-10 pt-24 px-4 sm:px-6 lg:px-8">
@@ -428,9 +439,16 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
                   <span className="font-bold text-text-dark">{formatPrice(subtotal || computedSubtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>送料</span>
-                  <span className="font-bold text-text-dark">{formatPrice(shippingFeeForSummary)}</span>
+                  <span>送料（{getCountryName(currentCountry, locale)}）</span>
+                  <span className="font-bold text-text-dark">
+                    {shippingFeeForSummary === 0 ? '無料' : formatPrice(shippingFeeForSummary)}
+                  </span>
                 </div>
+                {amountToFreeShipping > 0 && shippingFeeForSummary > 0 && (
+                  <p className="text-xs text-primary">
+                    あと{formatPrice(amountToFreeShipping)}で送料無料！
+                  </p>
+                )}
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>消費税（10%）</span>
                   <span className="font-bold text-text-dark">{formatPrice(taxForSummary)}</span>
@@ -487,6 +505,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
                 <h2 className="text-base font-black text-text-dark mb-5">配送先情報</h2>
                 <GuestAddressForm
                   onSubmit={initializeGuestCheckout}
+                  onCountryChange={setSelectedCountry}
                   isSubmitting={isGuestSubmitting}
                   error={error}
                 />

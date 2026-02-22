@@ -147,8 +147,8 @@ pub async fn create_order(
         stock_reserve_items.push((product.id, item_req.quantity));
     }
 
-    // 金額計算
-    let shipping_fee = calculate_shipping_fee(subtotal);
+    // 金額計算（国別送料対応）
+    let shipping_fee = calculate_shipping_fee(subtotal, &shipping_address.country);
     let tax = calculate_tax(subtotal);
     let total = subtotal + shipping_fee + tax;
 
@@ -574,8 +574,8 @@ pub async fn create_guest_order(
         stock_reserve_items.push((product.id, item_req.quantity));
     }
 
-    // 金額計算
-    let shipping_fee = calculate_shipping_fee(subtotal);
+    // 金額計算（国別送料対応）
+    let shipping_fee = calculate_shipping_fee(subtotal, &req.shipping_address.country);
     let tax = calculate_tax(subtotal);
     let total = subtotal + shipping_fee + tax;
 

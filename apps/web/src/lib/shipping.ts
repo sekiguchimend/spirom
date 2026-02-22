@@ -29,6 +29,8 @@ export const LOCALE_CURRENCY: Record<Locale, string> = {
 };
 
 // 送料設定（JPY基準）
+// 日本郵便EMS料金表に基づく（1kg想定、梱包込みアパレル商品）
+// 参考: https://www.post.japanpost.jp/int/charge/list/
 export interface ShippingRate {
   standard: number;
   express: number;
@@ -36,30 +38,41 @@ export interface ShippingRate {
 }
 
 export const SHIPPING_RATES: Record<ShippingRegion, ShippingRate> = {
+  // 国内配送（ゆうパック60サイズ全国平均）
   domestic: {
-    standard: 500,
-    express: 800,
+    standard: 700,
+    express: 1100,
     freeThreshold: 10000, // 1万円以上で送料無料
   },
-  asia: {
-    standard: 1500,
+  // 第1地帯: 東アジア（EMS 1kg: ¥2,200）
+  zone1_east_asia: {
+    standard: 2000,
     express: 2500,
-    freeThreshold: 30000,
+    freeThreshold: 20000, // 2万円以上で送料無料
   },
-  north_america: {
-    standard: 2500,
-    express: 4000,
-    freeThreshold: 50000,
-  },
-  europe: {
+  // 第2地帯: その他アジア（EMS 1kg: ¥3,150）
+  zone2_asia: {
     standard: 3000,
-    express: 5000,
-    freeThreshold: 50000,
+    express: 4000,
+    freeThreshold: 30000, // 3万円以上で送料無料
   },
-  other: {
-    standard: 3500,
+  // 第3地帯: ヨーロッパ・オセアニア・カナダ・中近東（EMS 1kg: ¥4,400）
+  zone3: {
+    standard: 4500,
     express: 6000,
-    freeThreshold: 60000,
+    freeThreshold: 50000, // 5万円以上で送料無料
+  },
+  // 第4地帯: アメリカ（EMS 1kg: ¥5,300）
+  zone4_usa: {
+    standard: 5500,
+    express: 7500,
+    freeThreshold: 50000, // 5万円以上で送料無料
+  },
+  // 第5地帯: 南米・アフリカ等（EMS 1kg: ¥5,100）
+  zone5: {
+    standard: 5500,
+    express: 7500,
+    freeThreshold: 60000, // 6万円以上で送料無料
   },
 };
 

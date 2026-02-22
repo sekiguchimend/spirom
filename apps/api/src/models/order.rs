@@ -241,9 +241,85 @@ pub fn calculate_tax(subtotal: i64) -> i64 {
     (subtotal as f64 * 0.1).round() as i64
 }
 
-/// 送料計算（全国一律750円）
-pub fn calculate_shipping_fee(_subtotal: i64) -> i64 {
-    750
+/// 国コードからEMS地帯を取得
+/// 日本郵便EMSの地帯区分に基づく
+/// - 第1地帯: 中国・韓国・台湾
+/// - 第2地帯: その他アジア
+/// - 第3地帯: ヨーロッパ・オセアニア・カナダ・中近東
+/// - 第4地帯: アメリカ
+/// - 第5地帯: 南米・アフリカ
+fn get_ems_zone(country_code: &str) -> &'static str {
+    match country_code {
+        // 国内
+        "JP" => "domestic",
+        // 第1地帯: 東アジア（中国・韓国・台湾・香港）
+        "CN" | "KR" | "TW" | "HK" => "zone1_east_asia",
+        // 第2地帯: その他アジア
+        "SG" | "TH" | "VN" | "MY" | "ID" | "PH" | "IN" | "BD" | "PK" | "LK" |
+        "NP" | "MM" | "KH" | "LA" | "BN" | "MO" | "MN" => "zone2_asia",
+        // 第4地帯: アメリカ（グアム等含む）
+        "US" | "GU" | "PR" | "VI" | "AS" | "MP" => "zone4_usa",
+        // 第3地帯: ヨーロッパ
+        "GB" | "DE" | "FR" | "IT" | "ES" | "NL" | "BE" | "AT" | "CH" | "SE" |
+        "NO" | "DK" | "FI" | "PL" | "PT" | "IE" | "GR" | "CZ" | "HU" | "RO" |
+        "SK" | "HR" | "SI" | "BG" | "LT" | "LV" | "EE" | "LU" | "MT" | "CY" |
+        "IS" | "RU" | "UA" | "BY" | "MD" => "zone3_europe",
+        // 第3地帯: オセアニア
+        "AU" | "NZ" | "FJ" | "PG" | "NC" | "PF" => "zone3_oceania",
+        // 第3地帯: カナダ・メキシコ
+        "CA" | "MX" => "zone3_north_america",
+        // 第3地帯: 中近東
+        "AE" | "SA" | "IL" | "TR" | "QA" | "KW" | "BH" | "OM" | "JO" | "LB" |
+        "EG" | "IR" | "IQ" => "zone3_middle_east",
+        // 第5地帯: 南米
+        "BR" | "AR" | "CL" | "CO" | "PE" | "VE" | "EC" | "UY" | "PY" | "BO" => "zone5_south_america",
+        // 第5地帯: アフリカ
+        "ZA" | "NG" | "KE" | "GH" | "TZ" | "ET" | "MA" | "TN" | "SN" => "zone5_africa",
+        // その他はデフォルトで第5地帯扱い
+        _ => "zone5_other",
+    }
+}
+
+/// 送料計算（日本郵便EMS地帯別料金に基づく）
+///
+/// ## 料金体系（1kg想定、梱包込みアパレル商品）
+/// - 国内（ゆうパック60サイズ相当）: ¥700（¥10,000以上で無料）
+/// - 第1地帯（東アジア）: ¥2,000（¥20,000以上で無料）
+/// - 第2地帯（その他アジア）: ¥3,000（¥30,000以上で無料）
+/// - 第3地帯（欧州・オセアニア・カナダ・中近東）: ¥4,500（¥50,000以上で無料）
+/// - 第4地帯（アメリカ）: ¥5,500（¥50,000以上で無料）
+/// - 第5地帯（南米・アフリカ等）: ¥5,500（¥60,000以上で無料）
+///
+/// 参考: 日本郵便EMS料金表 https://www.post.japanpost.jp/int/charge/list/
+pub fn calculate_shipping_fee(subtotal: i64, country_code: &str) -> i64 {
+    let zone = get_ems_zone(country_code);
+
+    match zone {
+        // 国内配送（ゆうパック60サイズ全国平均）
+        "domestic" => {
+            if subtotal >= 10000 { 0 } else { 700 }
+        }
+        // 第1地帯: 東アジア（EMS 1kg: ¥2,200）
+        "zone1_east_asia" => {
+            if subtotal >= 20000 { 0 } else { 2000 }
+        }
+        // 第2地帯: その他アジア（EMS 1kg: ¥3,150）
+        "zone2_asia" => {
+            if subtotal >= 30000 { 0 } else { 3000 }
+        }
+        // 第3地帯: ヨーロッパ・オセアニア・カナダ・中近東（EMS 1kg: ¥4,400）
+        "zone3_europe" | "zone3_oceania" | "zone3_north_america" | "zone3_middle_east" => {
+            if subtotal >= 50000 { 0 } else { 4500 }
+        }
+        // 第4地帯: アメリカ（EMS 1kg: ¥5,300）
+        "zone4_usa" => {
+            if subtotal >= 50000 { 0 } else { 5500 }
+        }
+        // 第5地帯: 南米・アフリカ等（EMS 1kg: ¥5,100）
+        _ => {
+            if subtotal >= 60000 { 0 } else { 5500 }
+        }
+    }
 }
 
 // ============================================
@@ -255,9 +331,13 @@ pub fn calculate_shipping_fee(_subtotal: i64) -> i64 {
 pub struct GuestShippingAddress {
     #[validate(length(min = 1, max = 100, message = "名前は1〜100文字で入力してください"))]
     pub name: String,
-    #[validate(length(min = 7, max = 8, message = "郵便番号は7桁で入力してください"))]
+    /// 国コード（ISO 3166-1 alpha-2、例: JP, US, CN）
+    #[validate(length(min = 2, max = 2, message = "国コードは2文字で入力してください"))]
+    #[serde(default = "default_country")]
+    pub country: String,
+    #[validate(length(min = 1, max = 20, message = "郵便番号を入力してください"))]
     pub postal_code: String,
-    #[validate(length(min = 1, max = 10, message = "都道府県を選択してください"))]
+    #[validate(length(min = 1, max = 50, message = "都道府県/州を入力してください"))]
     pub prefecture: String,
     #[validate(length(min = 1, max = 100, message = "市区町村は1〜100文字で入力してください"))]
     pub city: String,
@@ -265,8 +345,13 @@ pub struct GuestShippingAddress {
     pub address_line1: String,
     #[validate(length(max = 200, message = "建物名は200文字以内で入力してください"))]
     pub address_line2: Option<String>,
-    #[validate(length(min = 10, max = 14, message = "電話番号は10〜14文字で入力してください"))]
+    #[validate(length(min = 6, max = 20, message = "電話番号を正しく入力してください"))]
     pub phone: String,
+}
+
+/// デフォルト国コード（JP）
+fn default_country() -> String {
+    "JP".to_string()
 }
 
 impl GuestShippingAddress {
@@ -274,6 +359,7 @@ impl GuestShippingAddress {
     pub fn to_order_address(&self) -> OrderAddress {
         OrderAddress {
             name: self.name.clone(),
+            country: self.country.clone(),
             postal_code: self.postal_code.clone(),
             prefecture: self.prefecture.clone(),
             city: self.city.clone(),

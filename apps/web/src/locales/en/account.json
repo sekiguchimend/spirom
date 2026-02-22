@@ -51,9 +51,13 @@
     "form": {
       "label": "Label (Optional)",
       "labelPlaceholder": "e.g. Home, Office",
+      "country": "Country",
       "postalCode": "Postal Code",
       "postalCodePlaceholder": "12345 or 123-4567",
+      "postalCodeIntlPlaceholder": "e.g. 10001",
       "prefecture": "State / Prefecture",
+      "stateProvince": "State/Province",
+      "stateProvincePlaceholder": "e.g. California",
       "prefectureSelect": "Select",
       "city": "City",
       "cityPlaceholder": "e.g. Shibuya",

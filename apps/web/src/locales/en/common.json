@@ -109,8 +109,10 @@
   },
   "form": {
     "name": "Name",
+    "country": "Country",
     "postalCode": "Postal Code",
     "prefecture": "Prefecture",
+    "stateProvince": "State/Province",
     "city": "City",
     "addressLine1": "Address",
     "addressLine2": "Building/Apt (optional)",
@@ -120,10 +122,12 @@
     "required": "*",
     "placeholderName": "e.g. John Doe",
     "placeholderPostalCode": "1234567 or 123-4567",
+    "placeholderPostalCodeIntl": "e.g. 10001",
     "placeholderCity": "e.g. Shibuya-ku",
     "placeholderAddress1": "e.g. 1-2-3",
     "placeholderAddress2": "e.g. Sample Mansion 101",
     "placeholderPhone": "e.g. 03-1234-5678",
-    "placeholderEmail": "e.g. example@email.com"
+    "placeholderEmail": "e.g. example@email.com",
+    "placeholderStateProvince": "e.g. California"
   }
 }

@@ -51,9 +51,13 @@
     "form": {
       "label": "ラベル（任意）",
       "labelPlaceholder": "例: 自宅、会社など",
+      "country": "国",
       "postalCode": "郵便番号",
       "postalCodePlaceholder": "1234567 または 123-4567",
+      "postalCodeIntlPlaceholder": "例: 10001",
       "prefecture": "都道府県",
+      "stateProvince": "州/地域",
+      "stateProvincePlaceholder": "例: California",
       "prefectureSelect": "選択してください",
       "city": "市区町村",
       "cityPlaceholder": "例: 渋谷区",

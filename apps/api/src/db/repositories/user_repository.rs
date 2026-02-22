@@ -120,6 +120,7 @@ impl UserRepository {
             id: address.id,
             user_id: address.user_id,
             label: address.label.clone(),
+            country: address.country.clone(),
             postal_code: address.postal_code.clone(),
             prefecture: address.prefecture.clone(),
             city: address.city.clone(),
@@ -237,6 +238,7 @@ struct AddressInput {
     id: Uuid,
     user_id: Uuid,
     label: Option<String>,
+    country: String,
     postal_code: String,
     prefecture: String,
     city: String,
@@ -257,6 +259,8 @@ struct AddressRow {
     id: Uuid,
     user_id: Uuid,
     label: Option<String>,
+    #[serde(default = "default_country")]
+    country: String,
     postal_code: String,
     prefecture: String,
     city: String,
@@ -267,12 +271,17 @@ struct AddressRow {
     created_at: DateTime<Utc>,
 }
 
+fn default_country() -> String {
+    "JP".to_string()
+}
+
 impl AddressRow {
     fn into_address(self) -> Address {
         Address {
             id: self.id,
             user_id: self.user_id,
             label: self.label,
+            country: self.country,
             postal_code: self.postal_code,
             prefecture: self.prefecture,
             city: self.city,
