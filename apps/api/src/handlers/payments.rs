@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::State,
     http::StatusCode,
     Extension, Json,
 };
@@ -426,6 +426,7 @@ pub struct ConfirmPaymentRequest {
 }
 
 /// 決済確認
+/// セキュリティ: テスト用エンドポイント - 厳格な環境チェックを適用
 pub async fn confirm_payment(
     State(_state): State<AppState>,
     Extension(_auth_user): Extension<AuthenticatedUser>,
@@ -433,10 +434,17 @@ pub async fn confirm_payment(
 ) -> Result<Json<DataResponse<()>>> {
     req.validate()?;
 
-    // テスト用エンドポイントは開発環境のみ許可（本番での誤用防止）
-    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
-    let is_dev = env == "development" || env == "local";
-    if !is_dev {
+    // セキュリティ: テスト用エンドポイントは開発環境のみ許可
+    // 明示的に "development" または "local" が設定されている場合のみ許可
+    // その他の値（空文字、"staging"、"production" 等）はすべて拒否
+    let env = std::env::var("ENVIRONMENT").unwrap_or_default();
+    let allowed_envs = ["development", "local"];
+    if !allowed_envs.contains(&env.as_str()) {
+        tracing::warn!(
+            "Test endpoint access denied: environment={}, allowed={:?}",
+            env,
+            allowed_envs
+        );
         return Err(AppError::Forbidden("このエンドポイントは開発環境のみ利用可能です".to_string()));
     }
 

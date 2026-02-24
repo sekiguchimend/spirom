@@ -33,7 +33,10 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.sanity.io https://js.stripe.com",
+      // セキュリティ: Stripe/Next.jsの要件で unsafe-inline/eval が必要
+      // 将来的にはnonce-basedに移行を検討
+      // strict-dynamic と組み合わせることで安全性を向上
+      "script-src 'self' 'unsafe-inline' https://cdn.sanity.io https://js.stripe.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
@@ -42,6 +45,10 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      // セキュリティ強化: オブジェクト埋め込みを禁止
+      "object-src 'none'",
+      // セキュリティ強化: アップグレード不安全なリクエスト
+      "upgrade-insecure-requests",
     ].join('; ')
   },
 ];

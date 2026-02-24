@@ -18,6 +18,8 @@ struct RateLimitEntry {
 }
 
 /// インメモリレート制限ストア
+/// 注意: 分散環境では各インスタンスが独立したカウンターを持つため、
+/// 本番環境では Redis 等の分散キャッシュを使用することを推奨
 #[derive(Debug, Clone)]
 pub struct RateLimiterStore {
     entries: Arc<RwLock<HashMap<String, RateLimitEntry>>>,
@@ -154,24 +156,50 @@ pub fn init_rate_limiter(window_seconds: u64, max_requests: u32) {
 }
 
 /// 信頼できるプロキシIPリストを取得
+/// セキュリティ: 本番環境では必ず TRUSTED_PROXY_IPS を明示的に設定すること
 fn get_trusted_proxies() -> Vec<String> {
-    std::env::var("TRUSTED_PROXY_IPS")
-        .ok()
-        .map(|s| s.split(',').map(|ip| ip.trim().to_string()).collect())
-        .unwrap_or_else(|| {
-            // デフォルトで信頼するIP（ローカル、Fly.io、Cloudflare等のプライベートレンジ）
-            vec![
-                "127.0.0.1".to_string(),
-                "::1".to_string(),
-                // Fly.ioのプライベートネットワーク
-                "fdaa::".to_string(),
-            ]
-        })
+    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+
+    // 環境変数で明示的に設定されている場合はそれを使用
+    if let Ok(proxies) = std::env::var("TRUSTED_PROXY_IPS") {
+        if !proxies.is_empty() {
+            return proxies.split(',').map(|ip| ip.trim().to_string()).collect();
+        }
+    }
+
+    // 本番環境でTRUSTED_PROXY_IPSが未設定の場合は警告を出力
+    if env == "production" {
+        tracing::warn!(
+            "TRUSTED_PROXY_IPS is not set in production. Using restricted defaults. \
+             Consider setting this to your load balancer/CDN IPs for better security."
+        );
+        // 本番環境では最小限のローカルホストのみ
+        return vec![
+            "127.0.0.1".to_string(),
+            "::1".to_string(),
+        ];
+    }
+
+    // 開発環境のデフォルト（ローカル、Fly.io等）
+    vec![
+        "127.0.0.1".to_string(),
+        "::1".to_string(),
+        // Fly.ioのプライベートネットワーク
+        "fdaa::".to_string(),
+    ]
+}
+
+/// IPアドレスが有効な形式かどうかを検証
+/// セキュリティ: 不正なIPアドレス形式を拒否
+fn is_valid_ip(ip: &str) -> bool {
+    use std::net::IpAddr;
+    ip.parse::<IpAddr>().is_ok()
 }
 
 /// クライアントIPを安全に取得
 /// - 直接接続の場合: ソケットアドレスを使用
 /// - 信頼できるプロキシ経由の場合のみ: X-Forwarded-Forを使用
+/// セキュリティ: 不正なIPアドレス形式は拒否し、直接IPにフォールバック
 fn get_client_ip(addr: &SocketAddr, headers: &axum::http::HeaderMap) -> String {
     let direct_ip = addr.ip().to_string();
     let trusted_proxies = get_trusted_proxies();
@@ -207,7 +235,8 @@ fn get_client_ip(addr: &SocketAddr, headers: &axum::http::HeaderMap) -> String {
                 }
             });
 
-            if !is_trusted && !ip.is_empty() {
+            // セキュリティ: 有効なIPアドレス形式かを検証
+            if !is_trusted && !ip.is_empty() && is_valid_ip(ip) {
                 return ip.to_string();
             }
         }
@@ -216,7 +245,8 @@ fn get_client_ip(addr: &SocketAddr, headers: &axum::http::HeaderMap) -> String {
     // X-Real-IPもチェック（Cloudflare等が設定する）
     if let Some(real_ip) = headers.get("X-Real-IP").and_then(|h| h.to_str().ok()) {
         let real_ip = real_ip.trim();
-        if !real_ip.is_empty() {
+        // セキュリティ: 有効なIPアドレス形式かを検証
+        if !real_ip.is_empty() && is_valid_ip(real_ip) {
             return real_ip.to_string();
         }
     }
@@ -224,7 +254,8 @@ fn get_client_ip(addr: &SocketAddr, headers: &axum::http::HeaderMap) -> String {
     // CF-Connecting-IP（Cloudflare専用）
     if let Some(cf_ip) = headers.get("CF-Connecting-IP").and_then(|h| h.to_str().ok()) {
         let cf_ip = cf_ip.trim();
-        if !cf_ip.is_empty() {
+        // セキュリティ: 有効なIPアドレス形式かを検証
+        if !cf_ip.is_empty() && is_valid_ip(cf_ip) {
             return cf_ip.to_string();
         }
     }

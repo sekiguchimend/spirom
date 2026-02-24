@@ -1,7 +1,7 @@
 use axum::{
     body::Body,
     extract::State,
-    http::{header, Request, StatusCode},
+    http::{header, Request},
     middleware::Next,
     response::Response,
 };
@@ -47,6 +47,7 @@ pub async fn auth_middleware(
 }
 
 /// オプショナル認証ミドルウェア（認証なしでもアクセス可能）
+/// セキュリティ: block_on()を廃止し、適切な非同期処理に修正（デッドロック防止）
 pub async fn optional_auth_middleware(
     State(state): State<AppState>,
     mut request: Request<Body>,
@@ -57,13 +58,18 @@ pub async fn optional_auth_middleware(
             if let Ok(user) = AuthenticatedUser::try_from(claims.clone()) {
                 // ブラックリストチェック（オプショナルなのでエラーは無視して認証なし扱い）
                 let blacklist_repo = TokenBlacklistRepository::new(state.db.service());
-                let is_blacklisted = claims.jti.as_ref()
-                    .map(|jti| blacklist_repo.is_blacklisted(jti))
-                    .map(|f| futures::executor::block_on(f).unwrap_or(false))
+
+                // 非同期でブラックリストチェック（block_on廃止）
+                let is_blacklisted = if let Some(jti) = claims.jti.as_ref() {
+                    blacklist_repo.is_blacklisted(jti).await.unwrap_or(false)
+                } else {
+                    false
+                };
+
+                let is_user_blacklisted = blacklist_repo
+                    .is_user_blacklisted(user.id)
+                    .await
                     .unwrap_or(false);
-                let is_user_blacklisted = futures::executor::block_on(
-                    blacklist_repo.is_user_blacklisted(user.id)
-                ).unwrap_or(false);
 
                 if !is_blacklisted && !is_user_blacklisted {
                     request.extensions_mut().insert(token);

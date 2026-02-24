@@ -3,7 +3,7 @@ use axum::{
     http::{HeaderMap, header},
     Extension, Json,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
@@ -111,9 +111,17 @@ async fn supabase_auth_request(
         .map_err(|e| AppError::Internal(format!("Auth parse failed: {}", e)))
 }
 
-fn user_public_from_supabase(repo_user: Option<User>, supa: &SupabaseUser) -> UserPublic {
+/// SupabaseユーザーIDをUUIDにパース（失敗時はエラーを返す）
+fn parse_supabase_user_id(supa_id: &str) -> std::result::Result<Uuid, AppError> {
+    Uuid::parse_str(supa_id).map_err(|e| {
+        tracing::error!("Invalid Supabase user ID format: id={}, error={}", supa_id, e);
+        AppError::Internal("無効なユーザーIDです".to_string())
+    })
+}
+
+fn user_public_from_supabase(repo_user: Option<User>, supa: &SupabaseUser) -> std::result::Result<UserPublic, AppError> {
     if let Some(u) = repo_user {
-        return UserPublic::from(u);
+        return Ok(UserPublic::from(u));
     }
 
     let name = supa
@@ -128,15 +136,18 @@ fn user_public_from_supabase(repo_user: Option<User>, supa: &SupabaseUser) -> Us
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    UserPublic {
-        id: Uuid::parse_str(&supa.id).unwrap_or_else(|_| Uuid::nil()),
+    // セキュリティ: UUID.nil()へのフォールバックを防止
+    let user_id = parse_supabase_user_id(&supa.id)?;
+
+    Ok(UserPublic {
+        id: user_id,
         email: supa.email.clone(),
         name,
         phone,
         role: UserRole::User,
         is_verified: supa.email_confirmed_at.is_some(),
         created_at: supa.created_at.parse().unwrap_or_else(|_| Utc::now()),
-    }
+    })
 }
 
 /// Supabase Auth: 新規登録（email/password）
@@ -166,13 +177,15 @@ pub async fn register(
     .await?;
 
     // public.users を service role で取得（トリガー同期後）
+    // セキュリティ: UUID.nil()へのフォールバックを防止
+    let user_id = parse_supabase_user_id(&auth_res.user.id)?;
     let repo = UserRepository::new(state.db.service());
     let repo_user = repo
-        .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+        .find_by_id(user_id)
         .await
         .ok()
         .flatten();
-    let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+    let user_public = user_public_from_supabase(repo_user, &auth_res.user)?;
 
     let response = serde_json::json!({
         "user": user_public,
@@ -229,10 +242,10 @@ pub async fn login(
     // アカウントロックチェック
     if let Some(lock) = login_repo.is_account_locked(&req.email).await? {
         let remaining_minutes = (lock.locked_until - Utc::now()).num_minutes().max(1);
+        // セキュリティ: 具体的な失敗回数は漏洩しない（アカウント列挙攻撃対策）
         return Err(AppError::TooManyRequests(format!(
-            "アカウントがロックされています。{}分後に再試行してください。（失敗回数: {}回）",
-            remaining_minutes,
-            lock.failed_attempts
+            "ログイン試行回数が上限に達しました。{}分後に再試行してください。",
+            remaining_minutes
         )));
     }
 
@@ -259,13 +272,15 @@ pub async fn login(
                 .handle_successful_login(&req.email, &client_ip, user_agent.as_deref())
                 .await?;
 
+            // セキュリティ: UUID.nil()へのフォールバックを防止
+            let user_id = parse_supabase_user_id(&auth_res.user.id)?;
             let repo = UserRepository::new(state.db.service());
             let repo_user = repo
-                .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+                .find_by_id(user_id)
                 .await
                 .ok()
                 .flatten();
-            let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+            let user_public = user_public_from_supabase(repo_user, &auth_res.user)?;
 
             let response = serde_json::json!({
                 "user": user_public,
@@ -279,28 +294,27 @@ pub async fn login(
 
             Ok(Json(response))
         }
-        Err(e) => {
+        Err(_e) => {
             // 失敗: 試行を記録
             let attempt_result = login_repo
                 .handle_failed_login(&req.email, &client_ip, user_agent.as_deref())
                 .await?;
 
             match attempt_result {
-                LoginAttemptResult::Locked { until, attempts } => {
+                LoginAttemptResult::Locked { until, attempts: _ } => {
                     let remaining_minutes = (until - Utc::now()).num_minutes().max(1);
+                    // セキュリティ: 具体的な試行回数は漏洩しない（アカウント列挙攻撃対策）
                     Err(AppError::TooManyRequests(format!(
-                        "ログイン試行回数が上限（{}回）に達しました。アカウントは{}分間ロックされます。",
-                        attempts,
+                        "ログイン試行回数が上限に達しました。{}分後に再試行してください。",
                         remaining_minutes
                     )))
                 }
-                LoginAttemptResult::Failed { attempts, max_attempts } => {
-                    // 元のエラーに残り回数を追加
-                    let remaining = max_attempts - attempts;
-                    Err(AppError::Unauthorized(format!(
-                        "メールアドレスまたはパスワードが正しくありません。（残り試行回数: {}回）",
-                        remaining
-                    )))
+                LoginAttemptResult::Failed { attempts: _, max_attempts: _ } => {
+                    // セキュリティ: 残り試行回数は漏洩しない（アカウント列挙攻撃対策）
+                    // 攻撃者にロック状況を推測させないため一貫したメッセージを返す
+                    Err(AppError::Unauthorized(
+                        "メールアドレスまたはパスワードが正しくありません。".to_string()
+                    ))
                 }
             }
         }
@@ -327,13 +341,15 @@ pub async fn refresh_token(
     )
     .await?;
 
+    // セキュリティ: UUID.nil()へのフォールバックを防止
+    let user_id = parse_supabase_user_id(&auth_res.user.id)?;
     let repo = UserRepository::new(state.db.service());
     let repo_user = repo
-        .find_by_id(Uuid::parse_str(&auth_res.user.id).unwrap_or_else(|_| Uuid::nil()))
+        .find_by_id(user_id)
         .await
         .ok()
         .flatten();
-    let user_public = user_public_from_supabase(repo_user, &auth_res.user);
+    let user_public = user_public_from_supabase(repo_user, &auth_res.user)?;
 
     let response = serde_json::json!({
         "user": user_public,

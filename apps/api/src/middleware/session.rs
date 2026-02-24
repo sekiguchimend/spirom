@@ -81,11 +81,31 @@ fn verify_session_signature(session_id: &str, signature: &str) -> bool {
     constant_time_compare(&expected_signature, signature)
 }
 
-/// SESSION_SECRETを取得（JWT_SECRETにフォールバック）
+/// SESSION_SECRETを取得
+/// セキュリティ: JWT_SECRETへのフォールバックを廃止し、明示的な設定を要求
 fn get_session_secret() -> String {
-    std::env::var("SESSION_SECRET")
-        .or_else(|_| std::env::var("JWT_SECRET"))
-        .unwrap_or_default()
+    // SESSION_SECRETが設定されている場合はそれを使用
+    if let Ok(secret) = std::env::var("SESSION_SECRET") {
+        if !secret.is_empty() {
+            return secret;
+        }
+    }
+
+    // 開発環境のみJWT_SECRETへのフォールバックを許可（本番環境では拒否）
+    let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
+    if env != "production" {
+        if let Ok(jwt_secret) = std::env::var("JWT_SECRET") {
+            if !jwt_secret.is_empty() {
+                tracing::warn!(
+                    "SESSION_SECRET not set, falling back to JWT_SECRET (development only)"
+                );
+                return jwt_secret;
+            }
+        }
+    }
+
+    // 空文字を返すが、本番環境ではverify_session_signature()で拒否される
+    String::new()
 }
 
 /// 定数時間で文字列を比較（タイミング攻撃対策）

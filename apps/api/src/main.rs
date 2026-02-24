@@ -16,6 +16,7 @@ mod middleware;
 mod models;
 mod routes;
 mod services;
+mod utils;
 
 use config::{AppState, Config};
 use db::SupabaseClient;

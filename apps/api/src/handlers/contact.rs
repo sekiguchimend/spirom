@@ -403,18 +403,9 @@ pub async fn update_contact_status(
         .ok_or_else(|| AppError::NotFound("お問い合わせが見つかりません".to_string()))
 }
 
-/// 入力値のサニタイズ（基本的なXSS対策）
+/// 入力値のサニタイズ（共通ユーティリティを使用）
 fn sanitize_input(input: &str) -> String {
-    input
-        .chars()
-        .take(5000) // 最大長制限
-        .collect::<String>()
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
-        .trim()
-        .to_string()
+    crate::utils::sanitize_input_default(input)
 }
 
 /// クライアントIP取得（X-Forwarded-For対応）
