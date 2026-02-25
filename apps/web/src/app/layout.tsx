@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Nunito_Sans } from "next/font/google";
-import Script from "next/script";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { safeJsonLd } from "@/lib/safeJsonLd";
@@ -153,18 +153,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${nunitoSans.variable} ${anton.variable} font-sans antialiased min-h-screen flex flex-col`}>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-NT51FRJ427"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-NT51FRJ427');
-          `}
-        </Script>
+        <GoogleAnalytics gaId="G-NT51FRJ427" />
         <AuthProvider>
           <a
             href="#main-content"
