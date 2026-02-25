@@ -134,6 +134,17 @@ export default function RootLayout({
   return (
     <html lang="ja" dir="ltr">
       <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-NT51FRJ427" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-NT51FRJ427');
+            `,
+          }}
+        />
         <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/favicon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
