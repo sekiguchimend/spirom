@@ -25,6 +25,7 @@ export function PaymentForm({
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPaymentElementReady, setIsPaymentElementReady] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +70,7 @@ export function PaymentForm({
       </div>
 
       <div>
-        <PaymentElement />
+        <PaymentElement onReady={() => setIsPaymentElementReady(true)} />
       </div>
 
       {errorMessage && (
@@ -80,10 +81,10 @@ export function PaymentForm({
 
       <button
         type="submit"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe || !isPaymentElementReady || isProcessing}
         className="w-full px-6 py-3 text-base font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isProcessing ? t('checkout.processing') : `${formatPrice(total)} ${t('checkout.payButton')}`}
+        {isProcessing ? t('checkout.processing') : !isPaymentElementReady ? '読み込み中...' : `${formatPrice(total)} ${t('checkout.payButton')}`}
       </button>
 
       <div className="flex items-center justify-center gap-2 text-xs text-gray-500">

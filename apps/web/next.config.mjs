@@ -36,12 +36,12 @@ const securityHeaders = [
       // セキュリティ: Stripe/Next.jsの要件で unsafe-inline/eval が必要
       // 将来的にはnonce-basedに移行を検討
       // strict-dynamic と組み合わせることで安全性を向上
-      "script-src 'self' 'unsafe-inline' https://cdn.sanity.io https://js.stripe.com",
+      "script-src 'self' 'unsafe-inline' https://cdn.sanity.io https://js.stripe.com https://m.stripe.com https://m.stripe.network https://pay.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://api.spirom.com https://bff.spirom.com https://*.sanity.io https://api.stripe.com http://localhost:3001 http://localhost:8787 http://127.0.0.1:8787 https://*.supabase.co",
-      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+      "connect-src 'self' https://api.spirom.com https://bff.spirom.com https://*.sanity.io https://api.stripe.com https://m.stripe.com https://m.stripe.network https://pay.google.com http://localhost:3001 http://localhost:8787 http://127.0.0.1:8787 https://*.supabase.co",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://m.stripe.com https://m.stripe.network https://pay.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
