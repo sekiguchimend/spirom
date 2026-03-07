@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
+use sha2::{Sha256, Digest};
 
 use super::provider::*;
 
@@ -277,6 +277,8 @@ impl PaymentProvider for StripePaymentProvider {
     fn verify_webhook(&self, payload: &[u8], signature: &str) -> Result<WebhookEvent, PaymentError> {
         // Stripe署名検証
         // 署名形式: t=timestamp,v1=signature[,v1=signature2...]
+        tracing::debug!("verify_webhook: parsing signature, secrets_count={}", self.webhook_secrets.len());
+
         let mut timestamp: Option<i64> = None;
         let mut sigs_v1: Vec<String> = vec![];
         for part in signature.split(',') {
@@ -285,11 +287,15 @@ impl PaymentProvider for StripePaymentProvider {
             let v = iter.next().unwrap_or("").trim();
             if k == "t" {
                 timestamp = v.parse::<i64>().ok();
+                tracing::debug!("verify_webhook: found timestamp={:?}", timestamp);
             } else if k == "v1" && !v.is_empty() {
                 sigs_v1.push(v.to_string());
             }
         }
+        tracing::debug!("verify_webhook: found {} v1 signatures", sigs_v1.len());
+
         let timestamp = timestamp.ok_or_else(|| {
+            tracing::error!("verify_webhook: Missing timestamp in signature: {}", signature);
             PaymentError::WebhookVerificationFailed("Missing timestamp".to_string())
         })?;
         if sigs_v1.is_empty() {
@@ -329,6 +335,26 @@ impl PaymentProvider for StripePaymentProvider {
         signed_payload.push(b'.');
         signed_payload.extend_from_slice(payload);
 
+        // ペイロードの先頭・末尾部分をログ出力
+        let payload_preview = String::from_utf8_lossy(&payload[..payload.len().min(100)]);
+        let payload_end_start = if payload.len() > 50 { payload.len() - 50 } else { 0 };
+        let payload_end = String::from_utf8_lossy(&payload[payload_end_start..]);
+        let payload_hash = hex::encode(&sha2::Sha256::digest(payload));
+        tracing::debug!(
+            "verify_webhook: payload_len={}, timestamp={}, payload_hash={}, payload_end={}",
+            payload.len(),
+            timestamp,
+            &payload_hash[..16],
+            payload_end.trim()
+        );
+
+        // signed_payloadのハッシュも出力
+        let signed_payload_hash = hex::encode(&sha2::Sha256::digest(&signed_payload));
+        tracing::debug!(
+            "verify_webhook: signed_payload_hash={}",
+            &signed_payload_hash[..16]
+        );
+
         // いずれかのsecretで一致すればOK（ローテーション対応）
         fn ct_eq(a: &[u8], b: &[u8]) -> bool {
             if a.len() != b.len() {
@@ -343,18 +369,40 @@ impl PaymentProvider for StripePaymentProvider {
 
         let mut verified = false;
         for secret in self.webhook_secrets.iter() {
-            type HmacSha256 = Hmac<Sha256>;
-            let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-                .map_err(|_| PaymentError::WebhookVerificationFailed("Invalid secret".to_string()))?;
-            mac.update(&signed_payload);
-            let expected = mac.finalize().into_bytes();
+            // プレフィックス付きと無しの両方を試す
+            let secret_variants = vec![
+                secret.clone(),
+                secret.strip_prefix("whsec_").unwrap_or(secret).to_string(),
+            ];
 
-            for sig_hex in sigs_v1.iter() {
-                if let Ok(sig_bytes) = hex::decode(sig_hex) {
-                    if ct_eq(expected.as_slice(), sig_bytes.as_slice()) {
-                        verified = true;
-                        break;
+            for secret_variant in &secret_variants {
+                type HmacSha256 = Hmac<Sha256>;
+                let mut mac = HmacSha256::new_from_slice(secret_variant.as_bytes())
+                    .map_err(|_| PaymentError::WebhookVerificationFailed("Invalid secret".to_string()))?;
+                mac.update(&signed_payload);
+                let expected = mac.finalize().into_bytes();
+                let expected_hex = hex::encode(&expected);
+
+                tracing::debug!(
+                    "verify_webhook: trying secret_len={}, expected_sig={}",
+                    secret_variant.len(),
+                    &expected_hex[..expected_hex.len().min(20)]
+                );
+
+                for sig_hex in sigs_v1.iter() {
+                    if let Ok(sig_bytes) = hex::decode(sig_hex) {
+                        if ct_eq(expected.as_slice(), sig_bytes.as_slice()) {
+                            tracing::info!(
+                                "verify_webhook: matched with secret_len={}",
+                                secret_variant.len()
+                            );
+                            verified = true;
+                            break;
+                        }
                     }
+                }
+                if verified {
+                    break;
                 }
             }
             if verified {
@@ -363,8 +411,10 @@ impl PaymentProvider for StripePaymentProvider {
         }
 
         if !verified {
+            tracing::error!("verify_webhook: Signature mismatch. Secrets tried: {}", self.webhook_secrets.len());
             return Err(PaymentError::WebhookVerificationFailed("Signature mismatch".to_string()));
         }
+        tracing::info!("verify_webhook: Signature verified successfully");
 
         // イベントをパース
         let event: serde_json::Value = serde_json::from_slice(payload)

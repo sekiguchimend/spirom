@@ -4,8 +4,8 @@
     "description": "关于Spirom的常见问题"
   },
   "hero": {
-    "title": "FAQ",
-    "tagline": "GOT QUESTIONS? WE GOT ANSWERS!"
+    "title": "常见问题",
+    "tagline": "有问题吗？我们来解答！"
   },
   "categories": [
     {
@@ -32,7 +32,7 @@
       "items": [
         {
           "question": "运费是多少？",
-          "answer": "全国统一750日元（含税）。"
+          "answer": "日本国内配送700日元（含税）。购满1万日元免运费。"
         },
         {
           "question": "需要多长时间送达？",
@@ -44,7 +44,7 @@
         },
         {
           "question": "支持国际配送吗？",
-          "answer": "目前仅限日本国内配送。国际配送计划在未来支持。"
+          "answer": "支持国际配送。运费因地区而异（东亚2,000日元起、北美5,500日元起）。达到一定金额可享受免运费。"
         }
       ]
     },
@@ -78,9 +78,9 @@
     }
   ],
   "cta": {
-    "title": "STILL CONFUSED?",
+    "title": "还有疑问？",
     "description": "找不到您需要的答案？请随时联系我们！",
-    "button": "CONTACT US"
+    "button": "联系我们"
   },
   "qna": "Q&A"
 }

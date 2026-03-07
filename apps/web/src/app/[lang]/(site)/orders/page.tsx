@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { isAuthenticated, getServerOrders } from '@/lib/server-api';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { OrderProgress } from '@/components/orders/OrderProgress';
@@ -52,53 +53,72 @@ export default async function OrdersPage({
             {/* 注文一覧 */}
             <div className="space-y-6">
               {orders.map((order) => (
-                <div
+                <Link
                   key={order.id}
-                  className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                  href={routes.ORDERS.DETAIL(order.id)}
+                  className="block bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  {/* 注文ヘッダー */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-6 border-b border-gray-200">
-                    <div>
-                      <h3 className="text-lg font-bold text-text-dark mb-1">
-                        注文番号: {order.order_number}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        注文日: {formatDate(order.created_at)}
-                      </p>
-                    </div>
-                    <p className="text-xl font-bold text-text-dark">
+                  {/* 注文日と合計 */}
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                    <p className="text-sm text-gray-500">
+                      {formatDate(order.created_at)}
+                    </p>
+                    <p className="text-lg font-bold text-text-dark">
                       {formatPrice(order.total)}
                     </p>
                   </div>
 
-                  {/* 進捗状況 */}
-                  <div className="mb-6">
-                    <OrderProgress order={order} />
+                  {/* 商品一覧 */}
+                  <div className="space-y-3 mb-4">
+                    {order.items?.map((item, index) => (
+                      <div key={index} className="flex items-center gap-4">
+                        {/* 商品画像 */}
+                        <div className="relative w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                          {item.image_url ? (
+                            <Image
+                              src={item.image_url}
+                              alt={item.product_name}
+                              fill
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                <circle cx="9" cy="9" r="2"/>
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        {/* 商品情報 */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-dark truncate">
+                            {item.product_name}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                            {item.size && (
+                              <span className="bg-gray-100 px-2 py-0.5 rounded">
+                                {item.size}
+                              </span>
+                            )}
+                            <span>×{item.quantity}</span>
+                          </div>
+                        </div>
+                        {/* 価格 */}
+                        <p className="text-sm font-medium text-text-dark">
+                          {formatPrice(item.price)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* 注文詳細リンク */}
-                  <div className="flex justify-end">
-                    <Link
-                      href={routes.ORDERS.DETAIL(order.id)}
-                      className="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-dark transition-colors"
-                    >
-                      詳細を見る
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="m9 18 6-6-6-6" />
-                      </svg>
-                    </Link>
+                  {/* 進捗状況 */}
+                  <div className="pt-4 border-t border-gray-100">
+                    <OrderProgress order={order} />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

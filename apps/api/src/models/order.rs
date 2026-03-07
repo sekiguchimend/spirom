@@ -143,6 +143,10 @@ pub struct OrderItem {
     pub subtotal: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variant_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<String>,
 }
 
 /// 注文サマリ（一覧用）
@@ -186,6 +190,10 @@ pub struct OrderItemRequest {
     pub product_id: Uuid,
     #[validate(range(min = 1, max = 99))]
     pub quantity: i32,
+    #[serde(default)]
+    pub variant_id: Option<Uuid>,
+    #[serde(default)]
+    pub size: Option<String>,
 }
 
 /// 注文作成リクエスト

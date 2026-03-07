@@ -14,6 +14,8 @@ interface OrderItem {
   quantity: number;
   subtotal: number;
   image_url?: string;
+  variant_id?: string;
+  size?: string;
 }
 
 interface OrderAddress {
@@ -49,11 +51,11 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending_payment: { label: '作成待ち', color: 'bg-yellow-100 text-yellow-700' },
-  paid: { label: '作成済み', color: 'bg-blue-100 text-blue-700' },
-  processing: { label: '処理中', color: 'bg-purple-100 text-purple-700' },
+  pending_payment: { label: '決済待ち', color: 'bg-yellow-100 text-yellow-700' },
+  paid: { label: '注文確定', color: 'bg-blue-100 text-blue-700' },
+  processing: { label: '準備中', color: 'bg-purple-100 text-purple-700' },
   shipped: { label: '発送済み', color: 'bg-indigo-100 text-indigo-700' },
-  delivered: { label: '配達済み', color: 'bg-green-100 text-green-700' },
+  delivered: { label: '配達完了', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'キャンセル', color: 'bg-red-100 text-red-700' },
 };
 
@@ -270,7 +272,10 @@ export default function AdminOrderDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900 truncate">{item.product_name}</h3>
-                    <p className="text-sm text-gray-600">SKU: {item.product_sku || '-'}</p>
+                    <p className="text-sm text-gray-600">
+                      SKU: {item.product_sku || '-'}
+                      {item.size && <span className="ml-2">サイズ: {item.size}</span>}
+                    </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold">{formatPrice(item.price)} x {item.quantity}</p>

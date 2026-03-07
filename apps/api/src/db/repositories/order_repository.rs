@@ -60,6 +60,8 @@ impl OrderRepository {
                 quantity: item.quantity,
                 subtotal: item.subtotal,
                 image_url: item.image_url.clone(),
+                variant_id: item.variant_id,
+                size: item.size.clone(),
             };
 
             let _: OrderItemRow = self.client.insert("order_items", &item_input).await?;
@@ -84,8 +86,29 @@ impl OrderRepository {
         }
     }
 
-    /// ユーザーの注文履歴取得（N+1問題回避済み）
-    pub async fn find_by_user(&self, user_id: Uuid, limit: i32) -> Result<Vec<OrderSummary>> {
+    /// PaymentIntent IDで注文取得（認証済みユーザー用）
+    pub async fn find_by_payment_id(&self, payment_id: &str, user_id: Uuid) -> Result<Option<Order>> {
+        let query = format!("payment_id=eq.{}&user_id=eq.{}", payment_id, user_id);
+        let result: Option<OrderRow> = self.client.select_single("orders", &query).await?;
+
+        if let Some(row) = result {
+            let mut order = row.into_order();
+            order.items = self.find_order_items(order.id).await?;
+            Ok(Some(order))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// PaymentIntent IDで注文存在チェック（Webhook二重処理防止用）
+    pub async fn exists_by_payment_id(&self, payment_id: &str) -> Result<bool> {
+        let query = format!("payment_id=eq.{}&select=id", payment_id);
+        let result: Vec<IdOnly> = self.client.select("orders", &query).await?;
+        Ok(!result.is_empty())
+    }
+
+    /// ユーザーの注文履歴取得（N+1問題回避済み、アイテム含む）
+    pub async fn find_by_user(&self, user_id: Uuid, limit: i32) -> Result<Vec<Order>> {
         // 1. 注文一覧取得
         let query = format!(
             "user_id=eq.{}&order=created_at.desc&limit={}",
@@ -100,35 +123,28 @@ impl OrderRepository {
         // 2. 全注文のIDを収集してアイテムを一括取得
         let order_ids: Vec<String> = orders.iter().map(|o| o.id.to_string()).collect();
         let item_query = format!("order_id=in.({})", order_ids.join(","));
-        let items: Vec<OrderItemWithOrderId> = self.client.select("order_items", &item_query).await?;
+        let item_rows: Vec<OrderItemRowWithOrderId> = self.client.select("order_items", &item_query).await?;
 
-        // 3. order_idごとにアイテム数をカウント
-        let mut item_counts: std::collections::HashMap<Uuid, i32> = std::collections::HashMap::new();
-        for item in items {
-            *item_counts.entry(item.order_id).or_insert(0) += 1;
+        // 3. order_idごとにアイテムをグルーピング
+        let mut items_map: std::collections::HashMap<Uuid, Vec<OrderItem>> = std::collections::HashMap::new();
+        for item in item_rows {
+            items_map
+                .entry(item.order_id)
+                .or_insert_with(Vec::new)
+                .push(item.into_order_item());
         }
 
-        // 4. サマリー作成
-        let summaries = orders
+        // 4. 注文にアイテムを紐付け
+        let result = orders
             .into_iter()
             .map(|order| {
-                let item_count = item_counts.get(&order.id).copied().unwrap_or(0);
-                OrderSummary {
-                    id: order.id,
-                    order_number: order.order_number,
-                    status: order.status.parse().unwrap_or_default(),
-                    payment_status: serde_json::from_str(&order.payment_status).unwrap_or_default(),
-                    total: order.total,
-                    currency: order.currency,
-                    item_count,
-                    created_at: order.created_at,
-                    shipped_at: order.shipped_at,
-                    delivered_at: order.delivered_at,
-                }
+                let mut o = order.into_order();
+                o.items = items_map.remove(&o.id).unwrap_or_default();
+                o
             })
             .collect();
 
-        Ok(summaries)
+        Ok(result)
     }
 
     /// 注文アイテム取得
@@ -557,6 +573,10 @@ struct OrderItemInput {
     quantity: i32,
     subtotal: i64,
     image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    variant_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    size: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -668,6 +688,8 @@ struct OrderItemRow {
     quantity: i32,
     subtotal: i64,
     image_url: Option<String>,
+    variant_id: Option<Uuid>,
+    size: Option<String>,
 }
 
 impl OrderItemRow {
@@ -680,6 +702,8 @@ impl OrderItemRow {
             quantity: self.quantity,
             subtotal: self.subtotal,
             image_url: self.image_url,
+            variant_id: self.variant_id,
+            size: self.size,
         }
     }
 }
@@ -695,6 +719,38 @@ struct OrderItemWithOrderId {
     #[allow(dead_code)]
     id: Uuid,
     order_id: Uuid,
+}
+
+#[derive(Debug, Deserialize)]
+struct OrderItemRowWithOrderId {
+    #[allow(dead_code)]
+    id: Uuid,
+    order_id: Uuid,
+    product_id: Option<Uuid>,
+    product_name: String,
+    product_sku: Option<String>,
+    price: i64,
+    quantity: i32,
+    subtotal: i64,
+    image_url: Option<String>,
+    variant_id: Option<Uuid>,
+    size: Option<String>,
+}
+
+impl OrderItemRowWithOrderId {
+    fn into_order_item(self) -> OrderItem {
+        OrderItem {
+            product_id: self.product_id.unwrap_or_default(),
+            product_name: self.product_name,
+            product_sku: self.product_sku.unwrap_or_default(),
+            price: self.price,
+            quantity: self.quantity,
+            subtotal: self.subtotal,
+            image_url: self.image_url,
+            variant_id: self.variant_id,
+            size: self.size,
+        }
+    }
 }
 
 /// リカバリ/回収用の最小行

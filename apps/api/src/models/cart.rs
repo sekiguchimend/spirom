@@ -15,6 +15,10 @@ pub struct CartItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_url: Option<String>,
     pub added_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variant_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<String>,
 }
 
 /// カート
@@ -76,6 +80,10 @@ pub struct AddToCartRequest {
     pub product_id: Uuid,
     #[validate(range(min = 1, max = 99))]
     pub quantity: i32,
+    #[serde(default)]
+    pub variant_id: Option<Uuid>,
+    #[serde(default)]
+    pub size: Option<String>,
 }
 
 /// カートアイテム更新リクエスト

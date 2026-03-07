@@ -6,7 +6,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { fetchAddresses, createOrderAction, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
+import { fetchAddresses, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
+import { addToCart, clearCart } from '@/lib/cart';
 import type { Address, CreateOrderItemRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { createLocalizedRoutes } from '@/lib/routes';
@@ -35,6 +36,7 @@ interface ProductCheckoutProps {
 export default function ProductCheckout({
   product,
   quantity,
+  size,
   variantId,
   onClose,
 }: ProductCheckoutProps) {
@@ -118,40 +120,33 @@ export default function ProductCheckout({
     try {
       setStep('loading');
 
-      // 1) 注文作成（サーバー側で金額/税/送料/在庫ロックを確定）
-      const items: CreateOrderItemRequest[] = [
-        {
-          product_id: product.id,
-          quantity: quantity,
-          variant_id: variantId,
-        },
-      ];
+      // カートをクリアしてから商品を追加（「今すぐ購入」専用）
+      await clearCart();
+      await addToCart({
+        productId: product.id,
+        slug: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: quantity,
+        image: product.image,
+        variantId: variantId,
+        size: size,
+      });
 
-      const orderResult = await createOrderAction({
-        items,
+      // 仮の金額を計算（サーバー側で正確な値が計算される）
+      const itemSubtotal = product.price * quantity;
+      const estimatedShipping = 750;
+      const estimatedTax = Math.round(itemSubtotal * 0.1);
+      setSubtotal(itemSubtotal);
+      setShippingFee(estimatedShipping);
+      setTax(estimatedTax);
+      setTotal(itemSubtotal + estimatedShipping + estimatedTax);
+
+      // PaymentIntent作成（注文は支払い完了後にWebhookで作成される）
+      const paymentResult = await createPaymentIntentAction({
         shipping_address_id: shippingAddress.id,
         payment_method: 'credit_card',
       });
-
-      if (!orderResult.success || !orderResult.data) {
-        setError(orderResult.error || t('checkout.createOrderError'));
-        setStep('error');
-        isCheckoutInProgressRef.current = false;
-        return;
-      }
-
-      const order = orderResult.data;
-      setOrderId(order.id);
-      setOrderNumber(order.order_number);
-      setSubtotal(order.subtotal ?? 0);
-      setShippingFee(order.shipping_fee ?? 0);
-      setTax(order.tax ?? 0);
-      setTotal(order.total);
-
-      console.log('[ProductCheckout] Order created:', order.id);
-
-      // 2) PaymentIntent作成（注文IDに紐付け）
-      const paymentResult = await createPaymentIntentAction(order.id);
 
       if (!paymentResult.success || !paymentResult.data) {
         setError(paymentResult.error || t('checkout.paymentPrepareError'));
@@ -202,6 +197,7 @@ export default function ProductCheckout({
           product_id: product.id,
           quantity: quantity,
           variant_id: variantId,
+          size: size,
         },
       ];
 
@@ -476,7 +472,7 @@ export default function ProductCheckout({
                 </div>
               )}
 
-              {step === 'ready' && clientSecret && orderId && orderNumber && (
+              {step === 'ready' && clientSecret && (isGuest ? (orderId && orderNumber) : true) && (
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <Elements
                     stripe={getStripe()}
@@ -497,8 +493,8 @@ export default function ProductCheckout({
                     }}
                   >
                     <PaymentForm
-                      orderId={orderId}
-                      orderNumber={orderNumber}
+                      orderId={orderId || undefined}
+                      orderNumber={orderNumber || undefined}
                       total={total}
                       isGuest={isGuest}
                       guestToken={guestToken || undefined}

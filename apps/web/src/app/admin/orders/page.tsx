@@ -16,11 +16,11 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending_payment: { label: '作成待ち', color: 'bg-yellow-100 text-yellow-700' },
-  paid: { label: '作成済み', color: 'bg-blue-100 text-blue-700' },
-  processing: { label: '処理中', color: 'bg-purple-100 text-purple-700' },
+  pending_payment: { label: '決済待ち', color: 'bg-yellow-100 text-yellow-700' },
+  paid: { label: '注文確定', color: 'bg-blue-100 text-blue-700' },
+  processing: { label: '準備中', color: 'bg-purple-100 text-purple-700' },
   shipped: { label: '発送済み', color: 'bg-indigo-100 text-indigo-700' },
-  delivered: { label: '配達済み', color: 'bg-green-100 text-green-700' },
+  delivered: { label: '配達完了', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'キャンセル', color: 'bg-red-100 text-red-700' },
 };
 

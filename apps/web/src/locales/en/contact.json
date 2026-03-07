@@ -17,6 +17,7 @@
     "orderPlaceholder": "SP-XXXX-XXXX",
     "message": "MESSAGE",
     "messagePlaceholder": "Tell us what's on your mind...",
+    "minChars": "Min. 10 characters",
     "sendMessage": "SEND MESSAGE",
     "sending": "SENDING..."
   },

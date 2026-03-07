@@ -21,8 +21,8 @@
     "tracking": "配送状況"
   },
   "status": {
-    "pending": "処理中",
-    "confirmed": "確認済み",
+    "pending_payment": "決済待ち",
+    "paid": "注文確定",
     "processing": "準備中",
     "shipped": "発送済み",
     "delivered": "配達完了",

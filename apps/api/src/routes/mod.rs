@@ -75,6 +75,7 @@ pub fn create_router(state: AppState) -> Router {
     // ゲスト決済ルート（認証不要 + 専用レート制限）
     let guest_payment_routes = Router::new()
         .route("/api/v1/payments/guest/intent", post(handlers::payments::create_payment_intent_guest))
+        .route("/api/v1/payments/guest/order-intent", post(handlers::payments::create_payment_intent_for_guest_order))
         // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 決済レート制限）
         .layer(middleware::from_fn(payment_rate_limiter_middleware))
         .layer(middleware::from_fn(session_signature_middleware))
@@ -103,6 +104,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/orders", get(handlers::orders::list_orders))
         .route("/api/v1/orders/:id", get(handlers::orders::get_order))
         .route("/api/v1/orders/:id/cancel", post(handlers::orders::cancel_order))
+        .route("/api/v1/orders/by-payment/:payment_intent_id", get(handlers::orders::get_order_by_payment_intent))
         // レビュー（投稿は認証必要）
         .route("/api/v1/products/:id/reviews", post(handlers::reviews::create_review))
         // ミドルウェア（外側から: BFF検証 → セッション署名検証 → 認証）

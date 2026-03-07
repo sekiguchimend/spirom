@@ -65,11 +65,16 @@ impl SupabaseClient {
     }
 
     /// サービスロール用のクライアント（RLSをバイパス）
+    /// SUPABASE_SERVICE_ROLE_KEY が設定されていない場合はパニック
     pub fn service(&self) -> AuthenticatedClient {
+        let service_key = self.service_role_key.clone().expect(
+            "SUPABASE_SERVICE_ROLE_KEY is required for service role operations. \
+             Please set it in your .env file."
+        );
         AuthenticatedClient {
             client: self.client.clone(),
             url: self.url.clone(),
-            anon_key: self.service_role_key.clone().unwrap_or_else(|| self.anon_key.clone()),
+            anon_key: service_key,
             jwt: None,
         }
     }

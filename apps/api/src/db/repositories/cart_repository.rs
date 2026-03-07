@@ -55,10 +55,12 @@ impl CartRepository {
             quantity: item.quantity,
             image_url: item.image_url.clone(),
             added_at: item.added_at,
+            variant_id: item.variant_id,
+            size: item.size.clone(),
         };
 
-        // session_id, product_idの組み合わせでupsert
-        let _: CartItemRow = self.client.upsert("cart_items", &input, "session_id,product_id").await?;
+        // session_id, product_id, variant_idの組み合わせでupsert
+        let _: CartItemRow = self.client.upsert("cart_items", &input, "session_id,product_id,variant_id").await?;
         self.update_metadata_timestamp(session_id).await?;
 
         Ok(())
@@ -174,6 +176,10 @@ struct CartItemInput {
     quantity: i32,
     image_url: Option<String>,
     added_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    variant_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    size: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -212,6 +218,8 @@ struct CartItemRow {
     quantity: i32,
     image_url: Option<String>,
     added_at: DateTime<Utc>,
+    variant_id: Option<Uuid>,
+    size: Option<String>,
 }
 
 impl CartItemRow {
@@ -226,6 +234,8 @@ impl CartItemRow {
             subtotal: price * self.quantity as i64,
             image_url: self.image_url,
             added_at: self.added_at,
+            variant_id: self.variant_id,
+            size: self.size,
         }
     }
 }

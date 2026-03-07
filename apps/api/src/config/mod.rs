@@ -47,6 +47,7 @@ impl Config {
         let env = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "production".to_string());
         let is_dev = env == "development" || env == "local";
         validate_stripe_env(&env)?;
+        validate_supabase_service_role_key()?;
 
         Ok(Self {
             server: ServerConfig {
@@ -119,6 +120,17 @@ fn validate_stripe_env(environment: &str) -> anyhow::Result<()> {
         bail!("本番環境ではSTRIPE_WEBHOOK_SECRET または STRIPE_WEBHOOK_SECRETS が必須です。");
     }
 
+    Ok(())
+}
+
+fn validate_supabase_service_role_key() -> anyhow::Result<()> {
+    let key = std::env::var("SUPABASE_SERVICE_ROLE_KEY").unwrap_or_default();
+    if key.trim().is_empty() {
+        bail!(
+            "SUPABASE_SERVICE_ROLE_KEY が設定されていません。\n\
+             Supabase Dashboard → Settings → API → service_role (secret) から取得してください。"
+        );
+    }
     Ok(())
 }
 

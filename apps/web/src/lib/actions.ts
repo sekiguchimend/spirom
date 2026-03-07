@@ -1,5 +1,7 @@
 'use server';
 
+import { cookies } from 'next/headers';
+import { createHmac, randomUUID } from 'crypto';
 import { BFF_BASE_URL } from './config';
 import { getServerAccessToken } from './server-auth';
 import type {
@@ -9,6 +11,45 @@ import type {
   CreateGuestOrderRequest,
   CreateGuestOrderResponse,
 } from '@/types';
+
+// ============================================
+// セッション管理（/api/v1プロキシと同じロジック）
+// ============================================
+
+const SESSION_COOKIE_NAME = 'spirom_session_id';
+
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('SESSION_SECRET/JWT_SECRET is not set');
+  }
+  return secret;
+}
+
+function signSessionId(sessionId: string): string {
+  return createHmac('sha256', getSessionSecret()).update(sessionId).digest('hex');
+}
+
+function newSessionId(): string {
+  return `sess_${randomUUID().replace(/-/g, '')}`;
+}
+
+async function getSessionHeaders(): Promise<Record<string, string>> {
+  const cookieStore = await cookies();
+  let sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  console.log('[actions] Session cookie:', sessionId ? `found (${sessionId.substring(0, 15)}...)` : 'not found');
+
+  if (!sessionId) {
+    sessionId = newSessionId();
+    console.log('[actions] Generated new session:', sessionId.substring(0, 15) + '...');
+  }
+
+  return {
+    'x-session-id': sessionId,
+    'x-session-signature': signSessionId(sessionId),
+  };
+}
 
 // ============================================
 // ヘルパー関数
@@ -24,6 +65,11 @@ function withBffProxyToken(headers: Record<string, string>) {
     return { ...headers, 'X-BFF-Proxy-Token': proxyToken };
   }
   return headers;
+}
+
+async function withSessionHeaders(headers: Record<string, string>): Promise<Record<string, string>> {
+  const sessionHeaders = await getSessionHeaders();
+  return { ...headers, ...sessionHeaders };
 }
 
 // ============================================
@@ -160,8 +206,15 @@ export async function deleteAddressAction(
 // 決済関連
 // ============================================
 
+export interface CreatePaymentIntentParams {
+  shipping_address_id: string;
+  billing_address_id?: string;
+  payment_method?: string;
+  notes?: string;
+}
+
 export async function createPaymentIntentAction(
-  orderId: string
+  params: CreatePaymentIntentParams
 ): Promise<{ success: boolean; data?: { client_secret: string; payment_intent_id: string }; error?: string }> {
   const token = await getAccessToken();
   if (!token) {
@@ -169,19 +222,26 @@ export async function createPaymentIntentAction(
   }
 
   try {
+    const headers = await withSessionHeaders(withBffProxyToken({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }));
+
+    console.log('[actions] createPaymentIntent headers:', {
+      sessionId: headers['x-session-id']?.substring(0, 15) + '...',
+      hasSignature: !!headers['x-session-signature'],
+      hasAuth: !!headers['Authorization'],
+    });
+
     const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/intent`, {
       method: 'POST',
-      headers: {
-        ...withBffProxyToken({
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }),
-      },
-      body: JSON.stringify({ order_id: orderId }),
+      headers,
+      body: JSON.stringify(params),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('[actions] createPaymentIntent error:', response.status, errorText);
       throw new Error(errorText || `API error: ${response.status}`);
     }
 
@@ -334,7 +394,7 @@ export async function createGuestPaymentIntentAction(
   guestToken: string
 ): Promise<{ success: boolean; data?: { client_secret: string; payment_intent_id: string }; error?: string }> {
   try {
-    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/guest/intent`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/guest/order-intent`, {
       method: 'POST',
       headers: {
         ...withBffProxyToken({
@@ -385,5 +445,46 @@ export async function getGuestOrderAction(
     return { success: true, data: result.data };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to get guest order' };
+  }
+}
+
+// ============================================
+// PaymentIntent IDから注文取得（支払い完了後）
+// ============================================
+
+export async function getOrderByPaymentIntentAction(
+  paymentIntentId: string
+): Promise<{ success: boolean; data?: Order; error?: string }> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const response = await fetch(
+      `${BFF_BASE_URL}/api/v1/orders/by-payment/${encodeURIComponent(paymentIntentId)}`,
+      {
+        headers: {
+          ...withBffProxyToken({
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }),
+        },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { success: false, error: '注文が見つかりません' };
+      }
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get order' };
   }
 }

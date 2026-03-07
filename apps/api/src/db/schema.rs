@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id),
     order_number TEXT UNIQUE NOT NULL,
-    status TEXT DEFAULT 'pending',
+    status TEXT DEFAULT 'processing',
     subtotal BIGINT NOT NULL,
     shipping_fee BIGINT DEFAULT 0,
     tax BIGINT DEFAULT 0,

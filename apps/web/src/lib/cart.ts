@@ -15,6 +15,8 @@ type ApiCartItem = {
   quantity: number;
   subtotal: number;
   image_url?: string | null;
+  variant_id?: string | null;
+  size?: string | null;
 };
 
 type ApiCartResponse = {
@@ -28,13 +30,15 @@ type ApiCartResponse = {
 
 function toCartItems(apiItems: ApiCartItem[], sessionId: string): CartItem[] {
   return apiItems.map((it) => ({
-    id: `cart:${sessionId}:${it.product_id}`,
+    id: `cart:${sessionId}:${it.product_id}:${it.variant_id || 'default'}`,
     productId: it.product_id,
     slug: it.product_slug,
     name: it.product_name,
     price: it.price,
     quantity: it.quantity,
     image: it.image_url || '/placeholder-product.jpg',
+    variantId: it.variant_id || undefined,
+    size: it.size || undefined,
   }));
 }
 
@@ -106,7 +110,10 @@ export async function addToCart(item: Omit<CartItem, 'id'>): Promise<void> {
   if (!authenticated) {
     // ゲスト: ローカルストレージのみ
     const cart = getCart();
-    const existingIndex = cart.findIndex((c) => c.productId === item.productId);
+    // 同じ商品+同じサイズの組み合わせを探す
+    const existingIndex = cart.findIndex(
+      (c) => c.productId === item.productId && c.variantId === item.variantId
+    );
 
     if (existingIndex >= 0) {
       // 既存アイテムの数量を更新
@@ -114,13 +121,15 @@ export async function addToCart(item: Omit<CartItem, 'id'>): Promise<void> {
     } else {
       // 新規アイテムを追加
       cart.push({
-        id: `cart:local:${item.productId}`,
+        id: `cart:local:${item.productId}:${item.variantId || 'default'}`,
         productId: item.productId,
         slug: item.slug,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
         image: item.image,
+        variantId: item.variantId,
+        size: item.size,
       });
     }
 
@@ -131,33 +140,43 @@ export async function addToCart(item: Omit<CartItem, 'id'>): Promise<void> {
   // 認証済み: API経由
   const result = await fetchApi<ApiCartResponse>('/cart/items', {
     method: 'POST',
-    body: JSON.stringify({ product_id: item.productId, quantity: item.quantity }),
+    body: JSON.stringify({
+      product_id: item.productId,
+      quantity: item.quantity,
+      variant_id: item.variantId,
+      size: item.size,
+    }),
   });
   const items = toCartItems(result.data.items || [], result.data.session_id);
   saveCart(items);
 }
 
 // カートから商品を削除
-export async function removeFromCart(productId: string): Promise<void> {
+export async function removeFromCart(productId: string, variantId?: string): Promise<void> {
   const authenticated = await isAuthenticated();
 
   if (!authenticated) {
     // ゲスト: ローカルストレージのみ
-    const cart = getCart().filter((c) => c.productId !== productId);
+    const cart = getCart().filter(
+      (c) => !(c.productId === productId && c.variantId === variantId)
+    );
     saveCart(cart);
     return;
   }
 
   // 認証済み: API経由
-  const result = await fetchApi<ApiCartResponse>(`/cart/items/${productId}`, { method: 'DELETE' });
+  const url = variantId
+    ? `/cart/items/${productId}?variant_id=${variantId}`
+    : `/cart/items/${productId}`;
+  const result = await fetchApi<ApiCartResponse>(url, { method: 'DELETE' });
   const items = toCartItems(result.data.items || [], result.data.session_id);
   saveCart(items);
 }
 
 // カートの商品数量を更新
-export async function updateCartQuantity(productId: string, quantity: number): Promise<void> {
+export async function updateCartQuantity(productId: string, quantity: number, variantId?: string): Promise<void> {
   if (quantity <= 0) {
-    await removeFromCart(productId);
+    await removeFromCart(productId, variantId);
     return;
   }
 
@@ -166,7 +185,7 @@ export async function updateCartQuantity(productId: string, quantity: number): P
   if (!authenticated) {
     // ゲスト: ローカルストレージのみ
     const cart = getCart();
-    const item = cart.find((c) => c.productId === productId);
+    const item = cart.find((c) => c.productId === productId && c.variantId === variantId);
     if (item) {
       item.quantity = quantity;
       saveCart(cart);
@@ -175,7 +194,10 @@ export async function updateCartQuantity(productId: string, quantity: number): P
   }
 
   // 認証済み: API経由
-  const result = await fetchApi<ApiCartResponse>(`/cart/items/${productId}`, {
+  const url = variantId
+    ? `/cart/items/${productId}?variant_id=${variantId}`
+    : `/cart/items/${productId}`;
+  const result = await fetchApi<ApiCartResponse>(url, {
     method: 'PUT',
     body: JSON.stringify({ quantity }),
   });
@@ -223,7 +245,12 @@ export async function mergeLocalCartToServer(): Promise<void> {
     try {
       await fetchApi<ApiCartResponse>('/cart/items', {
         method: 'POST',
-        body: JSON.stringify({ product_id: item.productId, quantity: item.quantity }),
+        body: JSON.stringify({
+          product_id: item.productId,
+          quantity: item.quantity,
+          variant_id: item.variantId,
+          size: item.size,
+        }),
       });
     } catch (error) {
       console.error('Failed to merge cart item:', error);

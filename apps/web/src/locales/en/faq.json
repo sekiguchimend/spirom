@@ -32,7 +32,7 @@
       "items": [
         {
           "question": "How much is shipping?",
-          "answer": "Flat rate of ¥750 (tax included) nationwide."
+          "answer": "Domestic shipping is ¥700 (tax included). Free shipping on orders over ¥10,000."
         },
         {
           "question": "How long does delivery take?",
@@ -44,7 +44,7 @@
         },
         {
           "question": "Do you ship internationally?",
-          "answer": "Currently, we only ship within Japan. International shipping is planned for the future."
+          "answer": "Yes, we ship internationally. Shipping rates vary by region (East Asia from ¥2,000, North America from ¥5,500). Free shipping available on orders over a certain amount."
         }
       ]
     },

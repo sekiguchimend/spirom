@@ -86,17 +86,35 @@ fn get_verified_session_id(headers: &HeaderMap) -> Result<String> {
         (Some(sid), Some(sig)) => {
             // 署名付きセッションIDの検証
             if verify_session_id(&sid, &sig, &secret) {
+                tracing::debug!("Session verified: {}", &sid[..sid.len().min(15)]);
                 Ok(sid)
             } else {
                 // 署名が無効な場合は新しいセッションIDを生成
                 // （攻撃者が他人のセッションを乗っ取ろうとした場合）
-                tracing::warn!("Invalid session signature detected, generating new session");
-                Ok(generate_session_id())
+                let new_sid = generate_session_id();
+                tracing::warn!(
+                    "Invalid session signature! provided={}, generating new={}",
+                    &sid[..sid.len().min(15)],
+                    &new_sid[..new_sid.len().min(15)]
+                );
+                Ok(new_sid)
             }
+        }
+        (Some(sid), None) => {
+            // 署名がない場合も新規生成
+            let new_sid = generate_session_id();
+            tracing::warn!(
+                "No session signature! provided={}, generating new={}",
+                &sid[..sid.len().min(15)],
+                &new_sid[..new_sid.len().min(15)]
+            );
+            Ok(new_sid)
         }
         _ => {
             // セッションIDがない場合は新規生成
-            Ok(generate_session_id())
+            let new_sid = generate_session_id();
+            tracing::info!("No session header, generating new={}", &new_sid[..new_sid.len().min(15)]);
+            Ok(new_sid)
         }
     }
 }
@@ -148,6 +166,11 @@ pub async fn add_to_cart(
     };
 
     let session_id = get_verified_session_id(&headers)?;
+    tracing::info!(
+        "add_to_cart: session_id={}, product_id={}",
+        &session_id[..session_id.len().min(15)],
+        req.product_id
+    );
     let cart_repo = CartRepository::new(client.clone());
     let product_repo = ProductRepository::new(client.clone());
 
@@ -200,6 +223,8 @@ pub async fn add_to_cart(
         subtotal: product.price * new_quantity as i64,
         image_url: product.images.first().cloned(),
         added_at: Utc::now(),
+        variant_id: req.variant_id,
+        size: req.size.clone(),
     };
 
     cart_repo.add_item(&session_id, &cart_item).await?;

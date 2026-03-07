@@ -4,7 +4,7 @@ import { createLocalizedRoutes } from '@/lib/routes';
 import { type Locale, defaultLocale } from '@/lib/i18n/config';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { getServerOrder, isAuthenticated } from '@/lib/server-api';
-import { getGuestOrderAction } from '@/lib/actions';
+import { getGuestOrderAction, getOrderByPaymentIntentAction } from '@/lib/actions';
 import { OrderProgress } from '@/components/orders/OrderProgress';
 import { getOrderStatusBadgeClass, getOrderStatusLabel } from '@/lib/orderStatus';
 import { ClearLocalCart } from './ClearLocalCart';
@@ -22,30 +22,37 @@ export default async function CheckoutCompletePage({
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ order_id?: string; guest?: string; token?: string }>;
+  searchParams: Promise<{ order_id?: string; guest?: string; token?: string; payment_intent?: string }>;
 }) {
   const { lang } = await params;
   const locale = (lang as Locale) || defaultLocale;
   const routes = createLocalizedRoutes(locale);
 
-  const { order_id: orderId, guest, token: guestToken } = await searchParams;
+  const { order_id: orderId, guest, token: guestToken, payment_intent: paymentIntentId } = await searchParams;
   const isGuestOrder = guest === 'true' && guestToken;
 
   let order: Order | null = null;
 
-  if (orderId) {
-    if (isGuestOrder && guestToken) {
-      // ゲスト注文の場合
-      const result = await getGuestOrderAction(orderId, guestToken);
+  if (isGuestOrder && orderId && guestToken) {
+    // ゲスト注文の場合（order_idで取得）
+    const result = await getGuestOrderAction(orderId, guestToken);
+    if (result.success && result.data) {
+      order = result.data;
+    }
+  } else if (paymentIntentId) {
+    // 認証済みユーザーの場合（payment_intent IDで取得）
+    const authed = await isAuthenticated();
+    if (authed) {
+      const result = await getOrderByPaymentIntentAction(paymentIntentId);
       if (result.success && result.data) {
         order = result.data;
       }
-    } else {
-      // 認証済みユーザーの場合
-      const authed = await isAuthenticated();
-      if (authed) {
-        order = await getServerOrder(orderId);
-      }
+    }
+  } else if (orderId) {
+    // 従来の方式（order_idで取得）
+    const authed = await isAuthenticated();
+    if (authed) {
+      order = await getServerOrder(orderId);
     }
   }
 

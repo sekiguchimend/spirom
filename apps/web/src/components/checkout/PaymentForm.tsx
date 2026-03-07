@@ -6,11 +6,12 @@ import { formatPrice } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface PaymentFormProps {
-  orderId: string;
-  orderNumber: string;
+  orderId?: string;
+  orderNumber?: string;
   total: number;
   isGuest?: boolean;
   guestToken?: string;
+  locale?: string;
 }
 
 export function PaymentForm({
@@ -19,6 +20,7 @@ export function PaymentForm({
   total,
   isGuest = false,
   guestToken,
+  locale = 'ja',
 }: PaymentFormProps) {
   const { t } = useTranslation('common');
   const stripe = useStripe();
@@ -37,10 +39,11 @@ export function PaymentForm({
     setIsProcessing(true);
     setErrorMessage(null);
 
-    // ゲスト注文の場合はトークンをURLに含める
-    let returnUrl = `${window.location.origin}/checkout/complete?order_id=${orderId}`;
-    if (isGuest && guestToken) {
-      returnUrl += `&guest=true&token=${encodeURIComponent(guestToken)}`;
+    // 言語プレフィックス付きのreturn URL
+    // ゲスト注文の場合はorder_idとtokenを含める、認証済みの場合はStripeがpayment_intentを追加
+    let returnUrl = `${window.location.origin}/${locale}/checkout/complete`;
+    if (isGuest && guestToken && orderId) {
+      returnUrl += `?order_id=${orderId}&guest=true&token=${encodeURIComponent(guestToken)}`;
     }
 
     const { error } = await stripe.confirmPayment({
@@ -59,10 +62,12 @@ export function PaymentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="bg-primary/5 rounded-lg p-4">
-        <div className="flex justify-between items-center mb-2.5">
-          <span className="text-gray-600 text-xs">{t('checkout.orderNumber')}</span>
-          <span className="font-bold text-text-dark text-xs">{orderNumber}</span>
-        </div>
+        {orderNumber && (
+          <div className="flex justify-between items-center mb-2.5">
+            <span className="text-gray-600 text-xs">{t('checkout.orderNumber')}</span>
+            <span className="font-bold text-text-dark text-xs">{orderNumber}</span>
+          </div>
+        )}
         <div className="flex justify-between items-center">
           <span className="text-gray-600 text-sm">{t('checkout.paymentAmount')}</span>
           <span className="text-xl font-black text-primary">{formatPrice(total)}</span>

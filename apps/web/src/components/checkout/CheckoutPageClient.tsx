@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import type { Address, CartItem, CreateOrderRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
+import type { Address, CartItem, GuestShippingAddress, CreateGuestOrderRequest, CreateOrderItemRequest } from '@/types';
 import { getStripe } from '@/lib/stripe';
 import { formatPrice } from '@/lib/utils';
-import { createOrderAction, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
+import { createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
 import { getCart, refreshCart } from '@/lib/cart';
 import { createLocalizedRoutes } from '@/lib/routes';
 import { type Locale, defaultLocale } from '@/lib/i18n/config';
@@ -144,56 +144,14 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
       setError(null);
       setStep('loading');
 
-      // まずsessionStorageから既存の注文を確認
-      const savedOrder = getCheckoutOrder();
-      let currentOrderId = savedOrder?.orderId || null;
-      let currentOrderNumber = savedOrder?.orderNumber || null;
-      let currentTotal = savedOrder?.total || 0;
+      // 認証済みユーザーの場合、注文は支払い完了後にWebhookで作成される
+      // ここではPaymentIntentのみ作成
+      console.log('[Checkout] Creating payment intent with address:', defaultAddress.id);
+      const paymentResult = await createPaymentIntentAction({
+        shipping_address_id: defaultAddress.id,
+        payment_method: 'credit_card',
+      });
 
-      console.log('[Checkout] Saved order:', savedOrder);
-
-      // 注文がまだ作成されていない場合のみ作成
-      if (!currentOrderId) {
-        console.log('[Checkout] Creating new order');
-        const request: CreateOrderRequest = {
-          shipping_address_id: defaultAddress.id,
-          payment_method: 'credit_card',
-        };
-
-        const orderResult = await createOrderAction(request);
-        if (!orderResult.success || !orderResult.data) {
-          setError(orderResult.error || '注文の作成に失敗しました');
-          setStep('error');
-          isCheckoutInProgressRef.current = false;
-          return;
-        }
-
-        const order = orderResult.data;
-        currentOrderId = order.id;
-        currentOrderNumber = order.order_number;
-        currentTotal = order.total;
-
-        console.log('[Checkout] Order created:', order.id);
-
-        // sessionStorageに保存
-        saveCheckoutOrder(order.id, order.order_number, order.total);
-
-        // stateも更新
-        setOrderId(order.id);
-        setOrderNumber(order.order_number);
-        setSubtotal(order.subtotal ?? computedSubtotal);
-        setTotal(order.total);
-      } else {
-        console.log('[Checkout] Reusing existing order:', currentOrderId);
-        // 既存の注文情報をstateに反映
-        setOrderId(currentOrderId);
-        setOrderNumber(currentOrderNumber);
-        setTotal(currentTotal);
-      }
-
-      // PaymentIntent作成
-      console.log('[Checkout] Creating payment intent for order:', currentOrderId);
-      const paymentResult = await createPaymentIntentAction(currentOrderId);
       if (!paymentResult.success || !paymentResult.data) {
         setError(paymentResult.error || '決済の準備中にエラーが発生しました');
         setStep('error');
@@ -203,6 +161,8 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
 
       console.log('[Checkout] Payment intent created');
       setClientSecret(paymentResult.data.client_secret);
+      setSubtotal(computedSubtotal);
+      setTotal(computedSubtotal + calculateShipping(computedSubtotal, defaultAddress.country || 'JP') + Math.round(computedSubtotal * 0.1));
       setStep('ready');
     } catch (e) {
       console.error('[Checkout] Error:', e);
@@ -247,10 +207,19 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
       // 注文がまだ作成されていない場合のみ作成
       if (!currentOrderId) {
         console.log('[Checkout] Creating new guest order');
+        // カートからアイテム情報を取得（サイズ含む）
+        const items: CreateOrderItemRequest[] = currentCart.map((item) => ({
+          product_id: item.productId,
+          quantity: item.quantity,
+          variant_id: item.variantId,
+          size: item.size,
+        }));
+
         const request: CreateGuestOrderRequest = {
           shipping_address: address,
           payment_method: 'credit_card',
           email,
+          items,
         };
 
         const orderResult = await createGuestOrderAction(request);
@@ -423,7 +392,9 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
                   {cart.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm text-gray-700">
                       <span className="font-medium truncate">
-                        {item.name} × {item.quantity}
+                        {item.name}
+                        {item.size && <span className="text-gray-500"> ({item.size})</span>}
+                        {' × '}{item.quantity}
                       </span>
                       <span className="font-bold">
                         {formatPrice(item.price * item.quantity)}
@@ -546,7 +517,7 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
               </div>
             )}
 
-            {step === 'ready' && clientSecret && orderId && orderNumber && (
+            {step === 'ready' && clientSecret && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
                 <Elements
                   stripe={getStripe()}
@@ -567,11 +538,12 @@ export function CheckoutPageClient({ addresses, isGuest = false }: CheckoutPageC
                   }}
                 >
                   <PaymentForm
-                    orderId={orderId}
-                    orderNumber={orderNumber}
+                    orderId={orderId || undefined}
+                    orderNumber={orderNumber || undefined}
                     total={totalForSummary}
                     isGuest={isGuest}
                     guestToken={guestToken || undefined}
+                    locale={locale}
                   />
                 </Elements>
               </div>

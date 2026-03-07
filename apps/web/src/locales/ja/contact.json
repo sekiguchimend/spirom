@@ -4,63 +4,64 @@
     "description": "Spiromへのお問い合わせ"
   },
   "hero": {
-    "title": "CONTACT",
-    "tagline": "DROP US A LINE!"
+    "title": "お問い合わせ",
+    "tagline": "お気軽にご連絡ください"
   },
   "form": {
-    "loggedInAs": "LOGGED IN AS",
+    "loggedInAs": "ログイン中",
     "nameNotSet": "名前未設定",
-    "whatsUp": "WHAT'S UP?",
+    "whatsUp": "お問い合わせ種別",
     "required": "（必須）",
-    "orderNumber": "ORDER #",
-    "optional": "(optional)",
+    "orderNumber": "注文番号",
+    "optional": "（任意）",
     "orderPlaceholder": "SP-XXXX-XXXX",
-    "message": "MESSAGE",
+    "message": "メッセージ",
     "messagePlaceholder": "お問い合わせ内容をお書きください...",
-    "sendMessage": "SEND MESSAGE",
-    "sending": "SENDING..."
+    "minChars": "最低10文字",
+    "sendMessage": "送信する",
+    "sending": "送信中..."
   },
   "inquiryTypes": {
-    "order": "ORDER",
-    "product": "PRODUCT",
-    "shipping": "SHIPPING",
-    "return": "RETURNS",
-    "other": "OTHER"
+    "order": "注文について",
+    "product": "商品について",
+    "shipping": "配送について",
+    "return": "返品について",
+    "other": "その他"
   },
   "sidebar": {
     "hours": {
-      "title": "HOURS",
-      "weekdays": "MON - FRI",
+      "title": "営業時間",
+      "weekdays": "月〜金",
       "weekdaysTime": "10:00 - 18:00",
-      "weekend": "SAT - SUN",
-      "closed": "CLOSED"
+      "weekend": "土・日",
+      "closed": "休業"
     },
     "fastReply": {
-      "title": "FAST REPLY",
+      "title": "返信目安",
       "text": "通常",
-      "days": "2-3",
+      "days": "2〜3",
       "unit": "営業日以内"
     },
     "faq": {
-      "title": "FAQ",
+      "title": "よくある質問",
       "text": "よくある質問はこちら",
-      "link": "READ NOW"
+      "link": "FAQを見る"
     },
     "social": {
-      "title": "FOLLOW US",
-      "comingSoon": "Coming soon..."
+      "title": "フォローする",
+      "comingSoon": "準備中..."
     }
   },
   "success": {
-    "title": "SENT!",
+    "title": "送信完了",
     "message": "お問い合わせを受け付けました。",
     "replyTime": "2〜3営業日以内",
     "replyText": "にご返信いたします。",
-    "backToHome": "BACK TO HOME"
+    "backToHome": "ホームに戻る"
   },
   "errors": {
     "rateLimited": "お問い合わせの送信回数が上限に達しました。しばらくしてから再度お試しください。",
     "default": "送信に失敗しました。しばらくしてから再度お試しください。"
   },
-  "loading": "Loading..."
+  "loading": "読み込み中..."
 }

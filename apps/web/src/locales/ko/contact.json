@@ -4,63 +4,64 @@
     "description": "Spirom에 문의하기"
   },
   "hero": {
-    "title": "CONTACT",
-    "tagline": "DROP US A LINE!"
+    "title": "문의하기",
+    "tagline": "편하게 연락주세요"
   },
   "form": {
-    "loggedInAs": "LOGGED IN AS",
+    "loggedInAs": "로그인 중",
     "nameNotSet": "이름 미설정",
-    "whatsUp": "WHAT'S UP?",
+    "whatsUp": "문의 유형",
     "required": "（필수）",
-    "orderNumber": "ORDER #",
-    "optional": "(선택)",
+    "orderNumber": "주문 번호",
+    "optional": "（선택）",
     "orderPlaceholder": "SP-XXXX-XXXX",
-    "message": "MESSAGE",
+    "message": "메시지",
     "messagePlaceholder": "문의 내용을 입력해 주세요...",
-    "sendMessage": "SEND MESSAGE",
-    "sending": "SENDING..."
+    "minChars": "최소 10자",
+    "sendMessage": "보내기",
+    "sending": "전송 중..."
   },
   "inquiryTypes": {
-    "order": "ORDER",
-    "product": "PRODUCT",
-    "shipping": "SHIPPING",
-    "return": "RETURNS",
-    "other": "OTHER"
+    "order": "주문 관련",
+    "product": "상품 관련",
+    "shipping": "배송 관련",
+    "return": "반품 관련",
+    "other": "기타"
   },
   "sidebar": {
     "hours": {
-      "title": "HOURS",
-      "weekdays": "MON - FRI",
+      "title": "영업시간",
+      "weekdays": "월~금",
       "weekdaysTime": "10:00 - 18:00",
-      "weekend": "SAT - SUN",
-      "closed": "CLOSED"
+      "weekend": "토・일",
+      "closed": "휴무"
     },
     "fastReply": {
-      "title": "FAST REPLY",
+      "title": "답변 예상",
       "text": "보통",
-      "days": "2-3",
-      "unit": "영업일 이내 답변"
+      "days": "2~3",
+      "unit": "영업일 이내"
     },
     "faq": {
-      "title": "FAQ",
+      "title": "자주 묻는 질문",
       "text": "자주 묻는 질문 보기",
-      "link": "READ NOW"
+      "link": "FAQ 보기"
     },
     "social": {
-      "title": "FOLLOW US",
-      "comingSoon": "Coming soon..."
+      "title": "팔로우",
+      "comingSoon": "준비 중..."
     }
   },
   "success": {
-    "title": "SENT!",
+    "title": "전송 완료",
     "message": "문의가 접수되었습니다.",
-    "replyTime": "2-3영업일",
-    "replyText": "이내에 답변드리겠습니다.",
-    "backToHome": "BACK TO HOME"
+    "replyTime": "2~3영업일",
+    "replyText": " 이내에 답변드리겠습니다.",
+    "backToHome": "홈으로 돌아가기"
   },
   "errors": {
     "rateLimited": "문의 발송 횟수가 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.",
     "default": "전송에 실패했습니다. 잠시 후 다시 시도해 주세요."
   },
-  "loading": "Loading..."
+  "loading": "로딩 중..."
 }

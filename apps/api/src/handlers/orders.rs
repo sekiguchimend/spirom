@@ -77,6 +77,8 @@ pub async fn create_order(
             .map(|item| crate::models::OrderItemRequest {
                 product_id: item.product_id,
                 quantity: item.quantity,
+                variant_id: item.variant_id,
+                size: item.size.clone(),
             })
             .collect()
     };
@@ -142,6 +144,8 @@ pub async fn create_order(
             quantity: item_req.quantity,
             subtotal: item_subtotal,
             image_url: product.images.first().cloned(),
+            variant_id: item_req.variant_id,
+            size: item_req.size.clone(),
         });
 
         stock_reserve_items.push((product.id, item_req.quantity));
@@ -159,7 +163,7 @@ pub async fn create_order(
         id: Uuid::new_v4(),
         user_id: Some(auth_user.id),
         order_number: generate_order_number(),
-        status: OrderStatus::PendingPayment,
+        status: OrderStatus::Processing,
         items: order_items,
         subtotal,
         shipping_fee,
@@ -206,12 +210,12 @@ pub async fn create_order(
     Ok(Json(DataResponse::new(order)))
 }
 
-/// 注文履歴取得
+/// 注文履歴取得（アイテム情報含む）
 pub async fn list_orders(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthenticatedUser>,
     Extension(token): Extension<String>,
-) -> Result<Json<PaginatedResponse<OrderSummary>>> {
+) -> Result<Json<PaginatedResponse<Order>>> {
     let order_repo = OrderRepository::new(state.db.with_auth(&token));
 
     let orders = order_repo.find_by_user(auth_user.id, 50).await?;
@@ -526,6 +530,8 @@ pub async fn create_guest_order(
             .map(|item| crate::models::OrderItemRequest {
                 product_id: item.product_id,
                 quantity: item.quantity,
+                variant_id: item.variant_id,
+                size: item.size.clone(),
             })
             .collect()
     };
@@ -569,6 +575,8 @@ pub async fn create_guest_order(
             quantity: item_req.quantity,
             subtotal: item_subtotal,
             image_url: product.images.first().cloned(),
+            variant_id: item_req.variant_id,
+            size: item_req.size.clone(),
         });
 
         stock_reserve_items.push((product.id, item_req.quantity));
@@ -589,7 +597,7 @@ pub async fn create_guest_order(
     let shipping_address = req.shipping_address.to_order_address();
     let billing_address = req.billing_address.as_ref().map(|addr| addr.to_order_address());
 
-    // ゲスト注文作成
+    // ゲスト注文作成（決済待ち状態で作成、支払い完了後にPaidに更新される）
     let order = Order {
         id: Uuid::new_v4(),
         user_id: None, // ゲスト注文なのでuser_idはNULL
@@ -665,6 +673,22 @@ pub async fn get_guest_order(
     let order_repo = OrderRepository::new(state.db.anonymous());
     let order = order_repo
         .find_by_guest_token_rpc(&token_hash, id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
+
+    Ok(Json(DataResponse::new(order)))
+}
+
+/// PaymentIntent IDで注文取得（支払い完了後のリダイレクト用）
+pub async fn get_order_by_payment_intent(
+    State(state): State<AppState>,
+    Extension(auth_user): Extension<AuthenticatedUser>,
+    Extension(token): Extension<String>,
+    Path(payment_intent_id): Path<String>,
+) -> Result<Json<DataResponse<Order>>> {
+    let order_repo = OrderRepository::new(state.db.with_auth(&token));
+    let order = order_repo
+        .find_by_payment_id(&payment_intent_id, auth_user.id)
         .await?
         .ok_or_else(|| AppError::NotFound("注文が見つかりません".to_string()))?;
 

@@ -48,6 +48,8 @@ export interface OrderItem {
   quantity: number;
   subtotal: number;
   image_url?: string;
+  variant_id?: string;
+  size?: string;
 }
 
 export interface Order {
@@ -71,6 +73,7 @@ export interface CreateOrderItemRequest {
   product_id: string;
   quantity: number;
   variant_id?: string;
+  size?: string;
 }
 
 export type PaymentMethod = 'credit_card' | 'paypay' | 'rakuten_pay' | 'konbini' | 'bank_transfer';

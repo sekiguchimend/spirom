@@ -9,29 +9,24 @@ interface OrderProgressProps {
 export function OrderProgress({ order }: OrderProgressProps) {
   const steps = [
     {
-      id: 'pending_payment',
-      label: '作成待ち',
-      completed: order.status !== 'pending_payment',
-    },
-    {
       id: 'paid',
-      label: '作成済み',
+      label: '注文確定',
       completed: ['paid', 'processing', 'shipped', 'delivered'].includes(order.status),
     },
     {
       id: 'processing',
-      label: '処理中',
-      completed: ['processing', 'shipped', 'delivered'].includes(order.status),
+      label: '準備中',
+      completed: ['shipped', 'delivered'].includes(order.status),
     },
     {
       id: 'shipped',
       label: '発送済み',
-      completed: ['shipped', 'delivered'].includes(order.status),
+      completed: ['delivered'].includes(order.status),
       date: order.shipped_at,
     },
     {
       id: 'delivered',
-      label: '配達済み',
+      label: '配達完了',
       completed: order.status === 'delivered',
       date: order.delivered_at,
     },

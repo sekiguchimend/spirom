@@ -21,9 +21,9 @@
     "tracking": "Tracking"
   },
   "status": {
-    "pending": "Pending",
-    "confirmed": "Confirmed",
-    "processing": "Processing",
+    "pending_payment": "Awaiting Payment",
+    "paid": "Order Confirmed",
+    "processing": "Preparing",
     "shipped": "Shipped",
     "delivered": "Delivered",
     "cancelled": "Cancelled"
