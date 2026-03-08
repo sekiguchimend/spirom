@@ -257,6 +257,7 @@ pub struct AdminUpdateProductRequest {
     pub stock: Option<i32>,
     pub is_active: Option<bool>,
     pub is_featured: Option<bool>,
+    pub images: Option<Vec<String>>,
     pub product_type: Option<String>,
     pub material: Option<String>,
     pub material_detail: Option<String>,

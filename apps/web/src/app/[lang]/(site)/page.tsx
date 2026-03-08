@@ -7,6 +7,9 @@ import { createLocalizedRoutes } from '@/lib/routes';
 import { type Locale, locales, defaultLocale } from '@/lib/i18n/config';
 import { getDictionary } from '@/lib/i18n/get-dictionary';
 
+// ISR: 300秒（5分）ごとに再検証
+export const revalidate = 300;
+
 interface PageProps {
   params: Promise<{ lang: string }>;
 }

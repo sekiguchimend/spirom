@@ -186,6 +186,7 @@ pub async fn update_product(
         stock: req.stock,
         is_active: req.is_active,
         is_featured: req.is_featured,
+        images: req.images,
         updated_at: Utc::now(),
     };
 

@@ -481,6 +481,8 @@ pub struct ProductUpdateInput {
     pub is_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_featured: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<String>>,
     pub updated_at: DateTime<Utc>,
 }
 
