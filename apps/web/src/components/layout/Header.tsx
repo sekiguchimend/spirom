@@ -53,7 +53,7 @@ export default function Header() {
             href={routes.ABOUT}
             className="inline-flex text-black items-center gap-2 bg-brand-cream/90 backdrop-blur px-4 py-2 rounded text-xs font-bold uppercase tracking-widest border border-black/10 hover:bg-white transition-colors"
           >
-            We rebranded with purpose. Read the story
+            Behind our rebrand lies purpose. Learn more
             <span aria-hidden="true">→</span>
           </Link>
         </div>
