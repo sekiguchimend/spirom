@@ -1,30 +1,23 @@
-/**
- * 価格をフォーマットする（円単位）
- * @param price - 価格（円）
- * @param currencyOrOptions - 通貨コード（文字列）またはオプションオブジェクト
- * @returns フォーマットされた価格文字列（例: "¥1,234"）
- */
 export function formatPrice(
   price: number,
-  currencyOrOptions?: string | { currency?: string; divideBy100?: boolean }
+  options?: string | { currency?: string; divideBy100?: boolean; locale?: string }
 ): string {
-  let currency = 'JPY';
   let divideBy100 = false;
+  let locale = 'ja';
 
-  if (typeof currencyOrOptions === 'string') {
-    currency = currencyOrOptions;
-  } else if (currencyOrOptions) {
-    currency = currencyOrOptions.currency || 'JPY';
-    divideBy100 = currencyOrOptions.divideBy100 || false;
+  if (typeof options === 'string') {
+  } else if (options) {
+    divideBy100 = options.divideBy100 || false;
+    locale = options.locale || 'ja';
   }
 
   const amount = divideBy100 ? price / 100 : price;
 
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-  }).format(amount);
+  if (locale !== 'ja') {
+    return `$${amount / 100}`;
+  }
+
+  return `¥${amount.toLocaleString()}`;
 }
 
 /**
