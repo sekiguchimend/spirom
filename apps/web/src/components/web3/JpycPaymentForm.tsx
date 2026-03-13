@@ -34,6 +34,34 @@ interface JpycPaymentFormProps {
 
 type PaymentStep = 'connect' | 'ready' | 'sending' | 'confirming' | 'verifying' | 'success' | 'error';
 
+// エラーメッセージを分かりやすく変換
+function formatErrorMessage(error: Error): string {
+  const msg = error.message || '';
+
+  // ユーザーがキャンセルした場合
+  if (msg.includes('User rejected') || msg.includes('User denied') || msg.includes('user rejected')) {
+    return 'トランザクションがキャンセルされました';
+  }
+  // 残高不足
+  if (msg.includes('insufficient funds') || msg.includes('Insufficient funds')) {
+    return 'JPYCの残高が不足しています';
+  }
+  // ガス代不足
+  if (msg.includes('insufficient funds for gas') || msg.includes('gas required exceeds')) {
+    return 'ガス代（POL）が不足しています';
+  }
+  // ネットワークエラー
+  if (msg.includes('network') || msg.includes('connection')) {
+    return 'ネットワークエラーが発生しました。再度お試しください';
+  }
+  // タイムアウト
+  if (msg.includes('timeout')) {
+    return 'タイムアウトしました。再度お試しください';
+  }
+  // その他
+  return 'トランザクションに失敗しました。再度お試しください';
+}
+
 export function JpycPaymentForm({
   orderId,
   amountJpyc,
@@ -86,7 +114,7 @@ export function JpycPaymentForm({
         args: [recipientAddress as `0x${string}`, amountWei],
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Transaction failed';
+      const message = err instanceof Error ? formatErrorMessage(err) : 'トランザクションに失敗しました';
       setErrorMessage(message);
       setStep('error');
       onError(message);
@@ -112,7 +140,7 @@ export function JpycPaymentForm({
   // エラーの監視
   useEffect(() => {
     if (writeError) {
-      const message = writeError.message || 'Transaction failed';
+      const message = formatErrorMessage(writeError);
       setErrorMessage(message);
       setStep('error');
       onError(message);
