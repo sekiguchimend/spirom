@@ -11,6 +11,7 @@
   "dependencies": {
     "@next/third-parties": "^16.1.6",
     "@portabletext/react": "^3.1.0",
+    "@rainbow-me/rainbowkit": "^2.2.10",
     "@sanity/client": "^6.21.0",
     "@sanity/image-url": "^1.0.2",
     "@spirom/ui": "*",
@@ -18,12 +19,15 @@
     "@stripe/stripe-js": "^8.5.3",
     "@supabase/ssr": "0.5.2",
     "@supabase/supabase-js": "^2.86.2",
+    "@tanstack/react-query": "^5.90.21",
     "flag-icons": "^7.5.0",
     "jose": "^5.10.0",
     "lucide-react": "^0.556.0",
     "next": "14.2.15",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "viem": "^2.47.2",
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

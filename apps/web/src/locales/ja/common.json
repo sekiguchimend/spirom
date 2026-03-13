@@ -105,7 +105,19 @@
     "address": "住所",
     "guestCheckoutDesc": "アカウント登録なしでご購入いただけます。メールアドレスを入力すると、注文確認リンクをお送りします（任意）。",
     "confirmAddressAndProceed": "住所を確認して決済へ進む",
-    "emailConfirmNote": "入力すると注文確認リンクをメールでお送りします"
+    "emailConfirmNote": "入力すると注文確認リンクをメールでお送りします",
+    "selectPaymentMethod": "支払い方法を選択",
+    "cardPayment": "カード・電子決済",
+    "cardPaymentDesc": "Visa, Mastercard, Apple Pay, Google Pay など",
+    "stablecoin": "ステーブルコイン",
+    "stablecoinDesc": "JPYC など・ウォレット接続",
+    "selectStablecoin": "ステーブルコインを選択",
+    "jpyc": "JPYC",
+    "jpycDesc": "日本円連動型ステーブルコイン（Polygon）",
+    "jpycPayment": "JPYC決済",
+    "jpycNote": "MetaMask等のウォレットが必要です",
+    "comingSoon": "近日対応予定",
+    "back": "戻る"
   },
   "form": {
     "name": "お名前",

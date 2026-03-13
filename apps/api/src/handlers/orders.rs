@@ -188,6 +188,11 @@ pub async fn create_order(
         guest_phone: None,
         guest_access_token_hash: None,
         guest_token_expires_at: None,
+        // 暗号資産決済用（初期状態はNone）
+        crypto_tx_hash: None,
+        crypto_chain_id: None,
+        crypto_sender_address: None,
+        crypto_confirmed_at: None,
     };
 
     // 在庫を原子的に確保（同時購入で在庫マイナスになるのを防ぐ）
@@ -626,6 +631,11 @@ pub async fn create_guest_order(
         guest_phone: Some(req.shipping_address.phone.clone()),
         guest_access_token_hash: Some(guest_access_token_hash),
         guest_token_expires_at: Some(guest_token_expires),
+        // 暗号資産決済用（初期状態はNone）
+        crypto_tx_hash: None,
+        crypto_chain_id: None,
+        crypto_sender_address: None,
+        crypto_confirmed_at: None,
     };
 
     // 在庫を原子的に確保

@@ -105,7 +105,19 @@
     "address": "Address",
     "guestCheckoutDesc": "You can purchase without creating an account. Enter your email to receive an order confirmation link (optional).",
     "confirmAddressAndProceed": "Confirm address and proceed to payment",
-    "emailConfirmNote": "Enter to receive order confirmation link by email"
+    "emailConfirmNote": "Enter to receive order confirmation link by email",
+    "selectPaymentMethod": "Select Payment Method",
+    "cardPayment": "Card & Digital Payment",
+    "cardPaymentDesc": "Visa, Mastercard, Apple Pay, Google Pay, etc.",
+    "stablecoin": "Stablecoin",
+    "stablecoinDesc": "JPYC, etc. - Wallet connection",
+    "selectStablecoin": "Select Stablecoin",
+    "jpyc": "JPYC",
+    "jpycDesc": "Japanese Yen stablecoin (Polygon)",
+    "jpycPayment": "JPYC Payment",
+    "jpycNote": "MetaMask or other wallet required",
+    "comingSoon": "Coming Soon",
+    "back": "Back"
   },
   "form": {
     "name": "Name",

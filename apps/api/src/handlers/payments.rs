@@ -863,6 +863,11 @@ pub async fn handle_webhook(
                     guest_phone,
                     guest_access_token_hash,
                     guest_token_expires_at,
+                    // 暗号資産決済用（初期状態はNone - Stripe決済なので使用しない）
+                    crypto_tx_hash: None,
+                    crypto_chain_id: None,
+                    crypto_sender_address: None,
+                    crypto_confirmed_at: None,
                 };
 
                 // service_roleで注文作成

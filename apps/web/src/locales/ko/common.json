@@ -105,7 +105,19 @@
     "address": "주소",
     "guestCheckoutDesc": "회원가입 없이 구매할 수 있습니다. 이메일을 입력하시면 주문 확인 링크를 보내드립니다(선택사항).",
     "confirmAddressAndProceed": "주소 확인 후 결제 진행",
-    "emailConfirmNote": "입력하시면 이메일로 주문 확인 링크를 보내드립니다"
+    "emailConfirmNote": "입력하시면 이메일로 주문 확인 링크를 보내드립니다",
+    "selectPaymentMethod": "결제 방법 선택",
+    "cardPayment": "카드 및 전자결제",
+    "cardPaymentDesc": "Visa, Mastercard, Apple Pay, Google Pay 등",
+    "stablecoin": "스테이블코인",
+    "stablecoinDesc": "JPYC 등 - 지갑 연결",
+    "selectStablecoin": "스테이블코인 선택",
+    "jpyc": "JPYC",
+    "jpycDesc": "일본 엔화 연동 스테이블코인 (Polygon)",
+    "jpycPayment": "JPYC 결제",
+    "jpycNote": "MetaMask 등 지갑이 필요합니다",
+    "comingSoon": "곧 지원 예정",
+    "back": "돌아가기"
   },
   "form": {
     "name": "이름",

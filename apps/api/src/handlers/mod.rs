@@ -9,3 +9,4 @@ pub mod reviews;
 pub mod payments;
 pub mod mfa;
 pub mod contact;
+pub mod jpyc;

@@ -523,6 +523,126 @@ impl OrderRepository {
 
         Ok(summaries)
     }
+
+    // ============================================
+    // JPYC決済関連メソッド
+    // ============================================
+
+    /// IDで注文取得（JPYC用、find_by_idのエイリアス）
+    pub async fn get_by_id(&self, id: Uuid) -> Result<Option<Order>> {
+        self.find_by_id(id).await
+    }
+
+    /// トランザクションハッシュで注文検索（二重使用防止）
+    pub async fn get_by_crypto_tx_hash(&self, tx_hash: &str) -> Result<Option<Order>> {
+        let query = format!("crypto_tx_hash=eq.{}", tx_hash);
+        let result: Option<OrderRow> = self.client.select_single("orders", &query).await?;
+
+        if let Some(row) = result {
+            let mut order = row.into_order();
+            order.items = self.find_order_items(order.id).await?;
+            Ok(Some(order))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// JPYC決済イベント記録（冪等性保証）
+    pub async fn record_jpyc_payment_event(
+        &self,
+        tx_hash: &str,
+        chain_id: i32,
+        sender_address: &str,
+        recipient_address: &str,
+        amount_wei: &str,
+        amount_jpyc: i64,
+        block_number: i64,
+        block_hash: &str,
+        confirmations: i32,
+    ) -> Result<JpycPaymentEventResult> {
+        #[derive(serde::Serialize)]
+        struct RpcParams {
+            p_tx_hash: String,
+            p_chain_id: i32,
+            p_sender_address: String,
+            p_recipient_address: String,
+            p_amount_wei: String,
+            p_amount_jpyc: i64,
+            p_block_number: i64,
+            p_block_hash: String,
+            p_confirmations: i32,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct RpcResult {
+            event_id: Uuid,
+            is_new: bool,
+        }
+
+        let params = RpcParams {
+            p_tx_hash: tx_hash.to_string(),
+            p_chain_id: chain_id,
+            p_sender_address: sender_address.to_string(),
+            p_recipient_address: recipient_address.to_string(),
+            p_amount_wei: amount_wei.to_string(),
+            p_amount_jpyc: amount_jpyc,
+            p_block_number: block_number,
+            p_block_hash: block_hash.to_string(),
+            p_confirmations: confirmations,
+        };
+
+        let results: Vec<RpcResult> = self.client.rpc("record_jpyc_payment_event", &params).await?;
+
+        if let Some(result) = results.into_iter().next() {
+            Ok(JpycPaymentEventResult {
+                event_id: result.event_id,
+                is_new: result.is_new,
+            })
+        } else {
+            Err(crate::error::AppError::Database("Failed to record JPYC payment event".to_string()))
+        }
+    }
+
+    /// JPYC決済で注文を更新
+    pub async fn update_jpyc_payment(
+        &self,
+        order_id: Uuid,
+        tx_hash: &str,
+        chain_id: i32,
+        sender_address: &str,
+    ) -> Result<()> {
+        let query = format!("id=eq.{}", order_id);
+        let update = JpycPaymentUpdate {
+            status: "paid".to_string(),
+            payment_status: "\"paid\"".to_string(),
+            crypto_tx_hash: Some(tx_hash.to_string()),
+            crypto_chain_id: Some(chain_id),
+            crypto_sender_address: Some(sender_address.to_string()),
+            crypto_confirmed_at: Some(Utc::now()),
+            updated_at: Utc::now(),
+        };
+
+        let _: Vec<OrderRow> = self.client.update("orders", &query, &update).await?;
+        Ok(())
+    }
+}
+
+/// JPYC決済イベント記録結果
+#[derive(Debug)]
+pub struct JpycPaymentEventResult {
+    pub event_id: Uuid,
+    pub is_new: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct JpycPaymentUpdate {
+    status: String,
+    payment_status: String,
+    crypto_tx_hash: Option<String>,
+    crypto_chain_id: Option<i32>,
+    crypto_sender_address: Option<String>,
+    crypto_confirmed_at: Option<DateTime<Utc>>,
+    updated_at: DateTime<Utc>,
 }
 
 // Supabase REST API用の構造体
@@ -638,6 +758,15 @@ struct OrderRow {
     guest_phone: Option<String>,
     guest_access_token_hash: Option<String>,
     guest_token_expires_at: Option<DateTime<Utc>>,
+    // JPYC（クリプト）決済用フィールド
+    #[serde(default)]
+    crypto_tx_hash: Option<String>,
+    #[serde(default)]
+    crypto_chain_id: Option<i32>,
+    #[serde(default)]
+    crypto_sender_address: Option<String>,
+    #[serde(default)]
+    crypto_confirmed_at: Option<DateTime<Utc>>,
 }
 
 impl OrderRow {
@@ -671,6 +800,11 @@ impl OrderRow {
             guest_phone: self.guest_phone,
             guest_access_token_hash: self.guest_access_token_hash,
             guest_token_expires_at: self.guest_token_expires_at,
+            // JPYC（クリプト）決済用フィールド
+            crypto_tx_hash: self.crypto_tx_hash,
+            crypto_chain_id: self.crypto_chain_id,
+            crypto_sender_address: self.crypto_sender_address,
+            crypto_confirmed_at: self.crypto_confirmed_at,
         }
     }
 }

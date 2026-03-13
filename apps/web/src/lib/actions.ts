@@ -488,3 +488,208 @@ export async function getOrderByPaymentIntentAction(
     return { success: false, error: error instanceof Error ? error.message : 'Failed to get order' };
   }
 }
+
+// ============================================
+// JPYC決済関連
+// ============================================
+
+export interface JpycPaymentInfo {
+  recipient_address: string;
+  contract_address: string;
+  chain_id: number;
+  required_confirmations: number;
+  amount_jpyc: number;
+  order_id: string;
+  guest_token?: string;
+}
+
+export interface PrepareJpycPaymentParams {
+  shipping_address_id: string;
+  billing_address_id?: string;
+  notes?: string;
+}
+
+export async function prepareJpycPaymentAction(
+  params: PrepareJpycPaymentParams
+): Promise<{ success: boolean; data?: JpycPaymentInfo; error?: string }> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const headers = await withSessionHeaders(withBffProxyToken({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }));
+
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/jpyc/prepare`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to prepare JPYC payment' };
+  }
+}
+
+export interface VerifyJpycPaymentParams {
+  order_id: string;
+  tx_hash: string;
+}
+
+// 認証済みユーザー用JPYC決済検証
+export async function verifyJpycPaymentAction(
+  params: VerifyJpycPaymentParams
+): Promise<{ success: boolean; data?: { success: boolean; order_id: string; order_number: string; confirmations: number }; error?: string }> {
+  const token = await getAccessToken();
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    const headers = await withSessionHeaders(withBffProxyToken({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }));
+
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/jpyc/verify`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to verify JPYC payment' };
+  }
+}
+
+// ゲスト用JPYC決済準備パラメータ
+export interface PrepareJpycPaymentGuestParams {
+  shipping_address: {
+    name: string;
+    country: string;
+    postal_code: string;
+    prefecture: string;
+    city: string;
+    address_line1: string;
+    address_line2?: string;
+    phone: string;
+  };
+  billing_address?: {
+    name: string;
+    country: string;
+    postal_code: string;
+    prefecture: string;
+    city: string;
+    address_line1: string;
+    address_line2?: string;
+    phone: string;
+  };
+  email?: string;
+  notes?: string;
+  items: Array<{
+    product_id: string;
+    quantity: number;
+    variant_id?: string;
+    size?: string;
+  }>;
+}
+
+// ゲスト用JPYC決済準備
+export async function prepareJpycPaymentGuestAction(
+  params: PrepareJpycPaymentGuestParams
+): Promise<{ success: boolean; data?: JpycPaymentInfo; error?: string }> {
+  try {
+    const headers = await withSessionHeaders(withBffProxyToken({
+      'Content-Type': 'application/json',
+    }));
+
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/jpyc/guest/prepare`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to prepare JPYC payment' };
+  }
+}
+
+// ゲスト用JPYC決済検証パラメータ
+export interface VerifyJpycPaymentGuestParams {
+  order_id: string;
+  tx_hash: string;
+  guest_token: string;
+}
+
+// ゲスト用JPYC決済検証
+export async function verifyJpycPaymentGuestAction(
+  params: VerifyJpycPaymentGuestParams
+): Promise<{ success: boolean; data?: { success: boolean; order_id: string; order_number: string; confirmations: number }; error?: string }> {
+  try {
+    const headers = await withSessionHeaders(withBffProxyToken({
+      'Content-Type': 'application/json',
+    }));
+
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/jpyc/guest/verify`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to verify JPYC payment' };
+  }
+}
+
+export async function getJpycPaymentInfoAction(): Promise<{ success: boolean; data?: { recipient_address: string; contract_address: string; chain_id: number; required_confirmations: number }; error?: string }> {
+  try {
+    const headers = await withSessionHeaders(withBffProxyToken({
+      'Content-Type': 'application/json',
+    }));
+
+    const response = await fetch(`${BFF_BASE_URL}/api/v1/payments/jpyc/info`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get JPYC payment info' };
+  }
+}

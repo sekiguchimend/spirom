@@ -74,6 +74,7 @@ pub enum PaymentMethod {
     RakutenPay,
     Konbini,
     BankTransfer,
+    Jpyc,
 }
 
 impl std::fmt::Display for PaymentMethod {
@@ -84,6 +85,7 @@ impl std::fmt::Display for PaymentMethod {
             PaymentMethod::RakutenPay => write!(f, "rakuten_pay"),
             PaymentMethod::Konbini => write!(f, "konbini"),
             PaymentMethod::BankTransfer => write!(f, "bank_transfer"),
+            PaymentMethod::Jpyc => write!(f, "jpyc"),
         }
     }
 }
@@ -130,6 +132,15 @@ pub struct Order {
     pub guest_access_token_hash: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub guest_token_expires_at: Option<DateTime<Utc>>,
+    // JPYC（クリプト）決済用フィールド
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crypto_tx_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crypto_chain_id: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crypto_sender_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crypto_confirmed_at: Option<DateTime<Utc>>,
 }
 
 /// 注文アイテム
@@ -435,6 +446,14 @@ pub fn hash_guest_token(token: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(token.as_bytes());
     format!("{:x}", hasher.finalize())
+}
+
+/// ゲストトークンを検証（定時間比較でタイミング攻撃を防止）
+pub fn verify_guest_token(token: &str, stored_hash: &str) -> bool {
+    let token_hash = hash_guest_token(token);
+    // 定時間比較でタイミング攻撃を防止
+    use subtle::ConstantTimeEq;
+    token_hash.as_bytes().ct_eq(stored_hash.as_bytes()).into()
 }
 
 /// ゲストトークンの有効期限（7日間）

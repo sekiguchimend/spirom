@@ -105,7 +105,19 @@
     "address": "地址",
     "guestCheckoutDesc": "无需注册即可购买。输入邮箱可接收订单确认链接（可选）。",
     "confirmAddressAndProceed": "确认地址并进入付款",
-    "emailConfirmNote": "输入邮箱后将发送订单确认链接"
+    "emailConfirmNote": "输入邮箱后将发送订单确认链接",
+    "selectPaymentMethod": "选择付款方式",
+    "cardPayment": "卡片及电子支付",
+    "cardPaymentDesc": "Visa、Mastercard、Apple Pay、Google Pay等",
+    "stablecoin": "稳定币",
+    "stablecoinDesc": "JPYC等 - 钱包连接",
+    "selectStablecoin": "选择稳定币",
+    "jpyc": "JPYC",
+    "jpycDesc": "日元挂钩稳定币（Polygon）",
+    "jpycPayment": "JPYC支付",
+    "jpycNote": "需要MetaMask等钱包",
+    "comingSoon": "即将推出",
+    "back": "返回"
   },
   "form": {
     "name": "姓名",

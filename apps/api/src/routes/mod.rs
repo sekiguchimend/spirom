@@ -81,6 +81,24 @@ pub fn create_router(state: AppState) -> Router {
         .layer(middleware::from_fn(session_signature_middleware))
         .layer(middleware::from_fn(bff_proxy_token_middleware));
 
+    // JPYC決済ルート（認証必須 + 専用レート制限）
+    let jpyc_payment_routes = Router::new()
+        .route("/api/v1/payments/jpyc/prepare", post(handlers::jpyc::prepare_jpyc_payment))
+        .route("/api/v1/payments/jpyc/verify", post(handlers::jpyc::verify_jpyc_payment))
+        .layer(middleware::from_fn(payment_rate_limiter_middleware))
+        .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
+
+    // JPYC決済ルート（ゲスト用 + 専用レート制限）
+    let jpyc_guest_payment_routes = Router::new()
+        .route("/api/v1/payments/jpyc/guest/prepare", post(handlers::jpyc::prepare_jpyc_payment_guest))
+        .route("/api/v1/payments/jpyc/guest/verify", post(handlers::jpyc::verify_jpyc_payment_guest))
+        .route("/api/v1/payments/jpyc/info", get(handlers::jpyc::get_jpyc_payment_info))
+        .layer(middleware::from_fn(payment_rate_limiter_middleware))
+        .layer(middleware::from_fn(session_signature_middleware))
+        .layer(middleware::from_fn(bff_proxy_token_middleware));
+
     let auth_routes = Router::new()
         // プロファイル作成（Supabase Auth登録後にusersテーブルに追加）
         .route("/api/v1/auth/profile", post(handlers::auth::create_profile))
@@ -145,6 +163,8 @@ pub fn create_router(state: AppState) -> Router {
         .merge(contact_routes)
         .merge(payment_routes)
         .merge(guest_payment_routes)
+        .merge(jpyc_payment_routes)
+        .merge(jpyc_guest_payment_routes)
         .merge(auth_routes)
         .merge(admin_routes)
         .with_state(state)

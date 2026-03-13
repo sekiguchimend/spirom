@@ -1,12 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/lib/stripe';
-import { fetchAddresses, createPaymentIntentAction, createGuestOrderAction, createGuestPaymentIntentAction } from '@/lib/actions';
+import {
+  fetchAddresses,
+  createPaymentIntentAction,
+  createGuestOrderAction,
+  createGuestPaymentIntentAction,
+  prepareJpycPaymentAction,
+  prepareJpycPaymentGuestAction,
+  verifyJpycPaymentAction,
+  verifyJpycPaymentGuestAction,
+  type JpycPaymentInfo,
+} from '@/lib/actions';
 import { addToCart, clearCart } from '@/lib/cart';
 import type { Address, CreateOrderItemRequest, GuestShippingAddress, CreateGuestOrderRequest } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,8 +25,12 @@ import { type Locale, defaultLocale } from '@/lib/i18n/config';
 import { PAYMENT_MESSAGES } from '@/lib/messages';
 import { PaymentForm } from '@/components/checkout/PaymentForm';
 import { GuestAddressForm } from '@/components/checkout/GuestAddressForm';
+import { JpycPaymentForm } from '@/components/web3/JpycPaymentForm';
+import { Web3Provider } from '@/components/web3/Web3Provider';
 import { formatPrice } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+
+type PaymentMethod = 'credit_card' | 'jpyc';
 
 interface Product {
   id: string;
@@ -46,7 +60,7 @@ export default function ProductCheckout({
   const pathname = usePathname();
   const locale = (pathname?.split('/')[1] as Locale) || defaultLocale;
   const routes = createLocalizedRoutes(locale);
-  const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'address-input' | 'no-address' | 'no-auth'>('loading');
+  const [step, setStep] = useState<'loading' | 'ready' | 'error' | 'address-input' | 'no-address' | 'no-auth' | 'payment-select' | 'stablecoin-select' | 'jpyc-payment'>('loading');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
@@ -60,6 +74,9 @@ export default function ProductCheckout({
   const [guestAddress, setGuestAddress] = useState<GuestShippingAddress | null>(null);
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit_card');
+  const [jpycPaymentInfo, setJpycPaymentInfo] = useState<JpycPaymentInfo | null>(null);
+  const [guestEmail, setGuestEmail] = useState<string | null>(null);
 
   // 重複実行防止用のref
   const isCheckoutInProgressRef = useRef(false);
@@ -142,28 +159,63 @@ export default function ProductCheckout({
       setTax(estimatedTax);
       setTotal(itemSubtotal + estimatedShipping + estimatedTax);
 
-      // PaymentIntent作成（注文は支払い完了後にWebhookで作成される）
-      const paymentResult = await createPaymentIntentAction({
-        shipping_address_id: shippingAddress.id,
-        payment_method: 'credit_card',
-      });
-
-      if (!paymentResult.success || !paymentResult.data) {
-        setError(paymentResult.error || t('checkout.paymentPrepareError'));
-        setStep('error');
-        isCheckoutInProgressRef.current = false;
-        return;
-      }
-
-      setClientSecret(paymentResult.data.client_secret);
-      console.log('[ProductCheckout] Payment intent created');
-
-      setStep('ready');
+      // 支払い方法選択画面を表示
+      setStep('payment-select');
+      isCheckoutInProgressRef.current = false;
     } catch (err) {
       console.error('[ProductCheckout] Error:', err);
       setError(err instanceof Error ? err.message : PAYMENT_MESSAGES.FAILED);
       setStep('error');
       isCheckoutInProgressRef.current = false;
+    }
+  };
+
+  // 支払い方法選択後の処理（認証済みユーザー）
+  const proceedWithPaymentMethod = async (method: PaymentMethod) => {
+    if (!shippingAddress) return;
+
+    setPaymentMethod(method);
+    setError(null);
+    setStep('loading');
+
+    try {
+      if (method === 'credit_card') {
+        console.log('[ProductCheckout] Creating payment intent with address:', shippingAddress.id);
+        const paymentResult = await createPaymentIntentAction({
+          shipping_address_id: shippingAddress.id,
+          payment_method: 'credit_card',
+        });
+
+        if (!paymentResult.success || !paymentResult.data) {
+          setError(paymentResult.error || t('checkout.paymentPrepareError'));
+          setStep('error');
+          return;
+        }
+
+        console.log('[ProductCheckout] Payment intent created');
+        setClientSecret(paymentResult.data.client_secret);
+        setStep('ready');
+      } else if (method === 'jpyc') {
+        console.log('[ProductCheckout] Preparing JPYC payment with address:', shippingAddress.id);
+        const jpycResult = await prepareJpycPaymentAction({
+          shipping_address_id: shippingAddress.id,
+        });
+
+        if (!jpycResult.success || !jpycResult.data) {
+          setError(jpycResult.error || 'JPYC決済の準備中にエラーが発生しました');
+          setStep('error');
+          return;
+        }
+
+        console.log('[ProductCheckout] JPYC payment prepared:', jpycResult.data.order_id);
+        setJpycPaymentInfo(jpycResult.data);
+        setOrderId(jpycResult.data.order_id);
+        setStep('jpyc-payment');
+      }
+    } catch (e) {
+      console.error('[ProductCheckout] Error:', e);
+      setError(e instanceof Error ? e.message : '決済準備に失敗しました');
+      setStep('error');
     }
   };
 
@@ -176,7 +228,7 @@ export default function ProductCheckout({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shippingAddress, isGuest]);
 
-  // ゲスト用のチェックアウト（住所入力後）
+  // ゲスト用のチェックアウト（住所入力後 → 支払い方法選択画面へ）
   const initializeGuestCheckout = async (address: GuestShippingAddress, email?: string) => {
     // 重複実行防止
     if (isCheckoutInProgressRef.current) {
@@ -189,69 +241,116 @@ export default function ProductCheckout({
 
     try {
       setError(null);
-      setStep('loading');
       setGuestAddress(address);
+      if (email) setGuestEmail(email);
 
-      const items: CreateOrderItemRequest[] = [
-        {
-          product_id: product.id,
-          quantity: quantity,
-          variant_id: variantId,
-          size: size,
-        },
-      ];
+      // 仮の金額を計算
+      const itemSubtotal = product.price * quantity;
+      const estimatedShipping = 750;
+      const estimatedTax = Math.round(itemSubtotal * 0.1);
+      setSubtotal(itemSubtotal);
+      setShippingFee(estimatedShipping);
+      setTax(estimatedTax);
+      setTotal(itemSubtotal + estimatedShipping + estimatedTax);
 
-      const request: CreateGuestOrderRequest = {
-        items,
-        shipping_address: address,
-        payment_method: 'credit_card',
-        email,
-      };
-
-      const orderResult = await createGuestOrderAction(request);
-      if (!orderResult.success || !orderResult.data) {
-        setError(orderResult.error || t('checkout.createOrderError'));
-        setStep('error');
-        isCheckoutInProgressRef.current = false;
-        setIsGuestSubmitting(false);
-        return;
-      }
-
-      const { order, guest_access_token } = orderResult.data;
-      setOrderId(order.id);
-      setOrderNumber(order.order_number);
-      setSubtotal(order.subtotal ?? 0);
-      setShippingFee(order.shipping_fee ?? 0);
-      setTax(order.tax ?? 0);
-      setTotal(order.total);
-      setGuestToken(guest_access_token);
-
-      console.log('[ProductCheckout] Guest order created:', order.id);
-
-      // sessionStorageにゲストトークンを保存
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`guest_order_${order.id}`, guest_access_token);
-      }
-
-      const paymentResult = await createGuestPaymentIntentAction(order.id, guest_access_token);
-      if (!paymentResult.success || !paymentResult.data) {
-        setError(paymentResult.error || t('checkout.paymentPrepareError'));
-        setStep('error');
-        isCheckoutInProgressRef.current = false;
-        setIsGuestSubmitting(false);
-        return;
-      }
-
-      setClientSecret(paymentResult.data.client_secret);
-      console.log('[ProductCheckout] Payment intent created');
-      setStep('ready');
+      // 支払い方法選択画面を表示
+      setStep('payment-select');
       setIsGuestSubmitting(false);
+      isCheckoutInProgressRef.current = false;
     } catch (e) {
       console.error('[ProductCheckout] Error:', e);
       setError(e instanceof Error ? e.message : PAYMENT_MESSAGES.FAILED);
       setStep('error');
       isCheckoutInProgressRef.current = false;
       setIsGuestSubmitting(false);
+    }
+  };
+
+  // 支払い方法選択後の処理（ゲスト）
+  const proceedWithPaymentMethodGuest = async (method: PaymentMethod) => {
+    if (!guestAddress) return;
+
+    setPaymentMethod(method);
+    setError(null);
+    setStep('loading');
+
+    const items: CreateOrderItemRequest[] = [
+      {
+        product_id: product.id,
+        quantity: quantity,
+        variant_id: variantId,
+        size: size,
+      },
+    ];
+
+    try {
+      if (method === 'credit_card') {
+        const request: CreateGuestOrderRequest = {
+          items,
+          shipping_address: guestAddress,
+          payment_method: 'credit_card',
+          email: guestEmail || undefined,
+        };
+
+        const orderResult = await createGuestOrderAction(request);
+        if (!orderResult.success || !orderResult.data) {
+          setError(orderResult.error || t('checkout.createOrderError'));
+          setStep('error');
+          return;
+        }
+
+        const { order, guest_access_token } = orderResult.data;
+        setOrderId(order.id);
+        setOrderNumber(order.order_number);
+        setSubtotal(order.subtotal ?? 0);
+        setShippingFee(order.shipping_fee ?? 0);
+        setTax(order.tax ?? 0);
+        setTotal(order.total);
+        setGuestToken(guest_access_token);
+
+        console.log('[ProductCheckout] Guest order created:', order.id);
+
+        // sessionStorageにゲストトークンを保存
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`guest_order_${order.id}`, guest_access_token);
+        }
+
+        const paymentResult = await createGuestPaymentIntentAction(order.id, guest_access_token);
+        if (!paymentResult.success || !paymentResult.data) {
+          setError(paymentResult.error || t('checkout.paymentPrepareError'));
+          setStep('error');
+          return;
+        }
+
+        setClientSecret(paymentResult.data.client_secret);
+        console.log('[ProductCheckout] Payment intent created');
+        setStep('ready');
+      } else if (method === 'jpyc') {
+        console.log('[ProductCheckout] Preparing JPYC payment for guest');
+        const jpycResult = await prepareJpycPaymentGuestAction({
+          shipping_address: guestAddress,
+          email: guestEmail || undefined,
+          items,
+        });
+
+        if (!jpycResult.success || !jpycResult.data) {
+          setError(jpycResult.error || 'JPYC決済の準備中にエラーが発生しました');
+          setStep('error');
+          return;
+        }
+
+        console.log('[ProductCheckout] JPYC payment prepared:', jpycResult.data.order_id);
+        setJpycPaymentInfo(jpycResult.data);
+        setOrderId(jpycResult.data.order_id);
+        if (jpycResult.data.guest_token) {
+          setGuestToken(jpycResult.data.guest_token);
+        }
+        setStep('jpyc-payment');
+      }
+    } catch (e) {
+      console.error('[ProductCheckout] Error:', e);
+      setError(e instanceof Error ? e.message : '決済準備に失敗しました');
+      setStep('error');
     }
   };
 
@@ -264,6 +363,59 @@ export default function ProductCheckout({
       initializeCheckout();
     }
   };
+
+  // JPYC決済成功時のハンドラ
+  const handleJpycSuccess = useCallback(async (txHash: string) => {
+    if (!orderId) return;
+
+    console.log('[ProductCheckout] JPYC payment sent, verifying:', txHash);
+
+    try {
+      let verifyResult;
+      if (isGuest && guestToken) {
+        verifyResult = await verifyJpycPaymentGuestAction({
+          order_id: orderId,
+          tx_hash: txHash,
+          guest_token: guestToken,
+        });
+      } else {
+        verifyResult = await verifyJpycPaymentAction({
+          order_id: orderId,
+          tx_hash: txHash,
+        });
+      }
+
+      if (!verifyResult.success || !verifyResult.data?.success) {
+        setError(verifyResult.error || 'JPYC決済の検証に失敗しました');
+        setStep('error');
+        return;
+      }
+
+      console.log('[ProductCheckout] JPYC payment verified:', verifyResult.data);
+
+      // カートをクリア
+      clearCart();
+
+      // 完了ページへリダイレクト
+      if (isGuest && guestToken) {
+        router.push(`${routes.CHECKOUT.COMPLETE}?order_id=${orderId}&guest_token=${encodeURIComponent(guestToken)}`);
+      } else {
+        router.push(`${routes.CHECKOUT.COMPLETE}?order_id=${orderId}`);
+      }
+      onClose();
+    } catch (e) {
+      console.error('[ProductCheckout] JPYC verify error:', e);
+      setError(e instanceof Error ? e.message : 'JPYC決済の検証に失敗しました');
+      setStep('error');
+    }
+  }, [orderId, isGuest, guestToken, router, routes, onClose]);
+
+  // JPYC決済エラー時のハンドラ
+  const handleJpycError = useCallback((errorMsg: string) => {
+    console.error('[ProductCheckout] JPYC payment error:', errorMsg);
+    setError(errorMsg);
+    // エラーでも再試行できるようにステップはそのまま
+  }, []);
 
   const displayAddress = isGuest ? guestAddress : shippingAddress;
 
@@ -472,6 +624,144 @@ export default function ProductCheckout({
                 </div>
               )}
 
+              {/* 支払い方法選択 */}
+              {step === 'payment-select' && (
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h3 className="text-base font-black text-text-dark mb-5">{t('checkout.selectPaymentMethod')}</h3>
+                  <div className="space-y-3">
+                    {/* カード・電子決済 */}
+                    <button
+                      type="button"
+                      onClick={() => isGuest ? proceedWithPaymentMethodGuest('credit_card') : proceedWithPaymentMethod('credit_card')}
+                      className="w-full flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-text-dark text-sm">{t('checkout.cardPayment')}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{t('checkout.cardPaymentDesc')}</p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+
+                    {/* ステーブルコイン */}
+                    <button
+                      type="button"
+                      onClick={() => setStep('stablecoin-select')}
+                      className="w-full flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                    >
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 6v12M6 12h12" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-text-dark text-sm">{t('checkout.stablecoin')}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{t('checkout.stablecoinDesc')}</p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ステーブルコイン選択 */}
+              {step === 'stablecoin-select' && (
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-base font-black text-text-dark">{t('checkout.selectStablecoin')}</h3>
+                    <button
+                      type="button"
+                      onClick={() => setStep('payment-select')}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      ← {t('checkout.back')}
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {/* JPYC */}
+                    <button
+                      type="button"
+                      onClick={() => isGuest ? proceedWithPaymentMethodGuest('jpyc') : proceedWithPaymentMethod('jpyc')}
+                      className="w-full flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                    >
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-purple-600 font-bold text-xs">JPYC</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-text-dark text-sm">{t('checkout.jpyc')}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{t('checkout.jpycDesc')}</p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+
+                    {/* USDC - Coming Soon */}
+                    <div className="w-full flex items-center gap-3 p-3 border-2 border-gray-100 rounded-xl bg-gray-50 opacity-60 cursor-not-allowed">
+                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-400 font-bold text-xs">USDC</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-400 text-sm">USDC</p>
+                        <p className="text-[10px] text-gray-400 truncate">{t('checkout.comingSoon')}</p>
+                      </div>
+                    </div>
+
+                    {/* USDT - Coming Soon */}
+                    <div className="w-full flex items-center gap-3 p-3 border-2 border-gray-100 rounded-xl bg-gray-50 opacity-60 cursor-not-allowed">
+                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-green-400 font-bold text-xs">USDT</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-400 text-sm">USDT</p>
+                        <p className="text-[10px] text-gray-400 truncate">{t('checkout.comingSoon')}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-gray-500 mt-3 text-center">
+                    {t('checkout.jpycNote')}
+                  </p>
+                </div>
+              )}
+
+              {/* JPYC決済フォーム */}
+              {step === 'jpyc-payment' && jpycPaymentInfo && (
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-base font-black text-text-dark">{t('checkout.jpycPayment')}</h3>
+                    <button
+                      type="button"
+                      onClick={() => setStep('stablecoin-select')}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      ← {t('checkout.back')}
+                    </button>
+                  </div>
+                  <Web3Provider>
+                    <JpycPaymentForm
+                      orderId={jpycPaymentInfo.order_id}
+                      amountJpyc={jpycPaymentInfo.amount_jpyc}
+                      recipientAddress={jpycPaymentInfo.recipient_address}
+                      contractAddress={jpycPaymentInfo.contract_address}
+                      chainId={jpycPaymentInfo.chain_id}
+                      requiredConfirmations={jpycPaymentInfo.required_confirmations}
+                      onSuccess={handleJpycSuccess}
+                      onError={handleJpycError}
+                    />
+                  </Web3Provider>
+                </div>
+              )}
+
               {step === 'ready' && clientSecret && (isGuest ? (orderId && orderNumber) : true) && (
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <Elements
@@ -498,6 +788,7 @@ export default function ProductCheckout({
                       total={total}
                       isGuest={isGuest}
                       guestToken={guestToken || undefined}
+                      locale={locale}
                     />
                   </Elements>
                 </div>
