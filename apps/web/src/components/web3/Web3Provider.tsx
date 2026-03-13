@@ -8,11 +8,15 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { useState, type ReactNode } from 'react';
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://spirom.shop';
 
 // WalletConnect Cloud projectIdがない場合はダミー値を使用
 // （MetaMaskなど injected wallets は projectId なしでも動作する）
 const config = getDefaultConfig({
   appName: 'Spirom',
+  appDescription: 'Spirom - Premium T-shirts',
+  appUrl: siteUrl,
+  appIcon: `${siteUrl}/favicon.svg`,
   projectId: projectId || '0'.repeat(32), // 32文字のダミーID
   chains: [polygon, polygonAmoy],
   transports: {
