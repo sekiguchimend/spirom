@@ -40,7 +40,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://api.spirom.com https://bff.spirom.com https://*.sanity.io https://api.stripe.com https://m.stripe.com https://m.stripe.network https://pay.google.com http://localhost:3001 http://localhost:8787 http://127.0.0.1:8787 https://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com",
+      "connect-src 'self' https://api.spirom.com https://bff.spirom.com https://*.sanity.io https://api.stripe.com https://m.stripe.com https://m.stripe.network https://pay.google.com http://localhost:3001 http://localhost:8787 http://127.0.0.1:8787 https://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com https://*.walletconnect.com https://*.walletconnect.org https://api.web3modal.org https://pulse.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org https://polygon-rpc.com https://rpc-amoy.polygon.technology",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://m.stripe.com https://m.stripe.network https://pay.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
